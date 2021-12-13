@@ -1,0 +1,28 @@
+defaults:
+  - robot: panda_longer_finger
+  - scene: calvin_scene_A
+  - env: env
+  - cameras: static_and_gripper
+  - paths: general_paths
+  - override hydra/hydra_logging: colorlog
+  - override hydra/job_logging: colorlog
+
+data_path: ${paths.vr_data}
+model_name: full
+
+agent:
+  _target_: thesis.agent.base_agent.BaseAgent
+
+point_detector:
+  _target_: thesis.point_detectors.clip_point_detector.CLIPPointDetector
+  resize: 100
+  clip_model: "RN50"  # ["RN50", "RN101", "RN50x4", "RN50x16"]
+  saliency_layer: "layer4"  # ["layer4", "layer3", "layer2", "layer1"]
+  blur: False
+  viz: True
+
+
+save_dir: ./hydra_outputs/calvin
+hydra:
+  run:
+    dir: ${save_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
