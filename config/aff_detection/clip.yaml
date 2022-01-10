@@ -1,0 +1,6 @@
+__target__: thesis.models.clip_detector.CLIPPointDetector
+resize: 100
+clip_model: "RN50"  # ["RN50", "RN101", "RN50x4", "RN50x16"]
+saliency_layer: "layer4"  # ["layer4", "layer3", "layer2", "layer1"]
+blur: False
+viz: True

@@ -1,7 +1,6 @@
 import hydra
 import numpy as np
 import cv2
-from vr_env.envs.play_table_env import PlayTableSimEnv
 import pybullet as p
 
 
@@ -16,8 +15,8 @@ def main(cfg):
         rgb_obs =  ns["rgb_obs"]["rgb_static"]
         cv2.imshow("orig img",rgb_obs[:, :, ::-1])
         cv2.waitKey(1)
-        ns = agent.reset_position()
         caption = input("Type an instruction \n")
+        ns = agent.reset_position()
         pixel = point_detector.find_target({"rgb_obs": rgb_obs,
                                             "caption": caption})
         
