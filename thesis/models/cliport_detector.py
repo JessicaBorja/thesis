@@ -1,6 +1,6 @@
 from cliport.utils import utils
-from thesis.agents.cliport.pick_module import PickModule
-from thesis.agents.cliport.attention import OneStreamAttentionLangFusion
+from thesis.models.cliport.pick_module import PickModule
+from thesis.models.cliport.attention import OneStreamAttentionLangFusion
 import numpy as np
 
 
@@ -19,7 +19,7 @@ class ClipLingUNetDetector(PickModule):
             cfg=self.cfg,
             device=self.device_type,
         )
-    
+
     def attn_forward(self, inp, softmax=True):
         inp_img = inp['inp_img']
         lang_goal = inp['lang_goal']

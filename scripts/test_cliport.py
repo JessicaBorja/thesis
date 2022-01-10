@@ -9,11 +9,9 @@ from cliport import agents
 from cliport.utils import utils
 
 import torch
-import cv2
 from cliport.dataset import RavensDataset
 from cliport.environments.environment import Environment
 
-import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 train_demos = 1000 # number training demonstrations used to train agent
