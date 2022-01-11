@@ -6,7 +6,7 @@ defaults:
   - override hydra/job_logging: colorlog
 
 # folders
-train_dir: ./exps/affordance
+train_dir: ./
 run_name: 'cliport_lang'
 
 trainer:
