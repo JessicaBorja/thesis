@@ -20,8 +20,8 @@ class PickModule(LightningModule):
         self.in_shape = (200, 200, 3)
         self._batch_loss = []
         self.cmd_log = logging.getLogger(__name__)
-
         self._build_model()
+        self.save_hyperparameters()
 
     def _build_model(self):
         self.attention = None
@@ -62,6 +62,8 @@ class PickModule(LightningModule):
         label_size = inp_img.shape[2:] + (1, )
         aff_label = torch.zeros(label_size)
         p0=label['p0'][0].detach().cpu().numpy()
+        assert len(p0) == 2, "len p0!=2: %d" % len(p0)
+        assert len(label_size) == 3, "label_size: %s" % str(label_size)
         aff_label[p0[0], p0[1], 0] = 1
 
         aff_label = aff_label.permute((2, 0, 1))

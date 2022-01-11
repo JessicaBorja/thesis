@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
-
+import logging
 from thesis.utils.utils import resize_pixel, get_hydra_launch_dir, get_transforms
 
 
@@ -35,6 +35,8 @@ class CalvinDataLang(Dataset):
         # Excludes background
         self.n_classes = _data_info["n_classes"] if cam == "static" else 1
         self.resize = (self.img_resize[self.cam], self.img_resize[self.cam])
+        self.cmd_log = logging.getLogger(__name__)
+        self.cmd_log.info("Dataloader using shape: %s" % str(self.resize))
 
     def read_json(self, json_file):
         with open(json_file) as f:
@@ -81,13 +83,15 @@ class CalvinDataLang(Dataset):
         frame = self.transforms(frame)
 
         # Aff mask
-        # centers = (label, x, y)
+        # data["centers"] = (label, x, y)
         center = resize_pixel(data["centers"][0, 1:], old_shape, self.resize)
+        assert (center < self.resize).all(), "center is out of range, old_shape %s, resize %s, old_center %s, new_center %s" % (str(old_shape), str(self.resize), str(data["centers"][0, 1:]), str(center))
         # mask = np.zeros(self.resize)
         # mask[center[0], center[1]] = 1
 
         # Select a language annotation
         annotations = [i.item() for i in data["lang_ann"]]
+        assert len(annotations) > 0, "no language annotation in %s" % self.data[idx]
         lang_ann = np.random.choice(annotations).item()
 
         task = data["task"].tolist()
