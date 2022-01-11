@@ -98,8 +98,7 @@ class PickModule(LightningModule):
         step = self.total_steps + 1
         loss0, err0 = self.attn_step(frame, label)
         total_loss = loss0
-        self.log('tr/attn/loss', loss0)
-        self.log('tr/loss', total_loss)
+        self.log('Training/loss', total_loss, on_step=False, on_epoch=True)
         self.total_steps = step
         # self.check_save_iteration()
 
@@ -166,8 +165,8 @@ class PickModule(LightningModule):
         total_attn_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
         # total_attn_theta_err = np.sum([v['val_attn_theta_err'] for v in all_outputs])
     
-        self.log('vl/loss', mean_val_total_loss)
-        self.log('vl/total_attn_dist_err', total_attn_dist_err)
+        self.log('Validation/loss', mean_val_total_loss)
+        self.log('Validation/total_attn_dist_err', total_attn_dist_err)
         # self.log('vl/total_attn_theta_err', total_attn_theta_err)
 
         print("\nAttn Err - Dist: {:.2f}".format(total_attn_dist_err))
