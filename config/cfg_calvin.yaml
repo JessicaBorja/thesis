@@ -2,7 +2,7 @@ defaults:
   - robot: panda_longer_finger
   - scene: calvin_scene_A
   - env: env
-  - aff_detection: cliport_lang
+  - aff_detection: clip
   - cameras: static_and_gripper
   - paths: general_paths
   - override hydra/hydra_logging: colorlog
@@ -12,7 +12,7 @@ data_path: ${paths.vr_data}
 model_name: full
 
 agent:
-  _target_: thesis.agent.base_agent.BaseAgent
+  _target_: thesis.agents.base_agent.BaseAgent
   _recursive_: False
 
 save_dir: ./hydra_outputs/calvin

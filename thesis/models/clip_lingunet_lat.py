@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision.transforms import InterpolationMode
+from torchvision.transforms import Compose, Resize, CenterCrop, Normalize
 
 from thesis.models.resnet import IdentityBlock, ConvBlock
 from thesis.models.core.unet import Up
@@ -24,15 +26,23 @@ class CLIPLingUNetLat(nn.Module):
         self.lang_fusion_type = self.cfg['train']['lang_fusion_type']
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
-        self.preprocess = preprocess
+        # self.preprocess = preprocess
 
-        self._load_clip()
+        # Use clip preprocessing
+        self.preprocess = self._load_clip()
         self._build_decoder()
 
     def _load_clip(self):
         model, _ = load_clip("RN50", device=self.device)
         self.clip_rn50 = build_model(model.state_dict()).to(self.device)
+        n_px = model.input_resolution.item()
+        transform = Compose([
+            Resize(n_px, interpolation=InterpolationMode.BICUBIC),
+            CenterCrop(n_px),
+            Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+        ])
         del model
+        return transform
 
     def _build_decoder(self):
         # language
@@ -98,7 +108,7 @@ class CLIPLingUNetLat(nn.Module):
         return text_feat, text_emb, text_mask
 
     def forward(self, x, lat, l):
-        x = self.preprocess(x, dist='clip')
+        x = self.preprocess(x) # , dist='clip')
 
         in_type = x.dtype
         in_shape = x.shape
@@ -110,6 +120,7 @@ class CLIPLingUNetLat(nn.Module):
         l_input = l_emb if 'word' in self.lang_fusion_type else l_enc
         l_input = l_input.to(dtype=x.dtype)
 
+        ## Decoder
         assert x.shape[1] == self.input_dim
         x = self.conv1(x)
 

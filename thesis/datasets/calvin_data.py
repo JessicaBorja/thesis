@@ -95,7 +95,7 @@ class CalvinDataLang(Dataset):
         lang_ann = np.random.choice(annotations).item()
 
         task = data["task"].tolist()
-        inp = {"img": frame,
+        inp = {"img": frame,  # RGB
                "lang_goal": lang_ann}
 
         # CE Loss requires mask in form (B, H, W)

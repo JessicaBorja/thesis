@@ -8,7 +8,7 @@ import pybullet as p
 def main(cfg):
     env = hydra.utils.instantiate(cfg.env)
     agent = hydra.utils.instantiate(cfg.agent, env=env)
-    point_detector = hydra.utils.instantiate(cfg.point_detector)
+    point_detector = hydra.utils.instantiate(cfg.aff_detection)
     
     ns = env.reset()
     for i in range(10):  # 5 instructions

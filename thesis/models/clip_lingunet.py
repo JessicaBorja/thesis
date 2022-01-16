@@ -59,7 +59,7 @@ class CLIPLingUNet(CLIPLingUNetLat):
         )
 
     def forward(self, x, l):
-        x = self.preprocess(x, dist='clip')
+        x = self.preprocess(x) #, dist='clip')
 
         in_type = x.dtype
         in_shape = x.shape
@@ -71,7 +71,8 @@ class CLIPLingUNet(CLIPLingUNetLat):
         l_enc, l_emb, l_mask = self.encode_text(l)
         l_input = l_emb if 'word' in self.lang_fusion_type else l_enc
         l_input = l_input.to(dtype=x.dtype)
-
+    
+        # Decoder
         # encode image
         assert x.shape[1] == self.input_dim
         x = self.conv1(x)

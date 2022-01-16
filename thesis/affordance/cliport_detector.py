@@ -15,7 +15,7 @@ class ClipLingUNetDetector(PickModule):
             stream_fcn=(stream_fcn, None),
             in_shape=self.in_shape,
             n_rotations=1,
-            preprocess=utils.preprocess,
+            preprocess=None, ## Set on clip_lingunet_lat to match clip preprocessing
             cfg=self.cfg,
             device=self.device_type,
         )
