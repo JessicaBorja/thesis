@@ -3,7 +3,7 @@ import clip
 from PIL import Image
 from thesis.grad_cam.grad_cam import gradCAM
 from thesis.grad_cam.utils import *
-from thesis.models.base_detector import BaseDetector
+from thesis.affordance.base_detector import BaseDetector
 import cv2
 
 

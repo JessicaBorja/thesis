@@ -1,4 +1,4 @@
-_target_: thesis.models.cliport_detector.ClipLingUNetDetector
+_target_: thesis.affordance.cliport_detector.ClipLingUNetDetector
 _recursive_: False
 cfg:
   train:

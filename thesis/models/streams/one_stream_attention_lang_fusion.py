@@ -1,10 +1,14 @@
+###########################################
+#### Authors: Mohit Shridhar, Lucas Manuelli, Dieter Fox
+#### Credit: https://github.com/cliport/cliport
+#### Apache License 2.0
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import cliport.models as models
-from cliport.utils import utils
+import thesis.models as models
 
 
 class OneStreamAttentionLangFusion(nn.Module):
@@ -33,9 +37,6 @@ class OneStreamAttentionLangFusion(nn.Module):
         self.padding = self.padding[[1, 0, 2]] # C, H, W
         self.padding = tuple(self.padding.flatten())
         self.in_shape = in_shape
-
-        self.rotator = utils.ImageRotator(self.n_rotations)
-
         self._build_nets()
 
     def _build_nets(self):
@@ -53,30 +54,17 @@ class OneStreamAttentionLangFusion(nn.Module):
         """Forward pass."""
         in_data = F.pad(inp_img, self.padding, mode='constant')
         in_tens = in_data.to(dtype=torch.float, device=self.device) # [B 3 H W]
-        # Rotation pivot.
-        pv = np.array(in_tens.shape[2:]) // 2
-
-        # Rotate input.
-        in_tens = in_tens.repeat(self.n_rotations, 1, 1, 1)
-        in_tens = self.rotator(in_tens, pivot=pv)
 
         # Forward pass.
-        logits = []
-        for x, lang_goal in zip(in_tens, lang_goal):
-            lgts = self.attend(x, lang_goal)
-            logits.append(lgts)
-        logits = torch.cat(logits, dim=0)
+        logits = self.attend(in_tens, lang_goal)
 
-        # Rotate back output.
-        logits = self.rotator(logits, reverse=True, pivot=pv)
-        logits = torch.cat(logits, dim=0)
         c0 = np.array([self.padding[2], self.padding[0]])  # top(H), left(W)
         c1 = c0 + inp_img.shape[2:]
         logits = logits[:, :, c0[0]:c1[0], c0[1]:c1[1]]
 
-        logits = logits.permute(1, 2, 3, 0)  # [B H W 1]
-        output = logits.reshape(1, np.prod(logits.shape))
+        logits = logits.permute(0, 2, 3, 1)  # [B H W 1]
+        output = logits.reshape(logits.shape[0], np.prod(logits.shape[1:]))
         if softmax:
             output = F.softmax(output, dim=-1)
-            output = output.reshape(logits.shape[1:])
+            output = output.reshape(logits.shape)
         return output

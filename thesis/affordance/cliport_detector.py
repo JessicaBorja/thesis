@@ -1,6 +1,6 @@
-from cliport.utils import utils
-from thesis.models.cliport.pick_module import PickModule
-from thesis.models.cliport.attention import OneStreamAttentionLangFusion
+import thesis.models.core.utils as utils
+from thesis.models.core.pick_module import PickModule
+from thesis.models.streams.one_stream_attention_lang_fusion import OneStreamAttentionLangFusion
 import numpy as np
 
 

@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule
-from cliport.utils import utils
+import thesis.models.core.utils as utils
 import logging
 
 
@@ -51,23 +51,19 @@ class PickModule(LightningModule):
         return self.attn_criterion(compute_err, frame, out, label)
 
     def attn_criterion(self, compute_err, inp, out, label):
-        # Get label.
-        # theta = label['theta'].detach().cpu().numpy()
-        # theta_i = theta / (2 * np.pi / self.attention.n_rotations)
-        # theta_i = np.int32(np.round(theta_i)) % self.attention.n_rotations
 
         inp_img = inp['inp_img']
-        # label_size = inp_img.shape[:2] + (self.attention.n_rotations,)
-        # label[p[0], p[1], theta_i] = 1
-        label_size = inp_img.shape[2:] + (1, )
-        aff_label = torch.zeros(label_size)
-        p0=label['p0'][0].detach().cpu().numpy()
-        assert len(p0) == 2, "len p0!=2: %d" % len(p0)
-        assert len(label_size) == 3, "label_size: %s" % str(label_size)
-        aff_label[p0[0], p0[1], 0] = 1
+        B = inp_img.shape[0]
 
-        aff_label = aff_label.permute((2, 0, 1))
-        aff_label = aff_label.reshape(1, np.prod(aff_label.shape))
+        # B, H, W, 1
+        label_size = (inp_img.shape[0], ) + inp_img.shape[2:]
+        aff_label = torch.zeros(label_size)
+        p0=label['p0'].detach().cpu().numpy()  # B, 2
+        aff_label[np.arange(B), p0[:, 0], p0[:, 1]] = 1  # B, H, W
+
+        # B, 1, H, W
+        # aff_label = aff_label.permute((2, 0, 1))
+        aff_label = aff_label.reshape(B, np.prod(aff_label.shape[1:]))  # B, H*W
         aff_label = aff_label.to(dtype=torch.float, device=out.device)
 
         # Get loss.
@@ -81,7 +77,6 @@ class PickModule(LightningModule):
             argmax = np.argmax(pick_conf)
             argmax = np.unravel_index(argmax, shape=pick_conf.shape)
             p0_pix = argmax[:2]
-            p0_theta = argmax[2] * (2 * np.pi / pick_conf.shape[2])
 
             err = {
                 'dist': np.linalg.norm(p0 - p0_pix, ord=1),
