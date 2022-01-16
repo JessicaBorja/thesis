@@ -24,8 +24,8 @@ dataset:
   cam: static
   n_train_ep: -1  # Train using all episodes
   img_resize:
-    static: 200
-    gripper: 64
+    static: 224  # clip img size
+    gripper: 96
     all: 100
 
 dataloader:
