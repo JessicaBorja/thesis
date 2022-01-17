@@ -7,8 +7,8 @@ import os
 
 class ClipLingUNetDetector(PickModule):
 
-    def __init__(self, cfg):
-        super().__init__(cfg)
+    def __init__(self, cfg, *args, **kwargs):
+        super().__init__(cfg, *args, **kwargs)
 
     def _build_model(self):
         stream_fcn = 'clip_lingunet'
@@ -25,9 +25,9 @@ class ClipLingUNetDetector(PickModule):
         inp_img = inp['inp_img']
         lang_goal = inp['lang_goal']
         out = self.attention(inp_img, lang_goal, softmax=softmax)
-        return out
+        return out  # B, H, W
 
-    def attn_step(self, frame, label, backprop=True, compute_err=False):
+    def attn_step(self, frame, label, compute_err=False):
         inp_img = frame['img']
         lang_goal = frame['lang_goal']
 
@@ -56,10 +56,14 @@ class ClipLingUNetDetector(PickModule):
         pick_inp = {'inp_img': img,
                     'lang_goal': [lang_goal]}
         pick_conf = self.attn_forward(pick_inp)
+        pick_inp["img"] = img
+        _, err = self.attn_step(pick_inp, obs["label"], compute_err=True)
+
         pick_conf = pick_conf.detach().cpu().numpy().squeeze()
         argmax = np.argmax(pick_conf)
         argmax = np.unravel_index(argmax, shape=pick_conf.shape)
         p0_pix = argmax[:2]
 
         return {"softmax": (pick_conf * 255).astype('uint8'),
-                "pixel": (p0_pix[1], p0_pix[0])}
+                "pixel": (p0_pix[1], p0_pix[0]),
+                "error": err}

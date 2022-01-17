@@ -10,14 +10,14 @@ import logging
 
 
 class PickModule(LightningModule):
-    def __init__(self, cfg):
+    def __init__(self, cfg, in_shape=None):
         super().__init__()
         # utils.set_seed(0)
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
         self.val_repeats = cfg.train.val_repeats
         self.total_steps = 0
-        self.in_shape = (200, 200, 3)
+        self.in_shape = (200, 200, 3) if in_shape is None else in_shape
         self._batch_loss = []
         self.cmd_log = logging.getLogger(__name__)
         self._build_model()
@@ -72,17 +72,24 @@ class PickModule(LightningModule):
         # Pixel and Rotation error (not used anywhere).
         err = {}
         if compute_err:
-            pick_conf = self.attn_forward(inp)
+            pick_conf = self.attn_forward(inp)[:, :, :, 0]  # B, H, W 
             pick_conf = pick_conf.detach().cpu().numpy()
-            argmax = np.argmax(pick_conf)
-            argmax = np.unravel_index(argmax, shape=pick_conf.shape)
-            p0_pix = argmax[:2]
-
+            indices = np.argmax(pick_conf.reshape((B,-1)), -1)
+            p0_pix = self.unravel_idx(indices, shape=pick_conf.shape[1:])
             err = {
-                'dist': np.linalg.norm(p0 - p0_pix, ord=1),
+                'dist': np.sum(np.linalg.norm(p0 - p0_pix, axis=1)),
                 #'theta': np.absolute((theta - p0_theta) % np.pi)
             }
         return loss, err
+
+    def unravel_idx(self, indices, shape):
+        coord = []
+        for dim in reversed(shape):
+            coord.append(indices % dim)
+            indices = indices // dim
+
+        coord = np.stack(coord[::-1], axis=-1)
+        return coord
 
     def training_step(self, batch, batch_idx):
         self.attention.train()
@@ -148,12 +155,7 @@ class PickModule(LightningModule):
         return dict(
             val_loss=val_total_loss,
             val_attn_dist_err=err0['dist'],
-            # val_attn_theta_err=err0['theta'],
         )
-
-    # def training_epoch_end(self, all_outputs):
-    #     super().training_epoch_end(all_outputs)
-    #     utils.set_seed(self.trainer.current_epoch+1)
 
     def validation_epoch_end(self, all_outputs):
         mean_val_total_loss = np.mean([v['val_loss'].item() for v in all_outputs])
@@ -162,14 +164,12 @@ class PickModule(LightningModule):
     
         self.log('Validation/loss', mean_val_total_loss)
         self.log('Validation/total_attn_dist_err', total_attn_dist_err)
-        # self.log('vl/total_attn_theta_err', total_attn_theta_err)
 
         print("\nAttn Err - Dist: {:.2f}".format(total_attn_dist_err))
 
         return dict(
             val_loss=mean_val_total_loss,
             total_attn_dist_err=total_attn_dist_err,
-            # total_attn_theta_err=total_attn_theta_err,
         )
 
 

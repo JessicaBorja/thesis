@@ -6,13 +6,16 @@ defaults:
   - override hydra/job_logging: colorlog
 
 # folders
-train_dir: ./
+load_from_last_ckpt: True
+checkpoint:
+  path: ./ # ${hydra_outputs}/2022-01-16/14-42-24_aff_rl
+  model_name: last.ckpt # epoch=49-step=34449.ckpt
 run_name: 'cliport_lang'
 
 trainer:
   # script configs
   gpus: -1
-  max_epochs: 50
+  max_epochs: 20
   check_val_every_n_epoch: 1
   num_sanity_val_steps: 1
   strategy: ddp
@@ -40,7 +43,7 @@ wandb:
     project: affordance_model
     offline: False
   saver:
-    monitor: 'val_loss'
+    monitor: 'Validation/loss'
     save_top_k: 2
     mode: min
     verbose: True

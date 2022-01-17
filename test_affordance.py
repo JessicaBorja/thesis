@@ -8,8 +8,7 @@ import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 
 from omegaconf import OmegaConf
-from thesis.utils.utils import get_hydra_launch_dir, overlay_mask
-from thesis.utils.utils import load_aff_model
+from thesis.utils.utils import get_hydra_launch_dir, overlay_mask, load_aff_model
 from thesis.datasets.calvin_data import CalvinDataLang, DataLoader
 
 
@@ -49,7 +48,8 @@ def main(cfg):
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
         obs = {"img": frame.copy(),
-               "lang_goal": inp["lang_goal"][0]}
+               "lang_goal": inp["lang_goal"][0],
+               "label": labels}
         out_img = frame.copy()
         for label in range(0, val.n_classes):
             color = colors[label]
@@ -72,6 +72,7 @@ def main(cfg):
         pred_img = frame.copy()
         pred_img = overlay_mask(pred["softmax"], pred_img, (0, 0, 255))
         pixel = pred["pixel"]
+        print(pred["error"], pred["pixel"], (x, y))
         pred_img = cv2.drawMarker(
                 pred_img,
                 (pixel[0], pixel[1]),

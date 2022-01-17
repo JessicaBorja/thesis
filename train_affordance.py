@@ -11,6 +11,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import logging
 from omegaconf import OmegaConf
+from thesis.utils.utils import get_hydra_launch_dir
+
 
 def print_cfg(cfg):
     print_cfg = OmegaConf.to_container(cfg)
@@ -30,10 +32,10 @@ def main(cfg):
     wandb_logger = WandbLogger(**cfg.wandb.logger)
 
     # Checkpoint saver
-    
-    checkpoint_path = os.path.join(cfg.train_dir, 'checkpoints')
-    last_checkpoint_path = os.path.join(checkpoint_path, 'last.ckpt')
-    last_checkpoint = last_checkpoint_path if os.path.exists(last_checkpoint_path) and cfg.load_from_last_ckpt else None
+    checkpoint_dir = get_hydra_launch_dir(cfg.checkpoint.path)
+    checkpoint_path = os.path.join(checkpoint_dir, 'checkpoints')
+    checkpoint_path = os.path.join(checkpoint_path, cfg.checkpoint.model_name)
+    last_checkpoint = checkpoint_path if os.path.exists(checkpoint_path) and cfg.load_from_last_ckpt else None
 
     # Initialize model
     checkpoint_callback = ModelCheckpoint(
@@ -45,18 +47,9 @@ def main(cfg):
     # Trainer
     trainer = Trainer(
         logger=wandb_logger,
-        checkpoint_callback=checkpoint_callback,
-        resume_from_checkpoint=last_checkpoint,
+        callbacks=[checkpoint_callback],
         **cfg.trainer
     )
-
-    # Resume epoch and global_steps
-    if last_checkpoint:
-        print(f"Resuming: {last_checkpoint}")
-        last_ckpt = torch.load(last_checkpoint)
-        trainer.current_epoch = last_ckpt['epoch']
-        trainer.global_step = last_ckpt['global_step']
-        del last_ckpt
 
     # Dataloaders
     train = CalvinDataLang(split="training", log=logger, **cfg.dataset)
@@ -65,15 +58,22 @@ def main(cfg):
     logger.info("val_data {}".format(val.__len__()))
 
     train_loader = DataLoader(train, shuffle=True, **cfg.dataloader)
-    val_loader = DataLoader(val, **cfg.dataloader)
+    val_loader = DataLoader(val, shuffle=True, **cfg.dataloader)
     logger.info("train minibatches {}".format(len(train_loader)))
     logger.info("val minibatches {}".format(len(val_loader)))
 
     # Initialize agent
-    model = hydra.utils.instantiate(cfg.aff_detection)
+    in_shape = train.out_shape[::-1]  # H, W, C
+    model = hydra.utils.instantiate(cfg.aff_detection, in_shape = in_shape)
+
+    # Resume epoch and global_steps
+    if last_checkpoint:
+        print(f"Resuming: {last_checkpoint}")
+        model = model.load_from_checkpoint(last_checkpoint).cuda()
+        logger.info("Model successfully loaded: %s" % last_checkpoint)
 
     # Main training loop
-    trainer.fit(model, train_loader, val_loader)
+    trainer.fit(model, train_loader, val_loader, ckpt_path=last_checkpoint)
 
 
 if __name__ == '__main__':

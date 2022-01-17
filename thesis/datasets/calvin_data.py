@@ -31,7 +31,8 @@ class CalvinDataLang(Dataset):
         self.data = self._get_split_data(_data_info, split, cam, n_train_ep)
         self.img_resize = img_resize
         self.transforms = get_transforms(transforms_cfg[split], img_resize[cam])
-        self.out_shape = self.get_channels(img_resize[cam])
+        self.out_shape = self.get_shape(img_resize[cam])
+
         # Excludes background
         self.n_classes = _data_info["n_classes"] if cam == "static" else 1
         self.resize = (self.img_resize[self.cam], self.img_resize[self.cam])
@@ -43,7 +44,7 @@ class CalvinDataLang(Dataset):
             data = json.load(f)
         return data
 
-    def get_channels(self, in_size):
+    def get_shape(self, in_size):
         test_tensor = torch.zeros((3, in_size, in_size))
         test_tensor = self.transforms(test_tensor)
         return test_tensor.shape  # C, H, W
