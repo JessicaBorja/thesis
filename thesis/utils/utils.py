@@ -2,6 +2,59 @@ import numpy as np
 import hydra
 import os
 from torchvision import transforms
+import torch
+from torch.autograd import Variable
+from PIL import Image
+import logging
+logger = logging.getLogger(__name__)
+
+
+def load_aff_model(hydra_run_dir, model_name, model_cfg):
+    # Load model
+    checkpoint_path = os.path.join(hydra_run_dir, 'checkpoints')
+    checkpoint_path = os.path.join(checkpoint_path, model_name)
+    if(os.path.isfile(checkpoint_path)):
+        model = hydra.utils.instantiate(model_cfg)
+        model = model.load_from_checkpoint(checkpoint_path).cuda()
+        logger.info("Model successfully loaded: %s" % checkpoint_path)
+    else:
+        model = hydra.utils.instantiate(model_cfg).cuda()
+        logger.info("No checkpoint file found, loading untrained model: %s" % checkpoint_path)
+    return model
+
+
+def overlay_mask(mask, img, color):
+    """
+    mask: np.array
+        - shape: (H, W)
+        - range: 0 - 255.0
+        - uint8
+    img: np.array
+        - shape: (H, W, 3)
+        - range: 0 - 255
+        - uint8
+    color: tuple
+        - tuple size 3 RGB
+        - range: 0 - 255
+    """
+    result = Image.fromarray(np.uint8(img))
+    pil_mask = Image.fromarray(np.uint8(mask))
+    color = Image.new("RGB", result.size, color)
+    result.paste(color, (0, 0), pil_mask)
+    result = np.array(result)
+    return result
+
+
+def tt(x, device):
+    if isinstance(x, dict):
+        dict_of_list = {}
+        for key, val in x.items():
+            dict_of_list[key] = Variable(torch.from_numpy(val).float().to(device),
+                                         requires_grad=False)
+        return dict_of_list
+    else:
+        return Variable(torch.from_numpy(x).float().to(device),
+                        requires_grad=False)
 
 
 def get_transforms(transforms_cfg, img_size=None):

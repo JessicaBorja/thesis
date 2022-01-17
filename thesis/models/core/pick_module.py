@@ -12,8 +12,8 @@ import logging
 class PickModule(LightningModule):
     def __init__(self, cfg):
         super().__init__()
-        utils.set_seed(0)
-        self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu') # this is bad for PL :(
+        # utils.set_seed(0)
+        self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
         self.val_repeats = cfg.train.val_repeats
         self.total_steps = 0

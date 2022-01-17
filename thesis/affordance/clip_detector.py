@@ -24,16 +24,31 @@ class CLIPPointDetector(BaseDetector):
         self.resize = resize
         self.viz = viz
     
-    def find_target(self, inputs: dict):
+    def load_from_checkpoint(self, *args, **kwargs):
+        pass
+
+    def cuda(self):
+        new_obj = CLIPPointDetector(self.resize,
+                                    self.clip_model,
+                                    self.saliency_layer,
+                                    self.blur,
+                                    self.viz)
+        new_obj.model.cuda()
+        return new_obj
+
+    def eval(self):
+        self.model.eval()
+
+    def predict(self, inputs: dict):
         '''
             inputs:
-                rgb_obs: np.ndarray H, W, C
-                caption: str
+                img: np.ndarray H, W, C
+                lang_goal: str
         '''
-        img = Image.fromarray(inputs["rgb_obs"])
+        img = Image.fromarray(inputs["img"])
 
         image_input = self.preprocess(img).unsqueeze(0).to(self.device)
-        image_caption = inputs["caption"]
+        image_caption = inputs["lang_goal"]
         text_input = clip.tokenize([image_caption]).to(self.device)
         attn_map = gradCAM(
             self.model.visual,
@@ -63,7 +78,7 @@ class CLIPPointDetector(BaseDetector):
             # plt.imshow(attn_map)
             # plt.axis("off")
             # plt.show()
-        return (u, v)
+        return {"pixel": (u, v)}
 
     def normalize(self, x: np.ndarray) -> np.ndarray:
         # Normalize to [0, 1].

@@ -1,7 +1,8 @@
-import thesis.models.core.utils as utils
 from thesis.models.core.pick_module import PickModule
 from thesis.models.streams.one_stream_attention_lang_fusion import OneStreamAttentionLangFusion
+from thesis.utils.utils import tt
 import numpy as np
+import os
 
 
 class ClipLingUNetDetector(PickModule):
@@ -35,27 +36,30 @@ class ClipLingUNetDetector(PickModule):
         out = self.attn_forward(inp, softmax=False)
         return self.attn_criterion(compute_err, inp, out, label)
 
-    def act(self, obs, info, goal=None):  # pylint: disable=unused-argument
-        """Run inference and return best action given visual observations."""
-        # Get heightmap from RGB-D images.
-        img = self.test_ds.get_image(obs)
-        lang_goal = info['lang_goal']
+    def predict(self, obs, goal=None):
+        """ Run inference and return best pixel given visual observations.
+            Args:
+                obs(dict):
+                    img: np.ndarray (H, W, C)  values between 0-255 uint8
+                    lang_goal: str
+                goal(str)
+            Returns:
+                (Tuple) nd.array: pixel position
 
+        """
+        # Get inputs
+        img = np.expand_dims(obs["img"], 0)  # B, H, W, C
+        img = tt(img, self.device) / 255  # 0 - 1
+        img = img.permute((0, 3, 1, 2))
+        lang_goal = goal if goal is not None else obs["lang_goal"]
         # Attention model forward pass.
-        pick_inp = {'inp_img': img, 'lang_goal': lang_goal}
+        pick_inp = {'inp_img': img,
+                    'lang_goal': [lang_goal]}
         pick_conf = self.attn_forward(pick_inp)
-        pick_conf = pick_conf.detach().cpu().numpy()
+        pick_conf = pick_conf.detach().cpu().numpy().squeeze()
         argmax = np.argmax(pick_conf)
         argmax = np.unravel_index(argmax, shape=pick_conf.shape)
         p0_pix = argmax[:2]
-        p0_theta = argmax[2] * (2 * np.pi / pick_conf.shape[2])
 
-        # Pixels to end effector poses.
-        # hmap = img[:, :, 3]
-        # p0_xyz = utils.pix_to_xyz(p0_pix, hmap, self.bounds, self.pix_size)
-        # p0_xyzw = utils.eulerXYZ_to_quatXYZW((0, 0, -p0_theta))
-
-        return {
-            # 'pose0': (np.asarray(p0_xyz), np.asarray(p0_xyzw)),
-            'pick': [p0_pix[0], p0_pix[1], p0_theta],
-        }
+        return {"softmax": (pick_conf * 255).astype('uint8'),
+                "pixel": (p0_pix[1], p0_pix[0])}

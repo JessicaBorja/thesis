@@ -1,0 +1,32 @@
+defaults:
+  - aff_detection: cliport_lang
+  - paths: general_paths
+  - transforms@dataset.transforms_cfg: rgb_lang
+  - override hydra/hydra_logging: colorlog
+  - override hydra/job_logging: colorlog
+
+# folders
+checkpoint:
+  path: ${hydra_outputs}/2022-01-16/14-42-24_aff_rl
+  model_name: epoch=49-step=34449.ckpt
+
+dataset_name: calvin_lang
+dataset:
+  data_dir: ${paths.datasets}/${dataset_name}
+  cam: static
+  n_train_ep: -1  # Train using all episodes
+  img_resize:
+    static: 224  # clip img size
+    gripper: 96
+    all: 100
+
+dataloader:
+  num_workers: 4
+  batch_size: 4
+  pin_memory: true
+
+#-- Hydra config --#
+hydra_outputs: ./hydra_outputs/affordance_model/
+hydra:
+  run:
+    dir: ${hydra_outputs}/${now:%Y-%m-%d}/${now:%H-%M-%S} # Output

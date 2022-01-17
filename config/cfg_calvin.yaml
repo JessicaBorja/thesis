@@ -1,8 +1,8 @@
 defaults:
   - robot: panda_longer_finger
-  - scene: calvin_scene_A
+  - scene: calvin_scene_D
   - env: env
-  - aff_detection: clip
+  - aff_detection: cliport_lang
   - cameras: static_and_gripper
   - paths: general_paths
   - override hydra/hydra_logging: colorlog
@@ -10,6 +10,11 @@ defaults:
 
 data_path: ${paths.vr_data}
 model_name: full
+
+aff_checkpoint:
+  path: .hydra_outputs/affordance_model/2022-01-16/14-47-31_aff_rl
+  model_name: epoch=49-step=68849.ckpt
+  img_resize: 200
 
 agent:
   _target_: thesis.agents.base_agent.BaseAgent
