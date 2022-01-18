@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import pybullet as p
 import pytorch_lightning as pl
+import time
 from thesis.utils.utils import get_hydra_launch_dir, load_aff_model, resize_pixel
 
 def viz_img(rgb_img, lang_goal, pred, old_shape):
@@ -55,7 +56,6 @@ def main(cfg):
     for i in range(10):  # 5 instructions
         rgb_obs =  ns["rgb_obs"]["rgb_static"]
         caption = input("Type an instruction \n")
-        ns = agent.reset_position()
         img_input = cv2.resize(rgb_obs, (im_size, im_size))
         pred = point_detector.predict({"img": img_input,
                                        "lang_goal": caption})
@@ -67,7 +67,8 @@ def main(cfg):
         world_pos = env.cameras[0].deproject(pixel, depth)
         p.addUserDebugText("t", textPosition=world_pos, textColorRGB=[1, 0, 1])
         ns = agent.move_to(world_pos, gripper_action=1)
-
+        time.sleep(1)
+        ns = agent.reset_position()
 
 if __name__ == "__main__":
     main()

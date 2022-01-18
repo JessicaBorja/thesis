@@ -3,7 +3,7 @@ _recursive_: False
 cfg:
   train:
     batchnorm: False # important: False because batch_size=1
-    lr: 1e-4
+    lr: 1e-5
     attn_stream_fusion_type: 'add'
     lang_fusion_type: 'mult'
     load_from_last_ckpt: True

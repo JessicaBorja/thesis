@@ -7,10 +7,10 @@ defaults:
 
 # folders
 checkpoint:
-  path: ${hydra_outputs}/2022-01-16/14-42-24_aff_rl
-  model_name: epoch=49-step=34449.ckpt
+  path: ./hydra_outputs/affordance_model/2022-01-18/00-25-21_aff_rl
+  model_name: x.ckpt # cliport_bs32_epoch=00.ckpt
 
-dataset_name: calvin_lang
+dataset_name: calvin_lang_contact
 dataset:
   data_dir: ${paths.datasets}/${dataset_name}
   cam: static
@@ -26,7 +26,7 @@ dataloader:
   pin_memory: true
 
 #-- Hydra config --#
-hydra_outputs: ./hydra_outputs/affordance_model/
+hydra_outputs: ./hydra_outputs/tmp/
 hydra:
   run:
     dir: ${hydra_outputs}/${now:%Y-%m-%d}/${now:%H-%M-%S} # Output

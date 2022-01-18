@@ -15,7 +15,7 @@ run_name: 'cliport_lang'
 trainer:
   # script configs
   gpus: -1
-  max_epochs: 20
+  max_epochs: 15
   check_val_every_n_epoch: 1
   num_sanity_val_steps: 1
   strategy: ddp
@@ -33,7 +33,7 @@ dataset:
 
 dataloader:
   num_workers: 4
-  batch_size: 4
+  batch_size: 16
   pin_memory: true
 
 wandb:

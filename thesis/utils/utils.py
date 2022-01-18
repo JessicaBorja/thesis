@@ -6,6 +6,7 @@ import torch
 from torch.autograd import Variable
 from PIL import Image
 import logging
+import cv2
 logger = logging.getLogger(__name__)
 
 
@@ -21,6 +22,28 @@ def load_aff_model(hydra_run_dir, model_name, model_cfg):
         model = hydra.utils.instantiate(model_cfg).cuda()
         logger.info("No checkpoint file found, loading untrained model: %s" % checkpoint_path)
     return model
+
+
+def blend_imgs(background, foreground, alpha=0.5):
+    """
+    Blend two images of the same shape with an alpha value
+    img1: np.array(uint8)
+        - shape: (H, W)
+        - range: 0 - 255
+    img1: np.array(uint8)
+        - shape: (H, W, 3)
+        - range: 0 - 255
+    alpha(float): (0, 1) value
+    """
+    foreground = foreground.astype(float)
+    background = background.astype(float)
+
+    alpha = np.ones_like(foreground, dtype=float) * alpha # alpha.astype(float)/255
+    foreground = cv2.multiply(alpha, foreground)
+    background = cv2.multiply(1.0 - alpha, background)
+    outImage = cv2.add(foreground, background)/255
+    # outImage = ((outImage + 1)/2 * 255).astype('uint8')
+    return outImage
 
 
 def overlay_mask(mask, img, color):

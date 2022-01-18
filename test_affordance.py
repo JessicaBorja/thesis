@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 
 from omegaconf import OmegaConf
-from thesis.utils.utils import get_hydra_launch_dir, overlay_mask, load_aff_model
+from thesis.utils.utils import blend_imgs, get_hydra_launch_dir, overlay_mask, load_aff_model
 from thesis.datasets.calvin_data import CalvinDataLang, DataLoader
 
 
@@ -48,8 +48,7 @@ def main(cfg):
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
         obs = {"img": frame.copy(),
-               "lang_goal": inp["lang_goal"][0],
-               "label": labels}
+               "lang_goal": inp["lang_goal"][0]}
         out_img = frame.copy()
         for label in range(0, val.n_classes):
             color = colors[label]
@@ -68,11 +67,16 @@ def main(cfg):
                 thickness=2,
                 line_type=cv2.LINE_AA,
             )
-        pred = model.predict(obs)
+        info = None  # labels
+        pred = model.predict(obs, info=info)
         pred_img = frame.copy()
-        pred_img = overlay_mask(pred["softmax"], pred_img, (0, 0, 255))
+
+        cm = plt.get_cmap('viridis')
+        heatmap = cm(pred["softmax"])[:, :, [0,1,2]] * 255
+        heatmap = blend_imgs(frame.copy(), heatmap, alpha=0.7)
+
         pixel = pred["pixel"]
-        print(pred["error"], pred["pixel"], (x, y))
+        # print(pred["error"], pred["pixel"], (x, y))
         pred_img = cv2.drawMarker(
                 pred_img,
                 (pixel[0], pixel[1]),
@@ -82,10 +86,15 @@ def main(cfg):
                 thickness=2,
                 line_type=cv2.LINE_AA,
             )
-        pred_img = cv2.resize(pred_img, (300, 300), interpolation=cv2.INTER_CUBIC)
-        out_img = cv2.resize(out_img, (300, 300), interpolation=cv2.INTER_CUBIC)
 
-        out_img = np.hstack([out_img, pred_img])
+        new_size = (400, 400)
+        pred_img = cv2.resize(pred_img, new_size, interpolation=cv2.INTER_CUBIC)
+        out_img = cv2.resize(out_img, new_size, interpolation=cv2.INTER_CUBIC)
+        heatmap = cv2.resize(heatmap, new_size, interpolation=cv2.INTER_CUBIC)
+        out_img = out_img.astype(float) / 255
+        pred_img = pred_img.astype(float) / 255
+        out_img = np.concatenate([out_img, pred_img, heatmap], axis=1)
+
 
         # Prints the text.
         font_scale = 0.6
@@ -104,7 +113,6 @@ def main(cfg):
             color=(255, 255, 255),
             thickness=thickness,
         )
-
         cv2.imshow("img", out_img[:, :, ::-1])
         cv2.waitKey(0)
 

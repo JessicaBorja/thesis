@@ -36,7 +36,7 @@ class ClipLingUNetDetector(PickModule):
         out = self.attn_forward(inp, softmax=False)
         return self.attn_criterion(compute_err, inp, out, label)
 
-    def predict(self, obs, goal=None):
+    def predict(self, obs, goal=None, info=None):
         """ Run inference and return best pixel given visual observations.
             Args:
                 obs(dict):
@@ -57,13 +57,20 @@ class ClipLingUNetDetector(PickModule):
                     'lang_goal': [lang_goal]}
         pick_conf = self.attn_forward(pick_inp)
         pick_inp["img"] = img
-        _, err = self.attn_step(pick_inp, obs["label"], compute_err=True)
 
-        pick_conf = pick_conf.detach().cpu().numpy().squeeze()
-        argmax = np.argmax(pick_conf)
-        argmax = np.unravel_index(argmax, shape=pick_conf.shape)
+        err = None
+        if info is not None:
+            _, err = self.attn_step(pick_inp, info, compute_err=True)
+
+        logits = pick_conf.detach().cpu().numpy().squeeze()
+        argmax = np.argmax(logits)
+        argmax = np.unravel_index(argmax, shape=logits.shape)
         p0_pix = argmax[:2]
+        
+        affordance_heatmap_scale = 30
+        pick_logits_disp = (logits * 255 * affordance_heatmap_scale).astype('uint8')
+        pick_logits_disp_masked = np.ma.masked_where(pick_logits_disp < 0, pick_logits_disp)
 
-        return {"softmax": (pick_conf * 255).astype('uint8'),
+        return {"softmax": pick_logits_disp,
                 "pixel": (p0_pix[1], p0_pix[0]),
                 "error": err}
