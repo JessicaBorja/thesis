@@ -21,7 +21,7 @@ trainer:
   strategy: ddp
   precision: 32
 
-dataset_name: calvin_lang
+dataset_name: calvin_lang_contactInfo
 dataset:
   data_dir: ${paths.datasets}/${dataset_name}
   cam: static
@@ -43,12 +43,17 @@ wandb:
     project: affordance_model
     offline: False
   saver:
-    monitor: 'Validation/loss'
-    save_top_k: 2
-    mode: min
-    verbose: True
-    save_last: True
-
+    val_loss:
+      monitor: 'Validation/loss'
+      save_top_k: 2
+      mode: min
+      verbose: True
+      save_last: True
+    val_err:
+      monitor: 'Validation/total_attn_dist_err'
+      save_top_k: 2
+      mode: min
+      verbose: True
 #-- Hydra config --#
 hydra_outputs: ./hydra_outputs/affordance_model/
 hydra:

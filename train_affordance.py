@@ -37,13 +37,15 @@ def main(cfg):
     checkpoint_path = os.path.join(checkpoint_path, cfg.checkpoint.model_name)
     last_checkpoint = checkpoint_path if os.path.exists(checkpoint_path) and cfg.load_from_last_ckpt else None
 
-    # Initialize model
-    checkpoint_callback = ModelCheckpoint(
-        dirpath="checkpoints",
-        filename="%s_{epoch:02d}" % cfg.run_name,
-        **cfg.wandb.saver
-    )
-
+    # Initialize checkpoints
+    callbacks = []
+    for name, saver_cfg in cfg.wandb.saver.items():
+        checkpoint_callback = ModelCheckpoint(
+            dirpath="checkpoints",
+            filename="%s_{epoch:02d}_%s" % (cfg.run_name, name),
+            **saver_cfg
+        )
+        callbacks.append(checkpoint_callback)
     # Trainer
     trainer = Trainer(
         logger=wandb_logger,
