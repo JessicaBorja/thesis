@@ -1,0 +1,4 @@
+name: 'clip_unet_lat'
+
+defaults:
+  - /transforms: clip

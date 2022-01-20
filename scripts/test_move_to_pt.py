@@ -65,7 +65,7 @@ def main(cfg):
         # World pos
         depth = ns["depth_obs"]["depth_static"]
         world_pos = env.cameras[0].deproject(pixel, depth)
-        p.addUserDebugText("t", textPosition=world_pos, textColorRGB=[1, 0, 1])
+        # p.addUserDebugText("t", textPosition=world_pos, textColorRGB=[1, 0, 1])
         ns = agent.move_to(world_pos, gripper_action=1)
         time.sleep(1)
         ns = agent.reset_position()

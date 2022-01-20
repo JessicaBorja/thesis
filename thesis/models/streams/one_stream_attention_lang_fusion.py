@@ -5,24 +5,21 @@
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-
+import torch.nn as nn
 import thesis.models as models
 
+import hydra
 
-class OneStreamAttentionLangFusion(nn.Module):
-    """Attention (a.k.a Pick) module with language features fused at the bottleneck."""
+class AttentionLangFusion(nn.Module):
 
-    def __init__(self, stream_fcn, in_shape, n_rotations, preprocess, cfg, device):
+    def __init__(self, stream_fcn, in_shape, cfg, device):
         super().__init__()
-        self.fusion_type = cfg.train.attn_stream_fusion_type
+        self.fusion_type = cfg.attn_stream_fusion_type
         self.stream_fcn = stream_fcn
-        self.n_rotations = n_rotations
-        self.preprocess = preprocess
         self.cfg = cfg
         self.device = device
-        self.batchnorm = self.cfg.train.batchnorm
+        self.batchnorm = self.cfg.batchnorm
 
         self.padding = np.zeros((3, 2), dtype=int) # H, W, C
         max_dim = np.max(in_shape[:2])
@@ -40,10 +37,11 @@ class OneStreamAttentionLangFusion(nn.Module):
         self._build_nets()
 
     def _build_nets(self):
-        stream_one_fcn, _ = self.stream_fcn
+        stream_one_fcn = self.stream_fcn
         stream_one_model = models.names[stream_one_fcn]
 
-        self.attn_stream_one = stream_one_model(self.in_shape, 1, self.cfg, self.device, self.preprocess)
+        self.attn_stream_one = stream_one_model(self.in_shape, 1, self.cfg, self.device)
+
         print(f"Attn FCN: {stream_one_fcn}")
 
     def attend(self, x, l):

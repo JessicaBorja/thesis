@@ -15,7 +15,7 @@ class PickModule(LightningModule):
         # utils.set_seed(0)
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
-        self.val_repeats = cfg.train.val_repeats
+        self.val_repeats = cfg.val_repeats
         self.total_steps = 0
         self.in_shape = (200, 200, 3) if in_shape is None else in_shape
         self._batch_loss = []
@@ -41,7 +41,7 @@ class PickModule(LightningModule):
             raise NotImplementedError()
 
     def attn_forward(self, inp, softmax=True):
-        inp_img = inp['img']
+        inp_img = inp['inp_img']
         lang_goal = inp['lang_goal']
         out = self.attention(inp_img, lang_goal, softmax=softmax)
         return out
@@ -108,25 +108,6 @@ class PickModule(LightningModule):
             loss=total_loss,
         )
 
-    def check_save_iteration(self):
-        global_step = self.trainer.global_step
-        if (global_step + 1) in self.save_steps:
-            self.trainer.run_evaluation()
-            val_loss = self.trainer.callback_metrics['val_loss']
-            steps = f'{global_step + 1:05d}'
-            filename = f"steps={steps}-val_loss={val_loss:0.8f}.ckpt"
-            checkpoint_path = os.path.join(self.cfg['train']['train_dir'], 'checkpoints')
-            ckpt_path = os.path.join(checkpoint_path, filename)
-            self.trainer.save_checkpoint(ckpt_path)
-
-        if (global_step + 1) % 1000 == 0:
-            self.save_last_checkpoint()
-
-    def save_last_checkpoint(self):
-        checkpoint_path = os.path.join(self.cfg['train']['train_dir'], 'checkpoints')
-        ckpt_path = os.path.join(checkpoint_path, 'last.ckpt')
-        self.trainer.save_checkpoint(ckpt_path)
-
     def log_stats(self, split, max_batch, batch_idx, loss, error):
         if batch_idx >= max_batch - 1:
             e_loss = 0 if len(self._batch_loss) == 0 else np.mean(self._batch_loss)
@@ -172,9 +153,8 @@ class PickModule(LightningModule):
             total_attn_dist_err=total_attn_dist_err,
         )
 
-
     def configure_optimizers(self):
-        optim = torch.optim.Adam(self.attention.parameters(), lr=self.cfg.train.lr)
+        optim = torch.optim.Adam(self.attention.parameters(), lr=self.cfg.lr)
         return optim
 
     def load(self, model_path):

@@ -1,5 +1,5 @@
 from thesis.models.core.pick_module import PickModule
-from thesis.models.streams.one_stream_attention_lang_fusion import OneStreamAttentionLangFusion
+from thesis.models.streams.one_stream_attention_lang_fusion import AttentionLangFusion
 from thesis.utils.utils import tt
 import numpy as np
 import os
@@ -11,12 +11,9 @@ class ClipLingUNetDetector(PickModule):
         super().__init__(cfg, *args, **kwargs)
 
     def _build_model(self):
-        stream_fcn = 'clip_lingunet'
-        self.attention = OneStreamAttentionLangFusion(
-            stream_fcn=(stream_fcn, None),
+        self.attention = AttentionLangFusion(
+            stream_fcn=self.cfg.streams.name,
             in_shape=self.in_shape,
-            n_rotations=1,
-            preprocess=None, ## Set on clip_lingunet_lat to match clip preprocessing
             cfg=self.cfg,
             device=self.device_type,
         )
@@ -32,7 +29,6 @@ class ClipLingUNetDetector(PickModule):
         lang_goal = frame['lang_goal']
 
         inp = {'inp_img': inp_img, 'lang_goal': lang_goal}
-        # p0, p0_theta = label['p0'], label['p0_theta']
         out = self.attn_forward(inp, softmax=False)
         return self.attn_criterion(compute_err, inp, out, label)
 

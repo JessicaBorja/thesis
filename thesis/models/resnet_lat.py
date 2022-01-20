@@ -4,15 +4,14 @@ import torch.nn.functional as F
 from thesis.models.resnet import ConvBlock, IdentityBlock
 
 class ResNet45_10s(nn.Module):
-    def __init__(self, input_shape, output_dim, cfg, device, preprocess):
+    def __init__(self, input_shape, output_dim, cfg, device):
         super(ResNet45_10s, self).__init__()
         self.input_shape = input_shape
         self.input_dim = input_shape[-1]
         self.output_dim = output_dim
         self.cfg = cfg
         self.device = device
-        self.batchnorm = self.cfg['train']['batchnorm']
-        self.preprocess = preprocess
+        self.batchnorm = self.cfg['batchnorm']
 
         self._make_layers()
 
@@ -90,7 +89,6 @@ class ResNet45_10s(nn.Module):
         )
 
     def forward(self, x):
-        x = self.preprocess(x, dist='transporter')
         in_shape = x.shape
 
         # encoder

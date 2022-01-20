@@ -6,16 +6,15 @@ from thesis.models.resnet import ConvBlock, IdentityBlock
 
 
 class ResNet43_8s_lang(nn.Module):
-    def __init__(self, input_shape, output_dim, cfg, device, preprocess):
+    def __init__(self, input_shape, output_dim, cfg, device):
         super(ResNet43_8s_lang, self).__init__()
         self.input_shape = input_shape
         self.input_dim = input_shape[-1]
         self.output_dim = output_dim
         self.cfg = cfg
         self.device = device
-        self.batchnorm = self.cfg['train']['batchnorm']
-        self.lang_fusion_type = self.cfg['train']['lang_fusion_type']
-        self.preprocess = preprocess
+        self.batchnorm = self.cfg['batchnorm']
+        self.lang_fusion_type = self.cfg['lang_fusion_type']
 
         self._make_layers()
 
@@ -92,8 +91,6 @@ class ResNet43_8s_lang(nn.Module):
         return text_feat, text_embeddings.last_hidden_state, text_mask
 
     def forward(self, x, l):
-        x = self.preprocess(x, dist='transporter')
-
         # encode language
         l_enc, l_emb, l_mask = self.encode_text(l)
         l_input = l_emb if 'word' in self.lang_fusion_type else l_enc

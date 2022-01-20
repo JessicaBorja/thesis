@@ -14,18 +14,17 @@ from thesis.models.core.fusion import FusionConvLat
 class RN50BertLingUNetLat(nn.Module):
     """ ImageNet RN50 & Bert with U-Net skip connections """
 
-    def __init__(self, input_shape, output_dim, cfg, device, preprocess):
+    def __init__(self, input_shape, output_dim, cfg, device):
         super(RN50BertLingUNetLat, self).__init__()
         self.input_shape = input_shape
         self.output_dim = output_dim
         self.input_dim = 2048
         self.cfg = cfg
-        self.batchnorm = self.cfg['train']['batchnorm']
-        self.lang_fusion_type = self.cfg['train']['lang_fusion_type']
+        self.batchnorm = self.cfg['batchnorm']
+        self.lang_fusion_type = self.cfg['lang_fusion_type']
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
         self.device = device
-        self.preprocess = preprocess
 
         self._load_vision_fcn()
         self._load_lang_enc()
@@ -117,8 +116,6 @@ class RN50BertLingUNetLat(nn.Module):
         return text_feat, text_embeddings.last_hidden_state, text_mask
 
     def forward(self, x, lat, l):
-        x = self.preprocess(x, dist='clip')
-
         in_type = x.dtype
         in_shape = x.shape
         x = x[:,:3]  # select RGB

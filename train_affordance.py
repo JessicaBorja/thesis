@@ -66,7 +66,7 @@ def main(cfg):
 
     # Initialize agent
     in_shape = train.out_shape[::-1]  # H, W, C
-    model = hydra.utils.instantiate(cfg.aff_detection, in_shape = in_shape)
+    model = hydra.utils.instantiate(cfg.aff_detection.model, in_shape=in_shape)
 
     # Resume epoch and global_steps
     if last_checkpoint:

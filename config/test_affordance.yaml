@@ -7,10 +7,12 @@ defaults:
 
 # folders
 checkpoint:
+  # path: ./hydra_outputs/affordance_model/2022-01-18/16-20-15_aff_rl
+  # model_name: cliport_bs32_notrasforms_epoch=00_val_err.ckpt # cliport_bs32_epoch=00.ckpt
   path: ./hydra_outputs/affordance_model/2022-01-18/00-25-21_aff_rl
-  model_name: x.ckpt # cliport_bs32_epoch=00.ckpt
+  model_name: cliport_bs32_epoch=00.ckpt # last.ckpt
 
-dataset_name: calvin_lang_contact
+dataset_name: calvin_lang_contactInfo
 dataset:
   data_dir: ${paths.datasets}/${dataset_name}
   cam: static

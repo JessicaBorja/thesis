@@ -13,7 +13,9 @@ model_name: full
 
 aff_checkpoint:
   path: ./hydra_outputs/affordance_model/2022-01-18/00-25-21_aff_rl
-  model_name: last.ckpt
+  model_name: cliport_bs32_epoch=00.ckpt # last.ckpt
+  # path: ./hydra_outputs/affordance_model/2022-01-18/16-20-15_aff_rl
+  # model_name: cliport_bs32_notrasforms_epoch=00_val_err.ckpt
   img_resize: 224
 
 agent:

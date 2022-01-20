@@ -1,0 +1,22 @@
+training:
+  - _target_: torchvision.transforms.Resize
+    size: ${img_size}
+    interpolation: 'bicubic'
+  - _target_: torchvision.transforms.CenterCrop
+    size: ${img_size}
+  - _target_: affordance.dataloader.transforms.ScaleImageTensor  # Scale 0-255 to 0-1
+  - torchvision.transforms.Normalize:
+    mean: [0.18877631, 0.18877631, 0.18877631]
+    std: [0.07276466, 0.07276466, 0.07276466]
+
+validation:
+  - _target_: torchvision.transforms.Resize
+    size: ${img_size}
+    interpolation: 'bicubic'
+  - _target_: torchvision.transforms.CenterCrop
+    size: ${img_size}
+  - _target_: affordance.dataloader.transforms.ScaleImageTensor  # Scale 0-255 to 0-1
+  - torchvision.transforms.Normalize:
+    mean: [0.18877631, 0.18877631, 0.18877631]
+    std: [0.07276466, 0.07276466, 0.07276466]
+

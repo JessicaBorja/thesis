@@ -15,7 +15,7 @@ class CalvinDataLang(Dataset):
         self,
         img_resize,
         data_dir,
-        transforms_cfg,
+        transforms,
         n_train_ep=-1,
         split="training",
         cam="static",
@@ -30,7 +30,7 @@ class CalvinDataLang(Dataset):
         _data_info = self.read_json(os.path.join(self.data_dir, "episodes_split.json"))
         self.data = self._get_split_data(_data_info, split, cam, n_train_ep)
         self.img_resize = img_resize
-        self.transforms = get_transforms(transforms_cfg[split], img_resize[cam])
+        self.transforms = get_transforms(transforms[split], img_resize[cam])
         self.out_shape = self.get_shape(img_resize[cam])
 
         # Excludes background

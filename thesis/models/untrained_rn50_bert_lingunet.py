@@ -9,8 +9,8 @@ from thesis.models.rn50_bert_lingunet import RN50BertLingUNet
 class UntrainedRN50BertLingUNet(RN50BertLingUNet):
     """ Untrained ImageNet RN50 & Bert with U-Net skip connections """
 
-    def __init__(self, input_shape, output_dim, cfg, device, preprocess):
-        super().__init__(input_shape, output_dim, cfg, device, preprocess)
+    def __init__(self, input_shape, output_dim, cfg, device):
+        super().__init__(input_shape, output_dim, cfg, device)
 
     def _load_vision_fcn(self):
         resnet50 = models.resnet50(pretrained=False)

@@ -7,6 +7,8 @@ from torch.autograd import Variable
 from PIL import Image
 import logging
 import cv2
+from torchvision.transforms import InterpolationMode
+
 logger = logging.getLogger(__name__)
 
 
@@ -84,13 +86,10 @@ def get_transforms(transforms_cfg, img_size=None):
     transforms_lst = []
     transforms_config = transforms_cfg.copy()
     for cfg in transforms_config:
-        if (cfg._target_ == "torchvision.transforms.Resize" or "RandomCrop" in cfg._target_) and img_size is not None:
+        if ("size" in cfg) and img_size is not None:
             cfg.size = img_size
-        if "vapo.affordance_model.utils.transforms" in cfg._target_:
-            cfg._target_ = cfg._target_.replace(
-                "vapo.affordance_model.utils.transforms",
-                "affordance.dataloader.transforms",
-            )
+        if("interpolation" in cfg):
+            cfg.interpolation = InterpolationMode(cfg.interpolation)
         transforms_lst.append(hydra.utils.instantiate(cfg))
 
     return transforms.Compose(transforms_lst)

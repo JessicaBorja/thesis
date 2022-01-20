@@ -15,34 +15,26 @@ from thesis.models.core.fusion import FusionConvLat
 class CLIPLingUNetLat(nn.Module):
     """ CLIP RN50 with U-Net skip connections and lateral connections """
 
-    def __init__(self, input_shape, output_dim, cfg, device, preprocess):
+    def __init__(self, input_shape, output_dim, cfg, device):
         super(CLIPLingUNetLat, self).__init__()
         self.input_shape = input_shape
         self.output_dim = output_dim
         self.input_dim = 2048  # penultimate layer channel-size of CLIP-RN50
         self.cfg = cfg
         self.device = device
-        self.batchnorm = self.cfg['train']['batchnorm']
-        self.lang_fusion_type = self.cfg['train']['lang_fusion_type']
+        self.batchnorm = self.cfg['batchnorm']
+        self.lang_fusion_type = self.cfg['lang_fusion_type']
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
-        # self.preprocess = preprocess
 
         # Use clip preprocessing
-        self.preprocess = self._load_clip()
+        self._load_clip()
         self._build_decoder()
 
     def _load_clip(self):
         model, _ = load_clip("RN50", device=self.device)
         self.clip_rn50 = build_model(model.state_dict()).to(self.device)
-        n_px = model.input_resolution.item()
-        transform = Compose([
-            Resize(n_px, interpolation=InterpolationMode.BICUBIC),
-            CenterCrop(n_px),
-            Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
-        ])
         del model
-        return transform
 
     def _build_decoder(self):
         # language
@@ -108,8 +100,6 @@ class CLIPLingUNetLat(nn.Module):
         return text_feat, text_emb, text_mask
 
     def forward(self, x, lat, l):
-        x = self.preprocess(x) # , dist='clip')
-
         in_type = x.dtype
         in_shape = x.shape
         x = x[:,:3]  # select RGB
