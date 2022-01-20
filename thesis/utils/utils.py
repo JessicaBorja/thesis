@@ -85,14 +85,25 @@ def tt(x, device):
 def get_transforms(transforms_cfg, img_size=None):
     transforms_lst = []
     transforms_config = transforms_cfg.copy()
+    normalize_values, rand_shift = None, None
+
     for cfg in transforms_config:
         if ("size" in cfg) and img_size is not None:
             cfg.size = img_size
         if("interpolation" in cfg):
             cfg.interpolation = InterpolationMode(cfg.interpolation)
-        transforms_lst.append(hydra.utils.instantiate(cfg))
+        if("Normalize" in cfg._target_):
+            normalize_values = cfg
+        if("RandomShift" in cfg._target_):
+            rand_shift = hydra.utils.instantiate(cfg)
+        else:
+            transforms_lst.append(hydra.utils.instantiate(cfg))
 
-    return transforms.Compose(transforms_lst)
+    return  {
+        "transforms": transforms.Compose(transforms_lst),
+        "norm_values": normalize_values,
+        "rand_shift": rand_shift
+    }
 
 
 def get_hydra_launch_dir(path_str):
@@ -100,6 +111,13 @@ def get_hydra_launch_dir(path_str):
         path_str = os.path.join(hydra.utils.get_original_cwd(), path_str)
         path_str = os.path.abspath(path_str)
     return path_str
+
+
+def pixel_after_pad(pixel, pad):
+    l, r, t, b = pad
+    pad_val = np.array((l, t))
+    new_pixel = pixel + pad_val
+    return new_pixel
 
 
 def resize_pixel(pixel, old_shape, new_shape):

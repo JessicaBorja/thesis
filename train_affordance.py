@@ -49,7 +49,7 @@ def main(cfg):
     # Trainer
     trainer = Trainer(
         logger=wandb_logger,
-        callbacks=[checkpoint_callback],
+        callbacks=callbacks,
         **cfg.trainer
     )
 
