@@ -2,7 +2,9 @@ from thesis.models.core.pick_module import PickModule
 from thesis.models.streams.one_stream_attention_lang_fusion import AttentionLangFusion
 from thesis.utils.utils import tt
 import numpy as np
-import os
+from thesis.utils.utils import blend_imgs
+import cv2
+import matplotlib.pyplot as plt
 
 
 class ClipLingUNetDetector(PickModule):
@@ -70,3 +72,59 @@ class ClipLingUNetDetector(PickModule):
         return {"softmax": pick_logits_disp_masked,
                 "pixel": (p0_pix[1], p0_pix[0]),
                 "error": err}
+
+    def viz_preds(self, inp):
+        frame = inp["img"][0].detach().cpu().numpy()
+        frame = (frame * 255).astype("uint8")
+        frame = np.transpose(frame, (1, 2, 0))
+        if frame.shape[-1] == 1:
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+
+        obs = {"img": frame.copy(),
+               "lang_goal": inp["lang_goal"][0]}
+        info = None  # labels
+        pred = self.predict(obs, info=info)
+        pred_img = frame.copy()
+
+        cm = plt.get_cmap('viridis')
+        heatmap = cm(pred["softmax"])[:, :, [0,1,2]] * 255
+        heatmap = blend_imgs(frame.copy(), heatmap, alpha=0.7)
+
+        pixel = pred["pixel"]
+        # print(pred["error"], pred["pixel"], (x, y))
+        pred_img = cv2.drawMarker(
+                pred_img,
+                (pixel[0], pixel[1]),
+                (0, 0, 0),
+                markerType=cv2.MARKER_CROSS,
+                markerSize=12,
+                thickness=2,
+                line_type=cv2.LINE_AA,
+            )
+
+        new_size = (400, 400)
+        pred_img = cv2.resize(pred_img, new_size, interpolation=cv2.INTER_CUBIC)
+        heatmap = cv2.resize(heatmap, new_size, interpolation=cv2.INTER_CUBIC)
+        pred_img = pred_img.astype(float) / 255
+        out_img = np.concatenate([pred_img, heatmap], axis=1)
+
+
+        # Prints the text.
+        font_scale = 0.6
+        thickness = 2
+        color = (0, 0, 0)
+        x1, y1 = 10, 20
+        text_label = obs["lang_goal"]
+        (w, h), _ = cv2.getTextSize(text_label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+        out_img = cv2.rectangle(out_img, (x1, y1 - 20), (x1 + w, y1 + h), color, -1)
+        out_img = cv2.putText(
+            out_img,
+            text_label,
+            org=(x1, y1),
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+            fontScale=font_scale,
+            color=(255, 255, 255),
+            thickness=thickness,
+        )
+        cv2.imshow("img", out_img[:, :, ::-1])
+        cv2.waitKey(0)
