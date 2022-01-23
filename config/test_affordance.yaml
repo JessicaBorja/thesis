@@ -1,9 +1,11 @@
 defaults:
   - aff_detection: cliport_lang
   - paths: general_paths
-  - transforms@dataset.transforms_cfg: rgb_lang
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
+#
+save_viz: True
+
 
 # folders
 checkpoint:

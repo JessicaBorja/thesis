@@ -4,6 +4,9 @@ defaults:
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
 
+#
+save_viz: True
+
 # folders
 load_from_last_ckpt: True
 checkpoint:

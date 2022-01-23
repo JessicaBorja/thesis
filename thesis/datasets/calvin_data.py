@@ -27,7 +27,7 @@ class CalvinDataLang(Dataset):
         self.split = split
         self.log = log
         self.data_dir = get_hydra_launch_dir(data_dir)
-        _data_info = self.read_json(os.path.join(self.data_dir, "episodes_split_mini.json"))
+        _data_info = self.read_json(os.path.join(self.data_dir, "episodes_split.json"))
         self.data = self._get_split_data(_data_info, split, cam, n_train_ep)
         self.img_resize = img_resize
         _transforms_dct = get_transforms(transforms[split], img_resize[cam])
@@ -126,8 +126,8 @@ class CalvinDataLang(Dataset):
 
 @hydra.main(config_path="../../config", config_name="train_affordance")
 def main(cfg):
-    val = CalvinDataLang(split="training", log=None, **cfg.dataset)
-    val_loader = DataLoader(val, num_workers=1, batch_size=2, pin_memory=True)
+    val = CalvinDataLang(split="validation", log=None, **cfg.dataset)
+    val_loader = DataLoader(val, num_workers=1, batch_size=1, pin_memory=True)
     print("val minibatches {}".format(len(val_loader)))
 
     cm = plt.get_cmap("jet")
@@ -135,11 +135,12 @@ def main(cfg):
     for b_idx, b in enumerate(val_loader):
         # RGB
         inp, labels = b
-        inp["img"] = val.undo_normalize(inp["img"])
-
-        frame = inp["img"][0].detach().cpu().numpy()
+        inp_img = inp["orig_frame"] # val.undo_normalize(inp["img"])
+        frame = inp_img[0].detach().cpu().numpy()
         frame = (frame * 255).astype("uint8")
         frame = np.transpose(frame, (1, 2, 0))
+
+        frame = cv2.resize(frame, inp["img"].shape[-2:])
         if frame.shape[-1] == 1:
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
@@ -182,8 +183,14 @@ def main(cfg):
             thickness=thickness,
         )
 
-        cv2.imshow("img", out_img[:, :, ::-1])
-        cv2.waitKey(0)
+        out_img = out_img[:, :, ::-1]
+        if(cfg.save_viz):
+            file_dir = "./imgs"
+            os.makedirs(file_dir, exist_ok=True)
+            filename = os.path.join(file_dir, "frame_%04d.png" % b_idx)
+            cv2.imwrite(filename, out_img)
+        cv2.imshow("img", out_img)
+        cv2.waitKey(1)
 
 
 if __name__ == "__main__":
