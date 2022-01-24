@@ -28,13 +28,17 @@ class CLIPLingUNetLat(nn.Module):
         self.up_factor = 2 if self.bilinear else 1
 
         # Use clip preprocessing
-        self._load_clip()
+        self.clip_rn50 = self._load_clip()
         self._build_decoder()
 
     def _load_clip(self):
         model, _ = load_clip("RN50", device=self.device)
-        self.clip_rn50 = build_model(model.state_dict()).to(self.device)
+        _clip_rn50 = build_model(model.state_dict()).to(self.device)
         del model
+        # Fix encoder weights. Only train decoder
+        for param in _clip_rn50.parameters():
+            param.requires_grad = False
+        return _clip_rn50
 
     def _build_decoder(self):
         # language
