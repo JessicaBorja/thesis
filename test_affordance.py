@@ -88,13 +88,14 @@ def main(cfg):
             )
 
         new_size = (400, 400)
+        heatmap = (heatmap * 255).astype('uint8')
         pred_img = cv2.resize(pred_img, new_size, interpolation=cv2.INTER_CUBIC)
         out_img = cv2.resize(out_img, new_size, interpolation=cv2.INTER_CUBIC)
         heatmap = cv2.resize(heatmap, new_size, interpolation=cv2.INTER_CUBIC)
-        out_img = out_img.astype(float) / 255
-        pred_img = pred_img.astype(float) / 255
+        # out_img = out_img.astype(float) / 255
+        # pred_img = pred_img.astype(float) / 255
         out_img = np.concatenate([out_img, pred_img, heatmap], axis=1)
-
+        # out_img = (out_img * 255).astype('uint8')
 
         # Prints the text.
         font_scale = 0.6
@@ -113,8 +114,16 @@ def main(cfg):
             color=(255, 255, 255),
             thickness=thickness,
         )
-        cv2.imshow("img", out_img[:, :, ::-1])
-        cv2.waitKey(0)
+
+        out_img = out_img[:, :, ::-1]
+
+        # file_dir = "./imgs"
+        # os.makedirs(file_dir, exist_ok=True)
+        # filename = os.path.join(file_dir, "img_%04d.png" % b_idx)
+        # cv2.imwrite(filename, out_img)
+
+        cv2.imshow("img", out_img)
+        cv2.waitKey(1)
 
 
 if __name__ == '__main__':

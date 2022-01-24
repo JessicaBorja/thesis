@@ -71,6 +71,6 @@ class ClipLingUNetDetector(PickModule):
         pick_logits_disp = (logits * 255 * affordance_heatmap_scale).astype('uint8')
         pick_logits_disp_masked = np.ma.masked_where(pick_logits_disp < 0, pick_logits_disp)
 
-        return {"softmax": pick_logits_disp_masked,
+        return {"softmax": pick_logits_disp,
                 "pixel": (p0_pix[1], p0_pix[0]),
                 "error": err}
