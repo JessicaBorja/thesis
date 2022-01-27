@@ -2,7 +2,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-from thesis.models.core.pick_module import AffordanceModule
+from thesis.models.core.affordance_module import AffordanceModule
 from thesis.models.streams.one_stream_attention_lang_fusion import AttentionLangFusion
 from thesis.utils.utils import tt, blend_imgs
 

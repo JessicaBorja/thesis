@@ -77,7 +77,7 @@ class AffordanceModule(LightningModule):
             indices = np.argmax(pick_conf.reshape((B,-1)), -1)
             p0_pix = self.unravel_idx(indices, shape=pick_conf.shape[1:])
             err = {
-                'dist': np.mean(np.linalg.norm(p0 - p0_pix, axis=1)),
+                'dist': np.sum(np.linalg.norm(p0 - p0_pix, axis=1)),
                 #'theta': np.absolute((theta - p0_theta) % np.pi)
             }
         return loss, err
@@ -140,7 +140,7 @@ class AffordanceModule(LightningModule):
 
     def validation_epoch_end(self, all_outputs):
         mean_val_total_loss = np.mean([v['val_loss'].item() for v in all_outputs])
-        total_attn_dist_err = np.mean([v['val_attn_dist_err'] for v in all_outputs])
+        total_attn_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
         # total_attn_theta_err = np.sum([v['val_attn_theta_err'] for v in all_outputs])
     
         self.log('Validation/loss', mean_val_total_loss)
