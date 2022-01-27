@@ -1,5 +1,5 @@
 defaults:
-  - aff_detection: cliport_lang
+  - aff_detection: lang_fusion
   - paths: general_paths
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
@@ -12,7 +12,7 @@ load_from_last_ckpt: True
 checkpoint:
   path: ./ # ${hydra_outputs}/2022-01-16/14-42-24_aff_rl
   model_name: last.ckpt # epoch=49-step=34449.ckpt
-run_name: 'cliport_lang'
+run_name: 'lang_fusion'
 
 trainer:
   # script configs
@@ -23,7 +23,7 @@ trainer:
   strategy: ddp
   precision: 32
 
-dataset_name: calvin_lang_contactInfo
+dataset_name: calvin_lang_contactSync
 dataset:
   data_dir: ${paths.datasets}/${dataset_name}
   cam: static
@@ -36,7 +36,7 @@ dataset:
 
 dataloader:
   num_workers: 4
-  batch_size: 16
+  batch_size: 32
   pin_memory: true
 
 wandb:

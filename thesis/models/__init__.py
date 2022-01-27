@@ -16,6 +16,8 @@ from .clip_unet_lat import CLIPUNetLat
 from .clip_lingunet_lat import CLIPLingUNetLat
 from .clip_film_lingunet_lat import CLIPFilmLingUNet
 
+from .unet_lang import UnetLang
+
 
 names = {
     # resnet
@@ -33,6 +35,7 @@ names = {
     'clip_lingunet': CLIPLingUNet,
     'rn50_bert_lingunet': RN50BertLingUNet,
     'untrained_rn50_bert_lingunet': UntrainedRN50BertLingUNet,
+    'unet_lang': UnetLang,
 
     # lateral connections
     'plain_resnet_lat': ResNet45_10s,

@@ -1,13 +1,13 @@
-from thesis.models.core.pick_module import PickModule
-from thesis.models.streams.one_stream_attention_lang_fusion import AttentionLangFusion
-from thesis.utils.utils import tt
-import numpy as np
-from thesis.utils.utils import blend_imgs
 import cv2
 import matplotlib.pyplot as plt
+import numpy as np
+
+from thesis.models.core.pick_module import AffordanceModule
+from thesis.models.streams.one_stream_attention_lang_fusion import AttentionLangFusion
+from thesis.utils.utils import tt, blend_imgs
 
 
-class ClipLingUNetDetector(PickModule):
+class ClipLingUNetDetector(AffordanceModule):
 
     def __init__(self, cfg, *args, **kwargs):
         super().__init__(cfg, *args, **kwargs)
@@ -19,20 +19,6 @@ class ClipLingUNetDetector(PickModule):
             cfg=self.cfg,
             device=self.device_type,
         )
-
-    def attn_forward(self, inp, softmax=True):
-        inp_img = inp['inp_img']
-        lang_goal = inp['lang_goal']
-        out = self.attention(inp_img, lang_goal, softmax=softmax)
-        return out  # B, H, W
-
-    def attn_step(self, frame, label, compute_err=False):
-        inp_img = frame['img']
-        lang_goal = frame['lang_goal']
-
-        inp = {'inp_img': inp_img, 'lang_goal': lang_goal}
-        out = self.attn_forward(inp, softmax=False)
-        return self.attn_criterion(compute_err, inp, out, label)
 
     def predict(self, obs, goal=None, info=None):
         """ Run inference and return best pixel given visual observations.
@@ -49,10 +35,11 @@ class ClipLingUNetDetector(PickModule):
         img = np.expand_dims(obs["img"], 0)  # B, H, W, C
         img = tt(img, self.device) / 255  # 0 - 1
         img = img.permute((0, 3, 1, 2))
+
         lang_goal = goal if goal is not None else obs["lang_goal"]
         # Attention model forward pass.
         pick_inp = {'inp_img': img,
-                    'lang_goal': [lang_goal]}
+                    'lang_goal': lang_goal}
         pick_conf = self.attn_forward(pick_inp)
         pick_inp["img"] = img
 

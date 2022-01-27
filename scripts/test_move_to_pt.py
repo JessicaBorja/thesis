@@ -42,13 +42,13 @@ def viz_img(rgb_img, lang_goal, pred, old_shape):
 def main(cfg):
     env = hydra.utils.instantiate(cfg.env)
     agent = hydra.utils.instantiate(cfg.agent, env=env)
-    point_detector = hydra.utils.instantiate(cfg.aff_detection)
+    point_detector = hydra.utils.instantiate(cfg.aff_detection.model)
     
     # Load model
     checkpoint_path = get_hydra_launch_dir(cfg.aff_checkpoint.path)
     point_detector = load_aff_model(checkpoint_path,
                                     cfg.aff_checkpoint.model_name,
-                                    cfg.aff_detection)
+                                    cfg.aff_detection.model)
     point_detector.eval()
     im_size = cfg.aff_checkpoint.img_resize
 

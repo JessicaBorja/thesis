@@ -9,7 +9,6 @@ import torch.nn.functional as F
 import torch.nn as nn
 import thesis.models as models
 
-import hydra
 
 class AttentionLangFusion(nn.Module):
 

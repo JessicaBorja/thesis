@@ -126,7 +126,7 @@ class CalvinDataLang(Dataset):
 
 @hydra.main(config_path="../../config", config_name="train_affordance")
 def main(cfg):
-    val = CalvinDataLang(split="validation", log=None, **cfg.dataset)
+    val = CalvinDataLang(split="training", log=None, **cfg.dataset)
     val_loader = DataLoader(val, num_workers=1, batch_size=1, pin_memory=True)
     print("val minibatches {}".format(len(val_loader)))
 
@@ -190,7 +190,7 @@ def main(cfg):
             filename = os.path.join(file_dir, "frame_%04d.png" % b_idx)
             cv2.imwrite(filename, out_img)
         cv2.imshow("img", out_img)
-        cv2.waitKey(1)
+        cv2.waitKey(0)
 
 
 if __name__ == "__main__":

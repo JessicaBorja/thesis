@@ -28,7 +28,7 @@ def main(cfg):
     # Load model
     model = load_aff_model(hydra_run_dir,
                            cfg.checkpoint.model_name,
-                           run_cfg.aff_detection)
+                           run_cfg.aff_detection.model)
     model.eval()
 
     # Dataloaders
@@ -41,14 +41,16 @@ def main(cfg):
     for b_idx, b in enumerate(val_loader):
         # RGB
         inp, labels = b
-        frame = inp["img"][0].detach().cpu().numpy()
-        frame = (frame * 255).astype("uint8")
+        frame = inp["orig_frame"][0].detach().cpu().numpy()
+        frame = (frame * 255.0).astype("uint8")
         frame = np.transpose(frame, (1, 2, 0))
+        frame = cv2.resize(frame, (inp["img"].shape[-2:]))
         if frame.shape[-1] == 1:
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-
-        obs = {"img": frame.copy(),
-               "lang_goal": inp["lang_goal"][0]}
+        obs = {
+            "img": frame,
+            "lang_goal": inp["lang_goal"]
+        }
         out_img = frame.copy()
         for label in range(0, val.n_classes):
             color = colors[label]
@@ -88,11 +90,12 @@ def main(cfg):
             )
 
         new_size = (400, 400)
+        heatmap = (heatmap * 255).astype('uint8')
         pred_img = cv2.resize(pred_img, new_size, interpolation=cv2.INTER_CUBIC)
         out_img = cv2.resize(out_img, new_size, interpolation=cv2.INTER_CUBIC)
         heatmap = cv2.resize(heatmap, new_size, interpolation=cv2.INTER_CUBIC)
-        out_img = out_img.astype(float) / 255
-        pred_img = pred_img.astype(float) / 255
+        # out_img = out_img.astype(float) / 255
+        # pred_img = pred_img.astype(float) / 255
         out_img = np.concatenate([out_img, pred_img, heatmap], axis=1)
 
 
@@ -101,7 +104,7 @@ def main(cfg):
         thickness = 2
         color = (0, 0, 0)
         x1, y1 = 10, 20
-        text_label = obs["lang_goal"]
+        text_label = inp['lang_goal'][0]
         (w, h), _ = cv2.getTextSize(text_label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
         out_img = cv2.rectangle(out_img, (x1, y1 - 20), (x1 + w, y1 + h), color, -1)
         out_img = cv2.putText(

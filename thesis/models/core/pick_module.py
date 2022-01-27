@@ -9,10 +9,9 @@ import logging
 
 
 
-class PickModule(LightningModule):
+class AffordanceModule(LightningModule):
     def __init__(self, cfg, in_shape=None):
         super().__init__()
-        # utils.set_seed(0)
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
         self.val_repeats = cfg.val_repeats
@@ -25,9 +24,6 @@ class PickModule(LightningModule):
 
     def _build_model(self):
         self.attention = None
-        raise NotImplementedError()
-
-    def forward(self, x):
         raise NotImplementedError()
 
     def cross_entropy_with_logits(self, pred, labels, reduction='mean'):
@@ -44,11 +40,15 @@ class PickModule(LightningModule):
         inp_img = inp['inp_img']
         lang_goal = inp['lang_goal']
         out = self.attention(inp_img, lang_goal, softmax=softmax)
-        return out
+        return out  # B, H, W
 
     def attn_step(self, frame, label, compute_err=False):
-        out = self.attn_forward(frame, softmax=False)
-        return self.attn_criterion(compute_err, frame, out, label)
+        inp_img = frame['img']
+        lang_goal = frame['lang_goal']
+
+        inp = {'inp_img': inp_img, 'lang_goal': lang_goal}
+        out = self.attn_forward(inp, softmax=False)
+        return self.attn_criterion(compute_err, inp, out, label)
 
     def attn_criterion(self, compute_err, inp, out, label):
 
@@ -77,7 +77,7 @@ class PickModule(LightningModule):
             indices = np.argmax(pick_conf.reshape((B,-1)), -1)
             p0_pix = self.unravel_idx(indices, shape=pick_conf.shape[1:])
             err = {
-                'dist': np.sum(np.linalg.norm(p0 - p0_pix, axis=1)),
+                'dist': np.mean(np.linalg.norm(p0 - p0_pix, axis=1)),
                 #'theta': np.absolute((theta - p0_theta) % np.pi)
             }
         return loss, err
@@ -140,7 +140,7 @@ class PickModule(LightningModule):
 
     def validation_epoch_end(self, all_outputs):
         mean_val_total_loss = np.mean([v['val_loss'].item() for v in all_outputs])
-        total_attn_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
+        total_attn_dist_err = np.mean([v['val_attn_dist_err'] for v in all_outputs])
         # total_attn_theta_err = np.sum([v['val_attn_theta_err'] for v in all_outputs])
     
         self.log('Validation/loss', mean_val_total_loss)
@@ -156,7 +156,3 @@ class PickModule(LightningModule):
     def configure_optimizers(self):
         optim = torch.optim.Adam(self.attention.parameters(), lr=self.cfg.lr)
         return optim
-
-    def load(self, model_path):
-        self.load_state_dict(torch.load(model_path)['state_dict'])
-        self.to(device=self.device_type)
