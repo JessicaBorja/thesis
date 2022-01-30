@@ -42,7 +42,7 @@ def main(cfg):
     for name, saver_cfg in cfg.wandb.saver.items():
         checkpoint_callback = ModelCheckpoint(
             dirpath="checkpoints",
-            filename="%s_{epoch:02d}_%s" % (cfg.run_name, name),
+            filename=name,
             **saver_cfg
         )
         callbacks.append(checkpoint_callback)

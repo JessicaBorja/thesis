@@ -1,4 +1,4 @@
 name: 'unet_lang'
 
 defaults:
-  - /transforms: rgb
+  - /transforms: clip
