@@ -20,14 +20,14 @@ class CalvinDataLang(Dataset):
         split="training",
         cam="static",
         log=None,
-        radius=None,
+        episodes_file="episodes_split.json",
     ):
         super(CalvinDataLang, self).__init__()
         self.cam = cam
         self.split = split
         self.log = log
         self.data_dir = get_hydra_launch_dir(data_dir)
-        _data_info = self.read_json(os.path.join(self.data_dir, "episodes_split.json"))
+        _data_info = self.read_json(os.path.join(self.data_dir, episodes_file))
         self.data = self._get_split_data(_data_info, split, cam, n_train_ep)
         self.img_resize = img_resize
         _transforms_dct = get_transforms(transforms[split], img_resize[cam])
@@ -118,7 +118,7 @@ class CalvinDataLang(Dataset):
                "orig_frame": orig_frame.float() / 255}
 
         # CE Loss requires mask in form (B, H, W)
-        labels = {"task": task[0],
+        labels = {"task": task,
                   "p0": center,
                   "tetha0": []}
         return inp, labels
