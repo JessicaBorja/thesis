@@ -8,17 +8,16 @@ from PIL import Image
 import logging
 import cv2
 from torchvision.transforms import InterpolationMode
-
 logger = logging.getLogger(__name__)
 
 
-def load_aff_model(hydra_run_dir, model_name, model_cfg):
+def load_aff_model(hydra_run_dir, model_name, model_cfg, **kwargs):
     # Load model
     checkpoint_path = os.path.join(hydra_run_dir, 'checkpoints')
     checkpoint_path = os.path.join(checkpoint_path, model_name)
     if(os.path.isfile(checkpoint_path)):
-        model = hydra.utils.instantiate(model_cfg)
-        model = model.load_from_checkpoint(checkpoint_path).cuda()
+        model = hydra.utils.instantiate(model_cfg, **kwargs)
+        model = model.load_from_checkpoint(checkpoint_path, **kwargs).cuda()
         logger.info("Model successfully loaded: %s" % checkpoint_path)
     else:
         model = hydra.utils.instantiate(model_cfg).cuda()

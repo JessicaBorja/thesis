@@ -1,16 +1,24 @@
+import nntplib
 import cv2
+from cv2 import imshow
 import matplotlib.pyplot as plt
 import numpy as np
+import torch.nn as nn
 
 from thesis.models.core.affordance_module import AffordanceModule
 from thesis.models.streams.one_stream_attention_lang_fusion import AttentionLangFusion
 from thesis.utils.utils import tt, blend_imgs
+from thesis.utils.utils import get_transforms
 
 
 class ClipLingUNetDetector(AffordanceModule):
 
-    def __init__(self, cfg, *args, **kwargs):
+    def __init__(self, cfg, transforms=None, *args, **kwargs):
         super().__init__(cfg, *args, **kwargs)
+        if transforms is not None:
+            self.pred_transforms = get_transforms(transforms, self.in_shape[0])['transforms']
+        else:
+            self.pred_transforms = nn.Identity()
 
     def _build_model(self):
         self.attention = AttentionLangFusion(
@@ -33,8 +41,10 @@ class ClipLingUNetDetector(AffordanceModule):
         """
         # Get inputs
         img = np.expand_dims(obs["img"], 0)  # B, H, W, C
-        img = tt(img, self.device) / 255  # 0 - 1
+        img = tt(img, self.device)
         img = img.permute((0, 3, 1, 2))
+
+        img = self.pred_transforms(img)
 
         lang_goal = goal if goal is not None else obs["lang_goal"]
         # Attention model forward pass.

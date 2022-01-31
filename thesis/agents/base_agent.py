@@ -73,6 +73,6 @@ class BaseAgent:
             ns, r, d, info = self.env.step(action)             
             curr_pos = np.array(info["robot_info"]["tcp_pos"])
 
-            cv2.imshow("obs", ns["rgb_obs"]["rgb_static"])
+            cv2.imshow("obs", ns["rgb_obs"]["rgb_static"][:, :, ::-1])
             cv2.waitKey(1)
         return ns

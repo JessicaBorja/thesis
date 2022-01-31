@@ -48,12 +48,13 @@ def main(cfg):
     checkpoint_path = get_hydra_launch_dir(cfg.aff_checkpoint.path)
     point_detector = load_aff_model(checkpoint_path,
                                     cfg.aff_checkpoint.model_name,
-                                    cfg.aff_detection.model)
+                                    cfg.aff_detection.model,
+                                    transforms=cfg.aff_detection.transforms['validation'])
     point_detector.eval()
     im_size = cfg.aff_checkpoint.img_resize
 
     ns = env.reset()
-    for i in range(10):  # 5 instructions
+    for i in range(100):  # n instructions
         rgb_obs =  ns["rgb_obs"]["rgb_static"]
         caption = input("Type an instruction \n")
         img_input = cv2.resize(rgb_obs, (im_size, im_size))

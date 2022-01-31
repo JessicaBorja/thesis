@@ -11,7 +11,6 @@ from omegaconf import OmegaConf
 from thesis.utils.utils import blend_imgs, get_hydra_launch_dir, overlay_mask, load_aff_model
 from thesis.datasets.calvin_data import CalvinDataLang, DataLoader
 
-
 @hydra.main(config_path="./config", config_name='test_affordance')
 def main(cfg):
     # Checkpoint loader
@@ -28,7 +27,8 @@ def main(cfg):
     # Load model
     model = load_aff_model(hydra_run_dir,
                            cfg.checkpoint.model_name,
-                           run_cfg.aff_detection.model)
+                           run_cfg.aff_detection.model,
+                           transforms=run_cfg.aff_detection.transforms['validation'])
     model.eval()
 
     # Dataloaders
@@ -98,7 +98,6 @@ def main(cfg):
         # pred_img = pred_img.astype(float) / 255
         out_img = np.concatenate([out_img, pred_img, heatmap], axis=1)
 
-
         # Prints the text.
         font_scale = 0.6
         thickness = 2
@@ -116,7 +115,15 @@ def main(cfg):
             color=(255, 255, 255),
             thickness=thickness,
         )
-        cv2.imshow("img", out_img[:, :, ::-1])
+
+        out_img = out_img[:, :, ::-1]
+
+        # file_dir = "./imgs"
+        # os.makedirs(file_dir, exist_ok=True)
+        # filename = os.path.join(file_dir, "img_%04d.png" % b_idx)
+        # cv2.imwrite(filename, out_img)
+
+        cv2.imshow("img", out_img)
         cv2.waitKey(0)
 
 
