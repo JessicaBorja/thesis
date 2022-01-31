@@ -8,29 +8,36 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 import logging
 from thesis.utils.utils import resize_pixel, get_hydra_launch_dir, get_transforms
-
+from thesis.datasets.transforms import NormalizeInverse
 
 class CalvinDataLang(Dataset):
     def __init__(
         self,
         img_resize,
         data_dir,
-        transforms_cfg,
+        transforms,
         n_train_ep=-1,
         split="training",
         cam="static",
         log=None,
-        radius=None,
+        episodes_file="episodes_split.json",
     ):
         super(CalvinDataLang, self).__init__()
         self.cam = cam
         self.split = split
         self.log = log
         self.data_dir = get_hydra_launch_dir(data_dir)
-        _data_info = self.read_json(os.path.join(self.data_dir, "episodes_split.json"))
+        _data_info = self.read_json(os.path.join(self.data_dir, episodes_file))
         self.data = self._get_split_data(_data_info, split, cam, n_train_ep)
         self.img_resize = img_resize
-        self.transforms = get_transforms(transforms_cfg[split], img_resize[cam])
+        _transforms_dct = get_transforms(transforms[split], img_resize[cam])
+        self.transforms = _transforms_dct["transforms"]
+        self.rand_shift = _transforms_dct["rand_shift"]
+        _norm_vals = _transforms_dct["norm_values"]
+        if(_norm_vals is not None):
+            self.norm_inverse = NormalizeInverse(mean=_norm_vals.mean, std=_norm_vals.std)
+        else:
+            self.norm_inverse = None
         self.out_shape = self.get_shape(img_resize[cam])
 
         # Excludes background
@@ -38,6 +45,11 @@ class CalvinDataLang(Dataset):
         self.resize = (self.img_resize[self.cam], self.img_resize[self.cam])
         self.cmd_log = logging.getLogger(__name__)
         self.cmd_log.info("Dataloader using shape: %s" % str(self.resize))
+
+    def undo_normalize(self, x):
+        if(self.norm_inverse is not None):
+            x = self.norm_inverse(x)
+        return x
 
     def read_json(self, json_file):
         with open(json_file) as f:
@@ -80,8 +92,8 @@ class CalvinDataLang(Dataset):
         # Images are stored in BGR
         old_shape = data["frame"].shape[:2]
         frame = data["frame"]
-        frame = torch.from_numpy(frame).permute(2, 0, 1)  # C, W, H
-        frame = self.transforms(frame)
+        orig_frame = torch.from_numpy(frame).permute(2, 0, 1)  # C, W, H
+        frame = self.transforms(orig_frame.float())
 
         # Aff mask
         # data["centers"] = (label, x, y)
@@ -90,6 +102,11 @@ class CalvinDataLang(Dataset):
         # mask = np.zeros(self.resize)
         # mask[center[0], center[1]] = 1
 
+        # Apply rand shift
+        if(self.rand_shift is not None):
+            frame, center = self.rand_shift({"img": frame,
+                                             "center": center})
+
         # Select a language annotation
         annotations = [i.item() for i in data["lang_ann"]]
         assert len(annotations) > 0, "no language annotation in %s" % self.data[idx]
@@ -97,10 +114,11 @@ class CalvinDataLang(Dataset):
 
         task = data["task"].tolist()
         inp = {"img": frame,  # RGB
-               "lang_goal": lang_ann}
+               "lang_goal": lang_ann,
+               "orig_frame": orig_frame.float() / 255}
 
         # CE Loss requires mask in form (B, H, W)
-        labels = {"task": task[0],
+        labels = {"task": task,
                   "p0": center,
                   "tetha0": []}
         return inp, labels
@@ -108,8 +126,8 @@ class CalvinDataLang(Dataset):
 
 @hydra.main(config_path="../../config", config_name="train_affordance")
 def main(cfg):
-    val = CalvinDataLang(split="validation", log=None, **cfg.dataset)
-    val_loader = DataLoader(val, num_workers=1, batch_size=2, pin_memory=True)
+    val = CalvinDataLang(split="training", log=None, **cfg.dataset)
+    val_loader = DataLoader(val, num_workers=1, batch_size=1, pin_memory=True)
     print("val minibatches {}".format(len(val_loader)))
 
     cm = plt.get_cmap("jet")
@@ -117,9 +135,12 @@ def main(cfg):
     for b_idx, b in enumerate(val_loader):
         # RGB
         inp, labels = b
-        frame = inp["img"][0].detach().cpu().numpy()
-        frame = ((frame + 1) * 255 / 2).astype("uint8")
+        inp_img = inp["orig_frame"] # val.undo_normalize(inp["img"])
+        frame = inp_img[0].detach().cpu().numpy()
+        frame = (frame * 255).astype("uint8")
         frame = np.transpose(frame, (1, 2, 0))
+
+        frame = cv2.resize(frame, inp["img"].shape[-2:])
         if frame.shape[-1] == 1:
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
@@ -162,7 +183,13 @@ def main(cfg):
             thickness=thickness,
         )
 
-        cv2.imshow("img", out_img[:, :, ::-1])
+        out_img = out_img[:, :, ::-1]
+        if(cfg.save_viz):
+            file_dir = "./imgs"
+            os.makedirs(file_dir, exist_ok=True)
+            filename = os.path.join(file_dir, "frame_%04d.png" % b_idx)
+            cv2.imwrite(filename, out_img)
+        cv2.imshow("img", out_img)
         cv2.waitKey(0)
 
 

@@ -1,9 +1,11 @@
 defaults:
   - aff_detection: cliport_lang
   - paths: general_paths
-  - transforms@dataset.transforms_cfg: rgb_lang
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
+
+#
+save_viz: True
 
 # folders
 load_from_last_ckpt: True
@@ -21,11 +23,12 @@ trainer:
   strategy: ddp
   precision: 32
 
-dataset_name: calvin_lang_contactInfo
+dataset_name: calvin_lang_contactSync
 dataset:
   data_dir: ${paths.datasets}/${dataset_name}
   cam: static
   n_train_ep: -1  # Train using all episodes
+  transforms: ${aff_detection.transforms}
   img_resize:
     static: 224  # clip img size
     gripper: 96
@@ -33,7 +36,7 @@ dataset:
 
 dataloader:
   num_workers: 4
-  batch_size: 16
+  batch_size: 32
   pin_memory: true
 
 wandb:
@@ -48,12 +51,12 @@ wandb:
       save_top_k: 2
       mode: min
       verbose: True
-      save_last: True
     val_err:
       monitor: 'Validation/total_attn_dist_err'
       save_top_k: 2
       mode: min
       verbose: True
+      save_last: True
 #-- Hydra config --#
 hydra_outputs: ./hydra_outputs/affordance_model/
 hydra:

@@ -10,8 +10,8 @@ from thesis.models.rn50_bert_lingunet_lat import RN50BertLingUNetLat
 class RN50BertLingUNet(RN50BertLingUNetLat):
     """ ImageNet RN50 & Bert with U-Net skip connections but without lateral connections """
 
-    def __init__(self, input_shape, output_dim, cfg, device, preprocess):
-        super().__init__(input_shape, output_dim, cfg, device, preprocess)
+    def __init__(self, input_shape, output_dim, cfg, device):
+        super().__init__(input_shape, output_dim, cfg, device)
 
     def _build_decoder(self):
         self.conv1 = nn.Sequential(
@@ -45,8 +45,6 @@ class RN50BertLingUNet(RN50BertLingUNetLat):
         )
 
     def forward(self, x, l):
-        x = self.preprocess(x, dist='clip')
-
         in_type = x.dtype
         in_shape = x.shape
         x = x[:,:3]  # select RGB

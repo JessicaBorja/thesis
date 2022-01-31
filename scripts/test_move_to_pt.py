@@ -42,18 +42,19 @@ def viz_img(rgb_img, lang_goal, pred, old_shape):
 def main(cfg):
     env = hydra.utils.instantiate(cfg.env)
     agent = hydra.utils.instantiate(cfg.agent, env=env)
-    point_detector = hydra.utils.instantiate(cfg.aff_detection)
+    point_detector = hydra.utils.instantiate(cfg.aff_detection.model)
     
     # Load model
     checkpoint_path = get_hydra_launch_dir(cfg.aff_checkpoint.path)
     point_detector = load_aff_model(checkpoint_path,
                                     cfg.aff_checkpoint.model_name,
-                                    cfg.aff_detection)
+                                    cfg.aff_detection.model,
+                                    transforms=cfg.aff_detection.transforms['validation'])
     point_detector.eval()
     im_size = cfg.aff_checkpoint.img_resize
 
     ns = env.reset()
-    for i in range(10):  # 5 instructions
+    for i in range(100):  # n instructions
         rgb_obs =  ns["rgb_obs"]["rgb_static"]
         caption = input("Type an instruction \n")
         img_input = cv2.resize(rgb_obs, (im_size, im_size))
@@ -65,7 +66,7 @@ def main(cfg):
         # World pos
         depth = ns["depth_obs"]["depth_static"]
         world_pos = env.cameras[0].deproject(pixel, depth)
-        p.addUserDebugText("t", textPosition=world_pos, textColorRGB=[1, 0, 1])
+        # p.addUserDebugText("t", textPosition=world_pos, textColorRGB=[1, 0, 1])
         ns = agent.move_to(world_pos, gripper_action=1)
         time.sleep(1)
         ns = agent.reset_position()

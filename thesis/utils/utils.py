@@ -7,16 +7,17 @@ from torch.autograd import Variable
 from PIL import Image
 import logging
 import cv2
+from torchvision.transforms import InterpolationMode
 logger = logging.getLogger(__name__)
 
 
-def load_aff_model(hydra_run_dir, model_name, model_cfg):
+def load_aff_model(hydra_run_dir, model_name, model_cfg, **kwargs):
     # Load model
     checkpoint_path = os.path.join(hydra_run_dir, 'checkpoints')
     checkpoint_path = os.path.join(checkpoint_path, model_name)
     if(os.path.isfile(checkpoint_path)):
-        model = hydra.utils.instantiate(model_cfg)
-        model = model.load_from_checkpoint(checkpoint_path).cuda()
+        model = hydra.utils.instantiate(model_cfg, **kwargs)
+        model = model.load_from_checkpoint(checkpoint_path, **kwargs).cuda()
         logger.info("Model successfully loaded: %s" % checkpoint_path)
     else:
         model = hydra.utils.instantiate(model_cfg).cuda()
@@ -83,17 +84,25 @@ def tt(x, device):
 def get_transforms(transforms_cfg, img_size=None):
     transforms_lst = []
     transforms_config = transforms_cfg.copy()
-    for cfg in transforms_config:
-        if (cfg._target_ == "torchvision.transforms.Resize" or "RandomCrop" in cfg._target_) and img_size is not None:
-            cfg.size = img_size
-        if "vapo.affordance_model.utils.transforms" in cfg._target_:
-            cfg._target_ = cfg._target_.replace(
-                "vapo.affordance_model.utils.transforms",
-                "affordance.dataloader.transforms",
-            )
-        transforms_lst.append(hydra.utils.instantiate(cfg))
+    normalize_values, rand_shift = None, None
 
-    return transforms.Compose(transforms_lst)
+    for cfg in transforms_config:
+        if ("size" in cfg) and img_size is not None:
+            cfg.size = img_size
+        if("interpolation" in cfg):
+            cfg.interpolation = InterpolationMode(cfg.interpolation)
+        if("Normalize" in cfg._target_):
+            normalize_values = cfg
+        if("RandomShift" in cfg._target_):
+            rand_shift = hydra.utils.instantiate(cfg)
+        else:
+            transforms_lst.append(hydra.utils.instantiate(cfg))
+
+    return  {
+        "transforms": transforms.Compose(transforms_lst),
+        "norm_values": normalize_values,
+        "rand_shift": rand_shift
+    }
 
 
 def get_hydra_launch_dir(path_str):
@@ -101,6 +110,13 @@ def get_hydra_launch_dir(path_str):
         path_str = os.path.join(hydra.utils.get_original_cwd(), path_str)
         path_str = os.path.abspath(path_str)
     return path_str
+
+
+def pixel_after_pad(pixel, pad):
+    l, r, t, b = pad
+    pad_val = np.array((l, t))
+    new_pixel = pixel + pad_val
+    return new_pixel
 
 
 def resize_pixel(pixel, old_shape, new_shape):

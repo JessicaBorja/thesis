@@ -9,8 +9,9 @@ model:
     load_from_last_ckpt: True
     val_repeats: 1
     streams: ${aff_detection.streams}
+    decoder_channels: [128, 64, 32]
 
 transforms: ${aff_detection.streams.transforms}
 img_size: 224
 defaults:
-  - streams: clip_lingunet
+  - streams: clip_unet

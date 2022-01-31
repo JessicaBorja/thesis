@@ -14,5 +14,5 @@ class BaseDetector:
     def load_from_checkpoint(self, *args, **kwargs):
         pass
 
-    def find_target(self, inputs: dict):
+    def predict(self, inputs: dict):
         pass

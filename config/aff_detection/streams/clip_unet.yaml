@@ -1,0 +1,4 @@
+name: 'unet_lang'
+
+defaults:
+  - /transforms: clip

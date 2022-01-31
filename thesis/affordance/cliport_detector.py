@@ -1,40 +1,32 @@
-from thesis.models.core.pick_module import PickModule
-from thesis.models.streams.one_stream_attention_lang_fusion import OneStreamAttentionLangFusion
-from thesis.utils.utils import tt
+import nntplib
+import cv2
+from cv2 import imshow
+import matplotlib.pyplot as plt
 import numpy as np
-import os
+import torch.nn as nn
+
+from thesis.models.core.affordance_module import AffordanceModule
+from thesis.models.streams.one_stream_attention_lang_fusion import AttentionLangFusion
+from thesis.utils.utils import tt, blend_imgs
+from thesis.utils.utils import get_transforms
 
 
-class ClipLingUNetDetector(PickModule):
+class ClipLingUNetDetector(AffordanceModule):
 
-    def __init__(self, cfg, *args, **kwargs):
+    def __init__(self, cfg, transforms=None, *args, **kwargs):
         super().__init__(cfg, *args, **kwargs)
+        if transforms is not None:
+            self.pred_transforms = get_transforms(transforms, self.in_shape[0])['transforms']
+        else:
+            self.pred_transforms = nn.Identity()
 
     def _build_model(self):
-        stream_fcn = 'clip_lingunet'
-        self.attention = OneStreamAttentionLangFusion(
-            stream_fcn=(stream_fcn, None),
+        self.attention = AttentionLangFusion(
+            stream_fcn=self.cfg.streams.name,
             in_shape=self.in_shape,
-            n_rotations=1,
-            preprocess=None, ## Set on clip_lingunet_lat to match clip preprocessing
             cfg=self.cfg,
             device=self.device_type,
         )
-
-    def attn_forward(self, inp, softmax=True):
-        inp_img = inp['inp_img']
-        lang_goal = inp['lang_goal']
-        out = self.attention(inp_img, lang_goal, softmax=softmax)
-        return out  # B, H, W
-
-    def attn_step(self, frame, label, compute_err=False):
-        inp_img = frame['img']
-        lang_goal = frame['lang_goal']
-
-        inp = {'inp_img': inp_img, 'lang_goal': lang_goal}
-        # p0, p0_theta = label['p0'], label['p0_theta']
-        out = self.attn_forward(inp, softmax=False)
-        return self.attn_criterion(compute_err, inp, out, label)
 
     def predict(self, obs, goal=None, info=None):
         """ Run inference and return best pixel given visual observations.
@@ -49,12 +41,15 @@ class ClipLingUNetDetector(PickModule):
         """
         # Get inputs
         img = np.expand_dims(obs["img"], 0)  # B, H, W, C
-        img = tt(img, self.device) / 255  # 0 - 1
+        img = tt(img, self.device)
         img = img.permute((0, 3, 1, 2))
+
+        img = self.pred_transforms(img)
+
         lang_goal = goal if goal is not None else obs["lang_goal"]
         # Attention model forward pass.
         pick_inp = {'inp_img': img,
-                    'lang_goal': [lang_goal]}
+                    'lang_goal': lang_goal}
         pick_conf = self.attn_forward(pick_inp)
         pick_inp["img"] = img
 
@@ -74,3 +69,59 @@ class ClipLingUNetDetector(PickModule):
         return {"softmax": pick_logits_disp,
                 "pixel": (p0_pix[1], p0_pix[0]),
                 "error": err}
+
+    def viz_preds(self, inp):
+        frame = inp["img"][0].detach().cpu().numpy()
+        frame = (frame * 255).astype("uint8")
+        frame = np.transpose(frame, (1, 2, 0))
+        if frame.shape[-1] == 1:
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+
+        obs = {"img": frame.copy(),
+               "lang_goal": inp["lang_goal"][0]}
+        info = None  # labels
+        pred = self.predict(obs, info=info)
+        pred_img = frame.copy()
+
+        cm = plt.get_cmap('viridis')
+        heatmap = cm(pred["softmax"])[:, :, [0,1,2]] * 255
+        heatmap = blend_imgs(frame.copy(), heatmap, alpha=0.7)
+
+        pixel = pred["pixel"]
+        # print(pred["error"], pred["pixel"], (x, y))
+        pred_img = cv2.drawMarker(
+                pred_img,
+                (pixel[0], pixel[1]),
+                (0, 0, 0),
+                markerType=cv2.MARKER_CROSS,
+                markerSize=12,
+                thickness=2,
+                line_type=cv2.LINE_AA,
+            )
+
+        new_size = (400, 400)
+        pred_img = cv2.resize(pred_img, new_size, interpolation=cv2.INTER_CUBIC)
+        heatmap = cv2.resize(heatmap, new_size, interpolation=cv2.INTER_CUBIC)
+        pred_img = pred_img.astype(float) / 255
+        out_img = np.concatenate([pred_img, heatmap], axis=1)
+
+
+        # Prints the text.
+        font_scale = 0.6
+        thickness = 2
+        color = (0, 0, 0)
+        x1, y1 = 10, 20
+        text_label = obs["lang_goal"]
+        (w, h), _ = cv2.getTextSize(text_label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+        out_img = cv2.rectangle(out_img, (x1, y1 - 20), (x1 + w, y1 + h), color, -1)
+        out_img = cv2.putText(
+            out_img,
+            text_label,
+            org=(x1, y1),
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+            fontScale=font_scale,
+            color=(255, 255, 255),
+            thickness=thickness,
+        )
+        cv2.imshow("img", out_img[:, :, ::-1])
+        cv2.waitKey(0)

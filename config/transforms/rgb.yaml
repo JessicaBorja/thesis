@@ -1,24 +1,24 @@
 training:
   - _target_: torchvision.transforms.Resize
-    size: ${img_resize}
-  - _target_: affordance.dataloader.transforms.ColorTransform
+    size: ${aff_detection.img_size}
+  - _target_: thesis.datasets.transforms.ColorTransform
     contrast: 0.05
     brightness: 0.05
     hue: 0.02
     prob: 1
-  - _target_: affordance.dataloader.transforms.ScaleImageTensor  # Scale 0-255 to 0-1
+  - _target_: thesis.datasets.transforms.ScaleImageTensor  # Scale 0-255 to 0-1
   - _target_: torchvision.transforms.Normalize
     mean: [0.5,]
     std: [0.5,]
-  - _target_: affordance.dataloader.transforms.AddGaussianNoise
+  - _target_: thesis.datasets.transforms.AddGaussianNoise
     mean: [0.0]
     std: [0.01]
     clip: [-1, 1]
     
 validation:
   - _target_: torchvision.transforms.Resize
-    size: ${img_resize}
-  - _target_: affordance.dataloader.transforms.ScaleImageTensor
+    size: ${aff_detection.img_size}
+  - _target_: thesis.datasets.transforms.ScaleImageTensor
   - _target_: torchvision.transforms.Normalize
     mean: [0.5,]
     std: [0.5,]

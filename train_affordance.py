@@ -42,14 +42,14 @@ def main(cfg):
     for name, saver_cfg in cfg.wandb.saver.items():
         checkpoint_callback = ModelCheckpoint(
             dirpath="checkpoints",
-            filename="%s_{epoch:02d}_%s" % (cfg.run_name, name),
+            filename=name,
             **saver_cfg
         )
         callbacks.append(checkpoint_callback)
     # Trainer
     trainer = Trainer(
         logger=wandb_logger,
-        callbacks=[checkpoint_callback],
+        callbacks=callbacks,
         **cfg.trainer
     )
 
@@ -60,13 +60,13 @@ def main(cfg):
     logger.info("val_data {}".format(val.__len__()))
 
     train_loader = DataLoader(train, shuffle=True, **cfg.dataloader)
-    val_loader = DataLoader(val, shuffle=True, **cfg.dataloader)
+    val_loader = DataLoader(val, **cfg.dataloader)
     logger.info("train minibatches {}".format(len(train_loader)))
     logger.info("val minibatches {}".format(len(val_loader)))
 
     # Initialize agent
     in_shape = train.out_shape[::-1]  # H, W, C
-    model = hydra.utils.instantiate(cfg.aff_detection, in_shape = in_shape)
+    model = hydra.utils.instantiate(cfg.aff_detection.model, in_shape=in_shape)
 
     # Resume epoch and global_steps
     if last_checkpoint:

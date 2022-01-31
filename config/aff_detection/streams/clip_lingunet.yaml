@@ -1,0 +1,4 @@
+name: 'clip_lingunet'
+
+defaults:
+  - /transforms: clip

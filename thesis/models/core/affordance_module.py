@@ -9,13 +9,12 @@ import logging
 
 
 
-class PickModule(LightningModule):
+class AffordanceModule(LightningModule):
     def __init__(self, cfg, in_shape=None):
         super().__init__()
-        # utils.set_seed(0)
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
-        self.val_repeats = cfg.train.val_repeats
+        self.val_repeats = cfg.val_repeats
         self.total_steps = 0
         self.in_shape = (200, 200, 3) if in_shape is None else in_shape
         self._batch_loss = []
@@ -25,9 +24,6 @@ class PickModule(LightningModule):
 
     def _build_model(self):
         self.attention = None
-        raise NotImplementedError()
-
-    def forward(self, x):
         raise NotImplementedError()
 
     def cross_entropy_with_logits(self, pred, labels, reduction='mean'):
@@ -41,14 +37,18 @@ class PickModule(LightningModule):
             raise NotImplementedError()
 
     def attn_forward(self, inp, softmax=True):
-        inp_img = inp['img']
+        inp_img = inp['inp_img']
         lang_goal = inp['lang_goal']
         out = self.attention(inp_img, lang_goal, softmax=softmax)
-        return out
+        return out  # B, H, W
 
     def attn_step(self, frame, label, compute_err=False):
-        out = self.attn_forward(frame, softmax=False)
-        return self.attn_criterion(compute_err, frame, out, label)
+        inp_img = frame['img']
+        lang_goal = frame['lang_goal']
+
+        inp = {'inp_img': inp_img, 'lang_goal': lang_goal}
+        out = self.attn_forward(inp, softmax=False)
+        return self.attn_criterion(compute_err, inp, out, label)
 
     def attn_criterion(self, compute_err, inp, out, label):
 
@@ -78,7 +78,6 @@ class PickModule(LightningModule):
             p0_pix = self.unravel_idx(indices, shape=pick_conf.shape[1:])
             err = {
                 'dist': np.sum(np.linalg.norm(p0 - p0_pix, axis=1)),
-                #'theta': np.absolute((theta - p0_theta) % np.pi)
             }
         return loss, err
 
@@ -108,25 +107,6 @@ class PickModule(LightningModule):
             loss=total_loss,
         )
 
-    def check_save_iteration(self):
-        global_step = self.trainer.global_step
-        if (global_step + 1) in self.save_steps:
-            self.trainer.run_evaluation()
-            val_loss = self.trainer.callback_metrics['val_loss']
-            steps = f'{global_step + 1:05d}'
-            filename = f"steps={steps}-val_loss={val_loss:0.8f}.ckpt"
-            checkpoint_path = os.path.join(self.cfg['train']['train_dir'], 'checkpoints')
-            ckpt_path = os.path.join(checkpoint_path, filename)
-            self.trainer.save_checkpoint(ckpt_path)
-
-        if (global_step + 1) % 1000 == 0:
-            self.save_last_checkpoint()
-
-    def save_last_checkpoint(self):
-        checkpoint_path = os.path.join(self.cfg['train']['train_dir'], 'checkpoints')
-        ckpt_path = os.path.join(checkpoint_path, 'last.ckpt')
-        self.trainer.save_checkpoint(ckpt_path)
-
     def log_stats(self, split, max_batch, batch_idx, loss, error):
         if batch_idx >= max_batch - 1:
             e_loss = 0 if len(self._batch_loss) == 0 else np.mean(self._batch_loss)
@@ -155,15 +135,18 @@ class PickModule(LightningModule):
         return dict(
             val_loss=val_total_loss,
             val_attn_dist_err=err0['dist'],
+            n_imgs=batch[1]['p0'].shape[0],
         )
 
     def validation_epoch_end(self, all_outputs):
         mean_val_total_loss = np.mean([v['val_loss'].item() for v in all_outputs])
         total_attn_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
-        # total_attn_theta_err = np.sum([v['val_attn_theta_err'] for v in all_outputs])
-    
+        total_imgs = np.sum([v['n_imgs'] for v in all_outputs])
+        mean_img_error = total_attn_dist_err/total_imgs
+
         self.log('Validation/loss', mean_val_total_loss)
         self.log('Validation/total_attn_dist_err', total_attn_dist_err)
+        self.log('Validation/mean_img_error', mean_img_error)
 
         print("\nAttn Err - Dist: {:.2f}".format(total_attn_dist_err))
 
@@ -172,11 +155,6 @@ class PickModule(LightningModule):
             total_attn_dist_err=total_attn_dist_err,
         )
 
-
     def configure_optimizers(self):
-        optim = torch.optim.Adam(self.attention.parameters(), lr=self.cfg.train.lr)
+        optim = torch.optim.Adam(self.attention.parameters(), lr=self.cfg.lr)
         return optim
-
-    def load(self, model_path):
-        self.load_state_dict(torch.load(model_path)['state_dict'])
-        self.to(device=self.device_type)

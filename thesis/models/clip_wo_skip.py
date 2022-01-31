@@ -8,8 +8,8 @@ from thesis.models.clip_lingunet_lat import CLIPLingUNetLat
 class CLIPWithoutSkipConnections(CLIPLingUNetLat):
     """ CLIP RN50 with decoders (no skip connections) """
 
-    def __init__(self, input_shape, output_dim, cfg, device, preprocess):
-        super().__init__(input_shape, output_dim, cfg, device, preprocess)
+    def __init__(self, input_shape, output_dim, cfg, device):
+        super().__init__(input_shape, output_dim, cfg, device)
 
     def _build_decoder(self):
         self.layers = nn.Sequential(
@@ -52,8 +52,6 @@ class CLIPWithoutSkipConnections(CLIPLingUNetLat):
         )
 
     def forward(self, x):
-        x = self.preprocess(x, dist='clip')
-
         in_type = x.dtype
         in_shape = x.shape
         x = x[:,:3]  # select RGB
