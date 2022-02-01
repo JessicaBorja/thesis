@@ -4,19 +4,17 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule
-import thesis.models.core.utils as utils
 import logging
 
 
-
-class AffordanceModule(LightningModule):
-    def __init__(self, cfg, in_shape=None):
+class AffordancePixelModule(LightningModule):
+    def __init__(self, cfg, in_shape=(3, 200, 200)):
         super().__init__()
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
         self.val_repeats = cfg.val_repeats
         self.total_steps = 0
-        self.in_shape = (200, 200, 3) if in_shape is None else in_shape
+        self.in_shape = in_shape
         self._batch_loss = []
         self.cmd_log = logging.getLogger(__name__)
         self._build_model()
@@ -107,16 +105,6 @@ class AffordanceModule(LightningModule):
             loss=total_loss,
         )
 
-    def log_stats(self, split, max_batch, batch_idx, loss, error):
-        if batch_idx >= max_batch - 1:
-            e_loss = 0 if len(self._batch_loss) == 0 else np.mean(self._batch_loss)
-            self.cmd_log.info(
-                "%s [epoch %4d]" % (split, self.current_epoch) + "loss: %.3f, error: %.3f" % (e_loss, error)
-            )
-            self._batch_loss = []
-        else:
-            self._batch_loss.append(loss.item())
-
     def validation_step(self, batch, batch_idx):
         self.attention.eval()
 
@@ -127,10 +115,7 @@ class AffordanceModule(LightningModule):
             l0, err0 = self.attn_step(frame, label, compute_err=True)
             loss0 += l0
         loss0 /= self.val_repeats
-        val_total_loss = loss0 
-
-        # Log metrics on command line
-        # self.log_stats("validation", sum(self.trainer.num_val_batches), batch_idx, val_total_loss, err0)
+        val_total_loss = loss0
 
         return dict(
             val_loss=val_total_loss,

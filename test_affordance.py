@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 
 from omegaconf import OmegaConf
 from thesis.utils.utils import add_img_text, blend_imgs, get_hydra_launch_dir, overlay_mask, load_aff_model
-from thesis.datasets.calvin_data import CalvinDataLang, DataLoader
+from thesis.datasets.pixel_label import CalvinDataLang, DataLoader
 
 @hydra.main(config_path="./config", config_name='test_affordance')
 def main(cfg):

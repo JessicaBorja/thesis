@@ -1,3 +1,7 @@
+# Unet Resnet 18 with respective decoder channels
+# CLIP as sentence encoder
+# Single pixel prediction
+
 model:
   _target_: thesis.affordance.aff_lang_detector.AffLangDetector
   _recursive_: False
@@ -9,16 +13,11 @@ model:
     val_repeats: 1
     streams: ${aff_detection.streams}
     decoder_channels: [128, 64, 32]  # [256, 128, 64, 32, 16]
-  hough_voting:
-    skip_pixels: 2
-    inlier_threshold: 0.7
-    angle_discretization: 100
-    inlier_distance: 10
-    percentage_threshold: 0.3
-    object_center_kernel_radius: 10
 
+dataset: 
+  _target_: thesis.datasets.pixel_label.PixeLabelDataLang
+  transforms: ${aff_detection.streams.transforms}
 
-transforms: ${aff_detection.streams.transforms}
 img_size: 224
 defaults:
-  - streams: rn18_bert_lingunet
+  - streams: rn18_clip_lingunet

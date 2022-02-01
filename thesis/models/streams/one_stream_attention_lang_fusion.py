@@ -12,7 +12,7 @@ import thesis.models as models
 
 class AttentionLangFusion(nn.Module):
 
-    def __init__(self, stream_fcn, in_shape, cfg, device):
+    def __init__(self, stream_fcn, in_shape, cfg, device, output_dim=1):
         super().__init__()
         self.fusion_type = cfg.attn_stream_fusion_type
         self.stream_fcn = stream_fcn
@@ -33,13 +33,14 @@ class AttentionLangFusion(nn.Module):
         self.padding = self.padding[[1, 0, 2]] # C, H, W
         self.padding = tuple(self.padding.flatten())
         self.in_shape = in_shape
+        self.output_dim = output_dim
         self._build_nets()
 
     def _build_nets(self):
         stream_one_fcn = self.stream_fcn
         stream_one_model = models.names[stream_one_fcn]
 
-        self.attn_stream_one = stream_one_model(self.in_shape, 1, self.cfg, self.device)
+        self.attn_stream_one = stream_one_model(self.in_shape, self.output_dim, self.cfg, self.device)
 
         print(f"Attn FCN: {stream_one_fcn}")
 

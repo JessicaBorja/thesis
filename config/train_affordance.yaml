@@ -1,18 +1,17 @@
 defaults:
-  - aff_detection: cliport_lang
+  - aff_detection: cliport_pixel_lang
   - paths: general_paths
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
 
-#
 save_viz: True
 
 # folders
+run_name: 'cliport_lang'
 load_from_last_ckpt: True
 checkpoint:
   path: ./ # ${hydra_outputs}/2022-01-16/14-42-24_aff_rl
   model_name: last.ckpt # epoch=49-step=34449.ckpt
-run_name: 'cliport_lang'
 
 trainer:
   # script configs
@@ -23,16 +22,16 @@ trainer:
   strategy: ddp
   precision: 32
 
-dataset_name: calvin_lang_contactSync
-dataset:
-  data_dir: ${paths.datasets}/${dataset_name}
-  cam: static
-  n_train_ep: -1  # Train using all episodes
-  transforms: ${aff_detection.transforms}
-  img_resize:
-    static: 224  # clip img size
-    gripper: 96
-    all: 100
+dataset_name: calvin_lang_contactEndPt
+aff_detection:
+  dataset:
+    _recursive_: False
+    data_dir: ${paths.datasets}/${dataset_name}
+    cam: static
+    img_resize:
+      static: 224  # clip img size
+      gripper: 96
+      all: 100
 
 dataloader:
   num_workers: 4

@@ -1,17 +1,15 @@
-import nntplib
-import cv2
 from cv2 import imshow
 import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn as nn
 
-from thesis.models.core.affordance_pixel_module import AffordancePixelModule
+from thesis.models.core.affordance_mask_module import AffordanceMaskModule
 from thesis.models.streams.one_stream_attention_lang_fusion import AttentionLangFusion
 from thesis.utils.utils import add_img_text, tt, blend_imgs
 from thesis.utils.utils import get_transforms
 
 
-class AffLangDetector(AffordancePixelModule):
+class AffLangDetector(AffordanceMaskModule):
 
     def __init__(self, cfg, transforms=None, *args, **kwargs):
         super().__init__(cfg, *args, **kwargs)
@@ -26,6 +24,7 @@ class AffLangDetector(AffordancePixelModule):
             in_shape=self.in_shape,
             cfg=self.cfg,
             device=self.device_type,
+            output_dim=self.n_classes
         )
 
     def predict(self, obs, goal=None, info=None):
@@ -66,8 +65,7 @@ class AffLangDetector(AffordancePixelModule):
         pick_logits_disp = (logits * 255 * affordance_heatmap_scale).astype('uint8')
         pick_logits_disp_masked = np.ma.masked_where(pick_logits_disp < 0, pick_logits_disp)
 
-        return {"softmax": pick_logits_disp_masked,
-                "pixel": (p0_pix[1], p0_pix[0]),
+        return {"pixel": (p0_pix[1], p0_pix[0]),
                 "error": err}
 
     def viz_preds(self, inp):
@@ -77,42 +75,4 @@ class AffLangDetector(AffordancePixelModule):
                     img(float.Tensor): between 0-1, shape= H, W, C
                     lang(list): language instruction
         '''
-        frame = inp["img"][0].detach().cpu().numpy()
-        frame = (frame * 255).astype("uint8")
-        frame = np.transpose(frame, (1, 2, 0))
-        if frame.shape[-1] == 1:
-            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-
-        obs = {"img": frame.copy(),
-               "lang_goal": inp["lang_goal"][0]}
-        info = None  # labels
-        pred = self.predict(obs, info=info)
-        pred_img = frame.copy()
-
-        cm = plt.get_cmap('viridis')
-        heatmap = cm(pred["softmax"])[:, :, [0,1,2]] * 255
-        heatmap = blend_imgs(frame.copy(), heatmap, alpha=0.7)
-
-        pixel = pred["pixel"]
-        # print(pred["error"], pred["pixel"], (x, y))
-        pred_img = cv2.drawMarker(
-                pred_img,
-                (pixel[0], pixel[1]),
-                (0, 0, 0),
-                markerType=cv2.MARKER_CROSS,
-                markerSize=12,
-                thickness=2,
-                line_type=cv2.LINE_AA,
-            )
-
-        new_size = (400, 400)
-        pred_img = cv2.resize(pred_img, new_size, interpolation=cv2.INTER_CUBIC)
-        heatmap = cv2.resize(heatmap, new_size, interpolation=cv2.INTER_CUBIC)
-        pred_img = pred_img.astype(float) / 255
-        out_img = np.concatenate([pred_img, heatmap], axis=1)
-
-
-        # Prints the text.
-        out_img = add_img_text(out_img, obs["lang_goal"])
-        cv2.imshow("img", out_img[:, :, ::-1])
-        cv2.waitKey(0)
+        return

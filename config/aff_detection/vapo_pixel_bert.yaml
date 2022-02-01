@@ -1,3 +1,7 @@
+# Unet Resnet 18 with respective decoder channels
+# BERT as sentence encoder
+# Single pixel prediction
+
 model:
   _target_: thesis.affordance.aff_lang_detector.AffLangDetector
   _recursive_: False
@@ -10,7 +14,10 @@ model:
     streams: ${aff_detection.streams}
     decoder_channels: [128, 64, 32]  # [256, 128, 64, 32, 16]
 
-transforms: ${aff_detection.streams.transforms}
+dataset: 
+  _target_: thesis.datasets.pixel_label.PixeLabelDataLang
+  transforms: ${aff_detection.streams.transforms}
+
 img_size: 224
 defaults:
-  - streams: rn18_clip_lingunet
+  - streams: rn18_bert_lingunet

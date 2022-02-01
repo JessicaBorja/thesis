@@ -10,7 +10,10 @@ model:
     val_repeats: 1
     streams: ${aff_detection.streams}
 
-transforms: ${aff_detection.streams.transforms}
+dataset: 
+  _target_: thesis.datasets.pixel_label.PixeLabelDataLang
+  transforms: ${aff_detection.streams.transforms}
+
 img_size: 224
 defaults:
   - streams: clip_lingunet

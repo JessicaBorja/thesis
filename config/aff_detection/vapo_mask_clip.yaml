@@ -1,0 +1,41 @@
+# Unet Resnet 18 with respective decoder channels
+# CLIP as sentence encoder
+# Affordance binary mask prediction
+
+model:
+  _target_: thesis.affordance.vapo_lang_dector.VAPOAffLangDetector
+  cfg:
+    attn:
+      attn_stream_fusion_type: 'add'
+      lang_fusion_type: 'mult'
+      streams: ${aff_detection.streams}
+    loss:
+      centers: 2.5
+      dice: 5
+      ce_loss: 1
+      affordance:
+        add_dice: true
+        ce_class_weights: [0.2, 0.8]
+    optimizer:
+      lr: 1e-5
+      weight_decay: 1e-3
+    unet_cfg:
+      decoder_channels: [128, 64, 32]
+    hough_voting:
+      skip_pixels: 2
+      inlier_threshold: 0.7
+      angle_discretization: 100
+      inlier_distance: 10
+      percentage_threshold: 0.3
+      object_center_kernel_radius: 10
+
+dataset: 
+  _target_: thesis.datasets.mask_label.MaskLabelLabelDataLang
+  transforms: ${aff_detection.streams.transforms}
+  radius:
+    static: 16
+    gripper: 10
+
+img_size: 224
+defaults:
+  - streams: rn18_bert_lingunet

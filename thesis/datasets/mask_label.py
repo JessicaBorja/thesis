@@ -12,7 +12,7 @@ from thesis.datasets.transforms import NormalizeInverse
 import affordance.utils.flowlib as flowlib
 
 
-class VAPODataLang(Dataset):
+class MaskLabelLabelDataLang(Dataset):
     def __init__(
         self,
         img_resize,
@@ -24,8 +24,10 @@ class VAPODataLang(Dataset):
         cam="static",
         log=None,
         episodes_file="episodes_split.json",
+        *args,
+        **kwargs
     ):
-        super(VAPODataLang, self).__init__()
+        super(MaskLabelLabelDataLang, self).__init__()
         self.cam = cam
         self.split = split
         self.log = log
@@ -198,17 +200,17 @@ def test_dir_labels(hv, frame, aff_mask, center_dir):
     cv2.waitKey(1)
     return frame
 
-@hydra.main(config_path="../../config", config_name="train_vapo_aff")
+@hydra.main(config_path="../../config", config_name="train_affordance")
 def main(cfg):
-    val = VAPODataLang(split="training", log=None, **cfg.dataset)
-    val_loader = DataLoader(val, num_workers=1, batch_size=1, pin_memory=True)
-    print("val minibatches {}".format(len(val_loader)))
+    data = MaskLabelLabelDataLang(split="training", log=None, **cfg.aff_detection.dataset)
+    loader = DataLoader(data, num_workers=1, batch_size=1, pin_memory=True)
+    print("val minibatches {}".format(len(loader)))
     from affordance.hough_voting import hough_voting as hv
-    hv = hv.HoughVoting(**cfg.aff_detection.model.hough_voting)
+    hv = hv.HoughVoting(**cfg.aff_detection.model.cfg.hough_voting)
 
     cm = plt.get_cmap("jet")
-    colors = cm(np.linspace(0, 1, val.n_classes))
-    for b_idx, b in enumerate(val_loader):
+    colors = cm(np.linspace(0, 1, data.n_classes))
+    for b_idx, b in enumerate(loader):
         # RGB
         inp, labels = b
 
@@ -219,11 +221,11 @@ def main(cfg):
         flow_img = flowlib.flow_to_image(directions)  # RGB
 
         # Imgs to numpy
-        inp_img = val.undo_normalize(inp["img"]).detach().cpu().numpy()
+        inp_img = data.undo_normalize(inp["img"]).detach().cpu().numpy()
         inp_img = (inp_img[0] * 255).astype("uint8")
         inp_img = np.transpose(inp_img, (1, 2, 0)).copy()
 
-        orig_img = inp["orig_frame"] # val.undo_normalize(inp["img"])
+        orig_img = inp["orig_frame"]
         frame = orig_img[0].detach().cpu().numpy()
         frame = (frame * 255).astype("uint8")
         frame = np.transpose(frame, (1, 2, 0))
@@ -253,7 +255,10 @@ def main(cfg):
         )
 
         hv_center_img = test_dir_labels(hv, out_img, fg_mask, labels["center_dirs"])
-        out_img = np.hstack([transformed_img, hv_center_img])
+
+        transformed_img = cv2.resize(transformed_img, (400, 400), interpolation=cv2.INTER_CUBIC)
+        hv_center_img = cv2.resize(hv_center_img, (400, 400), interpolation=cv2.INTER_CUBIC)
+        out_img = np.hstack([hv_center_img, transformed_img])
 
         # Prints the text.
         out_img = add_img_text(out_img, inp["lang_goal"][0])

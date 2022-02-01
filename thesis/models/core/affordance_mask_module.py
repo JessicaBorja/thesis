@@ -3,6 +3,8 @@ import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
 import torch
 import torch.nn as nn
+import logging
+from thesis.utils.utils import get_transforms
 
 from affordance.hough_voting import hough_voting as hv
 from affordance.utils.losses import (
@@ -14,24 +16,26 @@ from affordance.utils.losses import (
 )
 
 
-class AffordanceModel(pl.LightningModule):
-    def __init__(self, cfg, input_channels=1, n_classes=2, cmd_log=None):
+class AffordanceMaskModule(pl.LightningModule):
+    def __init__(self, cfg, in_shape=(3, 200, 200), n_classes=2, transforms=None, *args, **kwargs):
         super().__init__()
         self.n_classes = n_classes
+
+        _in_channels = in_shape[-1]
         # https://github.com/qubvel/segmentation_models.pytorch
-        self.unet, self.center_direction_net = self.init_model(
+        self._build_model(
             decoder_channels=cfg.unet_cfg.decoder_channels,
-            in_channels=input_channels,
+            in_channels=_in_channels,
             n_classes=self.n_classes,
         )
         self.optimizer_cfg = cfg.optimizer
         # Loss function
-        self.affordance_loss = get_affordance_loss(cfg.aff_loss, self.n_classes)
+        self.affordance_loss = get_affordance_loss(cfg.loss, self.n_classes)
         self.center_loss = CosineSimilarityLossWithMask(weighted=True)
-        self.loss_cfg = {"affordance": cfg.aff_loss, "centers": cfg.centers_loss}
+        self.loss_w = cfg.loss
 
         # Misc
-        self.cmd_log = cmd_log
+        self.cmd_log = logging.getLogger(__name__)
         self._batch_loss = []
         self._batch_miou = []
 
@@ -45,9 +49,16 @@ class AffordanceModel(pl.LightningModule):
             self.act_fnc = torch.nn.Softmax(1)
         else:
             self.act_fnc = torch.nn.Sigmoid()
+        
+        # Store transforms
+        if transforms is not None:
+            self.pred_transforms = get_transforms(transforms, self.in_shape[0])['transforms']
+        else:
+            self.pred_transforms = nn.Identity()
         self.save_hyperparameters()
 
-    def init_model(self, decoder_channels=None, n_classes=2, in_channels=1):
+
+    def _build_model(self, decoder_channels=None, n_classes=2, in_channels=1):
         if decoder_channels is None:
             decoder_channels = [128, 64, 32]
         # encoder_depth Should be equal to number of layers in decoder
@@ -66,14 +77,12 @@ class AffordanceModel(pl.LightningModule):
 
         # A 1x1 conv layer that goes from embedded features to 2d pixel direction
         feature_dim = decoder_channels[-1]
-        center_direction_net = nn.Conv2d(feature_dim, 2, kernel_size=1, stride=1, padding=0, bias=False)
+        self.center_direction_net = nn.Conv2d(feature_dim, 2, kernel_size=1, stride=1, padding=0, bias=False)
+        self.unet = unet
 
-        return unet, center_direction_net
-
-    def _calc_aff_loss(self, preds, labels):
+    def compute_aff_loss(self, preds, labels):
         # Preds = (B, C, H, W)
         # labels = (B, H, W)
-        cfg = self.loss_cfg["affordance"]
         B, C, H, W = preds.shape
         if C == 1:
             # BCE needs B, H, W
@@ -81,24 +90,24 @@ class AffordanceModel(pl.LightningModule):
             labels = labels.float()
         ce_loss = self.affordance_loss(preds, labels)
         info = {"CE_loss": ce_loss}
-        if cfg.dice_loss.add:
-            # Unweighted cross entropy + dice loss
+        loss = self.loss_w.ce_loss * ce_loss
+
+        # Add dice if required
+        if self.loss_w.affordance.add_dice:
             if C == 1:
                 # Dice needs B, C, H, W
                 preds = preds.unsqueeze(1)
                 labels = labels.unsqueeze(1)
             # label_spatial = pixel2spatial(labels.long(), H, W)
             dice_loss = compute_dice_loss(labels.long(), preds)
-            loss = cfg.ce_loss.weight * ce_loss + cfg.dice_loss.weight * dice_loss
             info["dice_loss"] = dice_loss
-        else:
-            loss = ce_loss
+            loss += self.loss_w.dice * dice_loss
         return loss, info
 
-    def compute_loss(self, preds, labels):
+    def criterion(self, preds, labels):
         # Activation fnc is applied in loss fnc hence, use logits
         # Affordance loss
-        aff_loss, info = self._calc_aff_loss(preds["affordance_logits"], labels["affordance"])
+        aff_loss, info = self.compute_aff_loss(preds["affordance_logits"], labels["affordance"])
 
         # Center prediction loss
         if self.n_classes > 2:
@@ -111,9 +120,7 @@ class AffordanceModel(pl.LightningModule):
         info.update({"center_loss": center_loss})
 
         # Total loss
-        lambda_aff = self.loss_cfg["affordance"].weight
-        lambda_center = self.loss_cfg["centers"].weight
-        total_loss = lambda_aff * aff_loss + lambda_center * center_loss
+        total_loss = aff_loss + self.loss_w.centers * center_loss
         return total_loss, info
 
     def eval_mode(self):
@@ -200,7 +207,7 @@ class AffordanceModel(pl.LightningModule):
         preds = {"affordance_logits": aff_logits, "center_dirs": center_dir}
 
         # Compute loss
-        total_loss, info = self.compute_loss(preds, labels)
+        total_loss, info = self.criterion(preds, labels)
 
         # Metrics
         mIoU = compute_mIoU(aff_logits, labels["affordance"])

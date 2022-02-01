@@ -1,10 +1,7 @@
 """Main training script."""
 
 import os
-
-from sklearn.utils import shuffle
-
-from thesis.datasets.calvin_data import CalvinDataLang, DataLoader
+from torch.utils.data import DataLoader
 
 import hydra
 from pytorch_lightning import Trainer
@@ -17,7 +14,7 @@ from thesis.utils.utils import get_hydra_launch_dir
 
 def print_cfg(cfg):
     print_cfg = OmegaConf.to_container(cfg)
-    print_cfg.pop("dataset")
+    print_cfg.pop("paths")
     print_cfg.pop("trainer")
     return OmegaConf.create(print_cfg)
 
@@ -55,8 +52,8 @@ def main(cfg):
     )
 
     # Dataloaders
-    train = CalvinDataLang(split="training", log=logger, **cfg.dataset)
-    val = CalvinDataLang(split="validation", log=logger, **cfg.dataset)
+    train = hydra.utils.instantiate(cfg.aff_detection.dataset, split="training", log=logger)
+    val = hydra.utils.instantiate(cfg.aff_detection.dataset, split="validation", log=logger)
     logger.info("train_data {}".format(train.__len__()))
     logger.info("val_data {}".format(val.__len__()))
 

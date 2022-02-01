@@ -10,7 +10,7 @@ import logging
 from thesis.utils.utils import add_img_text, resize_pixel, get_hydra_launch_dir, get_transforms
 from thesis.datasets.transforms import NormalizeInverse
 
-class CalvinDataLang(Dataset):
+class PixeLabelDataLang(Dataset):
     def __init__(
         self,
         img_resize,
@@ -21,8 +21,10 @@ class CalvinDataLang(Dataset):
         cam="static",
         log=None,
         episodes_file="episodes_split.json",
+        *args,
+        **kwargs
     ):
-        super(CalvinDataLang, self).__init__()
+        super(PixeLabelDataLang, self).__init__()
         self.cam = cam
         self.split = split
         self.log = log
@@ -126,17 +128,23 @@ class CalvinDataLang(Dataset):
 
 @hydra.main(config_path="../../config", config_name="train_affordance")
 def main(cfg):
-    val = CalvinDataLang(split="training", log=None, **cfg.dataset)
-    val_loader = DataLoader(val, num_workers=1, batch_size=1, pin_memory=True)
-    print("val minibatches {}".format(len(val_loader)))
+    data = PixeLabelDataLang(split="training", log=None, **cfg.aff_detection.dataset)
+    loader = DataLoader(data, num_workers=1, batch_size=1, pin_memory=True)
+    print("val minibatches {}".format(len(loader)))
 
     cm = plt.get_cmap("jet")
-    colors = cm(np.linspace(0, 1, val.n_classes))
-    for b_idx, b in enumerate(val_loader):
+    colors = cm(np.linspace(0, 1, data.n_classes))
+    for b_idx, b in enumerate(loader):
         # RGB
         inp, labels = b
-        inp_img = inp["orig_frame"] # val.undo_normalize(inp["img"])
-        frame = inp_img[0].detach().cpu().numpy()
+    
+        # Imgs to numpy
+        inp_img = data.undo_normalize(inp["img"]).detach().cpu().numpy()
+        inp_img = (inp_img[0] * 255).astype("uint8")
+        transformed_img = np.transpose(inp_img, (1, 2, 0)).copy()
+
+        orig_img = inp["orig_frame"]
+        frame = orig_img[0].detach().cpu().numpy()
         frame = (frame * 255).astype("uint8")
         frame = np.transpose(frame, (1, 2, 0))
 
@@ -145,7 +153,7 @@ def main(cfg):
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
         out_img = frame.copy()
-        for label in range(0, val.n_classes):
+        for label in range(0, data.n_classes):
             color = colors[label]
             color[-1] = 0.3
             color = tuple((color * 255).astype("int32"))
@@ -153,8 +161,8 @@ def main(cfg):
             # Draw center
             center_px = labels["p0"][0].numpy().squeeze()
             y, x = center_px[0].item(), center_px[1].item()
-            out_img = cv2.drawMarker(
-                out_img,
+            transformed_img = cv2.drawMarker(
+                transformed_img,
                 (x, y),
                 (0, 0, 0),
                 markerType=cv2.MARKER_CROSS,
@@ -163,8 +171,10 @@ def main(cfg):
                 line_type=cv2.LINE_AA,
             )
 
-        out_img = cv2.resize(out_img, (500, 500), interpolation=cv2.INTER_CUBIC)
+        transformed_img = cv2.resize(transformed_img, (400, 400), interpolation=cv2.INTER_CUBIC)
+        out_img = cv2.resize(out_img, (400, 400), interpolation=cv2.INTER_CUBIC)
 
+        out_img = np.hstack([out_img, transformed_img])
         # Prints the text.
         out_img = add_img_text(out_img, inp["lang_goal"][0])
 
