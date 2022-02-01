@@ -11,11 +11,9 @@ from .clip_lingunet import CLIPLingUNet
 
 from .resnet_lang import ResNet43_8s_lang
 
-from .resnet_lat import ResNet45_10s
-from .clip_unet_lat import CLIPUNetLat
-from .clip_film_lingunet_lat import CLIPFilmLingUNet
-
-from .unet_lang import UnetLang
+# VAPO enc-dec arch
+from .rn18_clip_lingunet import RN18CLIPLingunet
+from .rn18_bert_lingunet import RN18BertLingunet
 
 
 names = {
@@ -34,5 +32,6 @@ names = {
     'clip_lingunet': CLIPLingUNet,
     'rn50_bert_lingunet': RN50BertLingUNet,
     'untrained_rn50_bert_lingunet': UntrainedRN50BertLingUNet,
-    'unet_lang': UnetLang,
+    'rn18_clip_lingunet': RN18CLIPLingunet,
+    'rn18_bert_lingunet': RN18BertLingunet,
 }

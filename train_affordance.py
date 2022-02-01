@@ -2,7 +2,8 @@
 
 import os
 
-import torch
+from sklearn.utils import shuffle
+
 from thesis.datasets.calvin_data import CalvinDataLang, DataLoader
 
 import hydra

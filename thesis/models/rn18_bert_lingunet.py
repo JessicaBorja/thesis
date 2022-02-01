@@ -1,22 +1,32 @@
+import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from thesis.models.core import fusion
-from thesis.models.clip_lingunet_lat import CLIPLingUNetLat
 import segmentation_models_pytorch as smp
 from thesis.models.core.unet_decoder import UnetLangFusionDecoder
+from transformers import DistilBertTokenizer, DistilBertModel
 
-class UnetLang(CLIPLingUNetLat):
-    """ CLIP RN50 with U-Net skip connections and lateral connections without language """
+
+class RN18BertLingunet(nn.Module):
+    """Resnet 18 with U-Net skip connections and BERT language encoder"""
 
     def __init__(self, input_shape, output_dim, cfg, device):
-        super().__init__(input_shape, output_dim, cfg, device)
+        super().__init__()
         in_channels = input_shape[-1]
+        self.input_shape = input_shape
+        self.output_dim = output_dim
+        self.cfg = cfg
+        self.device = device
+        self.lang_fusion_type = self.cfg['lang_fusion_type']
+
+        # Use BERT text embeddings
+        self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+        self.text_encoder = DistilBertModel.from_pretrained('distilbert-base-uncased')
+        self.lang_embed_dim = 1024
+        self.text_fc = nn.Linear(768, self.text_enc_dim)
         self.unet = self._build_model(cfg.decoder_channels, in_channels)
 
     def _build_model(self, decoder_channels, in_channels):
-        # if decoder_channels is None:
-        decoder_channels = [256, 128, 64, 32, 16]
         # encoder_depth Should be equal to number of layers in decoder
         unet = smp.Unet(
             encoder_name="resnet18",
@@ -27,11 +37,9 @@ class UnetLang(CLIPLingUNetLat):
             decoder_channels=tuple(decoder_channels),
             activation=None,
         )
-
-        lang_embed_dim = self.clip_rn50.state_dict()["text_projection"].shape[1]
         self.decoder = UnetLangFusionDecoder(
             fusion_module = fusion.names[self.lang_fusion_type],
-            lang_embed_dim = lang_embed_dim,
+            lang_embed_dim = self.lang_embed_dim,
             encoder_channels=unet.encoder.out_channels,
             decoder_channels=decoder_channels,
             n_blocks=len(decoder_channels))
@@ -43,35 +51,22 @@ class UnetLang(CLIPLingUNetLat):
             param.requires_grad = False
         return unet
 
-    def encode_image(self, x):
-        """Run until prepool and save intermediate features"""
-        im = []
-        x = x.type(self.conv1.weight.dtype)
-        for layer in self.unet.encoder:
-            x = layer(x)
-            im.append(x)
-        # def stem(x):
-        #     for conv, bn in [(self.conv1, self.bn1), (self.conv2, self.bn2), (self.conv3, self.bn3)]:
-        #         x = self.relu(bn(conv(x)))
-        #         im.append(x)
-        #     x = self.avgpool(x)
-        #     im.append(x)
-        #     return x
-
-        for layer in [self.layer1, self.layer2, self.layer3, self.layer4]:
-            x = layer(x)
-            im.append(x)
-
-        return x, im
+    def encode_text(self, x):
+        with torch.no_grad():
+            inputs = self.tokenizer(x, return_tensors='pt')
+            text_embeddings = self.text_encoder(**inputs)
+            sentence_encodings = text_embeddings.last_hidden_state.mean(1)
+        text_feat = self.text_fc(sentence_encodings)
+        return text_feat, text_embeddings.last_hidden_state
 
     def forward(self, x, l):
-        in_type = x.dtype
-        in_shape = x.shape
+        # in_type = x.dtype
+        # in_shape = x.shape
         x = x[:,:3]  # select RGB
         features = self.unet.encoder(x)
 
         # encode text
-        l_enc, l_emb, _ = self.encode_text(l)
+        l_enc, l_emb = self.encode_text(l)
         l_input = l_emb if 'word' in self.lang_fusion_type else l_enc
         l_input = l_input.to(dtype=x.dtype)
     

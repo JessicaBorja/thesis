@@ -1,5 +1,5 @@
 import numpy as np
-from thesis.utils.utils import resize_pixel
+from thesis.utils.utils import add_img_text, resize_pixel
 import cv2
 
 class BaseAgent:
@@ -33,21 +33,7 @@ class BaseAgent:
         out_img = cv2.resize(out_img, output_size)
         if(lang_goal != ""):
             # Prints the text.
-            font_scale = 0.6
-            thickness = 2
-            color = (0, 0, 0)
-            x1, y1 = 10, 20
-            (w, h), _ = cv2.getTextSize(lang_goal, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
-            out_img = cv2.rectangle(out_img, (x1, y1 - 20), (x1 + w, y1 + h), color, -1)
-            out_img = cv2.putText(
-                out_img,
-                lang_goal,
-                org=(x1, y1),
-                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                fontScale=font_scale,
-                color=(255, 255, 255),
-                thickness=thickness,
-            )
+            out_img = add_img_text(out_img, lang_goal)
 
         cv2.imshow("orig img",out_img[:, :, ::-1])
         cv2.waitKey(1)

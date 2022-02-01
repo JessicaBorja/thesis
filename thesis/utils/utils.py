@@ -10,6 +10,23 @@ import cv2
 from torchvision.transforms import InterpolationMode
 logger = logging.getLogger(__name__)
 
+def add_img_text(img, text_label):
+    font_scale = 0.6
+    thickness = 2
+    color = (0, 0, 0)
+    x1, y1 = 10, 20
+    (w, h), _ = cv2.getTextSize(text_label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+    out_img = cv2.rectangle(img, (x1, y1 - 20), (x1 + w, y1 + h), color, -1)
+    out_img = cv2.putText(
+        out_img,
+        text_label,
+        org=(x1, y1),
+        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+        fontScale=font_scale,
+        color=(255, 255, 255),
+        thickness=thickness,
+    )
+    return out_img
 
 def load_aff_model(hydra_run_dir, model_name, model_cfg, **kwargs):
     # Load model
@@ -103,6 +120,23 @@ def get_transforms(transforms_cfg, img_size=None):
         "norm_values": normalize_values,
         "rand_shift": rand_shift
     }
+
+
+def overlay_flow(flow, img, mask):
+    """
+    Args:
+        flow: numpy array, shape = (W, H, 3), between 0 - 255
+        img: numpy array, shape = (W, H, 3), between 0 - 255
+        mask: numpy array, shape = (W, H), between 0 - 255
+    return:
+        res: Overlay of mask over image, shape = (W, H, 3), 0-255
+    """
+    result = Image.fromarray(np.uint8(img.squeeze()))
+    pil_mask = Image.fromarray(np.uint8(mask.squeeze()))
+    flow = Image.fromarray(np.uint8(flow))
+    result.paste(flow, (0, 0), pil_mask)
+    result = np.array(result)
+    return result
 
 
 def get_hydra_launch_dir(path_str):

@@ -2,15 +2,15 @@ model:
   _target_: thesis.affordance.aff_lang_detector.AffLangDetector
   _recursive_: False
   cfg:
-    batchnorm: False # important: False because batch_size=1
     lr: 1e-5
     attn_stream_fusion_type: 'add'
     lang_fusion_type: 'mult'
     load_from_last_ckpt: True
     val_repeats: 1
     streams: ${aff_detection.streams}
+    decoder_channels: [128, 64, 32]  # [256, 128, 64, 32, 16]
 
 transforms: ${aff_detection.streams.transforms}
 img_size: 224
 defaults:
-  - streams: clip_lingunet
+  - streams: rn18_bert_lingunet

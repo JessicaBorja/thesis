@@ -7,11 +7,11 @@ import torch.nn as nn
 
 from thesis.models.core.affordance_module import AffordanceModule
 from thesis.models.streams.one_stream_attention_lang_fusion import AttentionLangFusion
-from thesis.utils.utils import tt, blend_imgs
+from thesis.utils.utils import add_img_text, tt, blend_imgs
 from thesis.utils.utils import get_transforms
 
 
-class ClipLingUNetDetector(AffordanceModule):
+class AffLangDetector(AffordanceModule):
 
     def __init__(self, cfg, transforms=None, *args, **kwargs):
         super().__init__(cfg, *args, **kwargs)
@@ -107,21 +107,6 @@ class ClipLingUNetDetector(AffordanceModule):
 
 
         # Prints the text.
-        font_scale = 0.6
-        thickness = 2
-        color = (0, 0, 0)
-        x1, y1 = 10, 20
-        text_label = obs["lang_goal"]
-        (w, h), _ = cv2.getTextSize(text_label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
-        out_img = cv2.rectangle(out_img, (x1, y1 - 20), (x1 + w, y1 + h), color, -1)
-        out_img = cv2.putText(
-            out_img,
-            text_label,
-            org=(x1, y1),
-            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-            fontScale=font_scale,
-            color=(255, 255, 255),
-            thickness=thickness,
-        )
+        out_img = add_img_text(out_img, obs["lang_goal"])
         cv2.imshow("img", out_img[:, :, ::-1])
         cv2.waitKey(0)

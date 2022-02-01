@@ -1,0 +1,4 @@
+name: 'rn18_bert_lingunet'
+
+defaults:
+  - /transforms: rgb
