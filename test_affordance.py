@@ -33,7 +33,7 @@ def main(cfg):
 
     # Dataloaders
     val = CalvinDataLang(split="validation", log=None, **run_cfg.dataset)
-    val_loader = DataLoader(val, num_workers=1, batch_size=1, pin_memory=True)
+    val_loader = DataLoader(val, num_workers=1, batch_size=1, shuffle=True, pin_memory=True)
     print("val minibatches {}".format(len(val_loader)))
 
     cm = plt.get_cmap("jet")
