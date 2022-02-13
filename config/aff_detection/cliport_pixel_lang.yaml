@@ -1,3 +1,5 @@
+name: cliport_pixel_clip
+
 model:
   _target_: thesis.affordance.aff_lang_detector.AffLangDetector
   _recursive_: False
@@ -10,10 +12,7 @@ model:
     val_repeats: 1
     streams: ${aff_detection.streams}
 
-dataset: 
-  _target_: thesis.datasets.pixel_label.PixeLabelDataLang
-  transforms: ${aff_detection.streams.transforms}
-
 img_size: 224
 defaults:
+  - pixel_data
   - streams: clip_lingunet

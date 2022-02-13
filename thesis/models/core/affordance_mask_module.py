@@ -1,10 +1,7 @@
 import numpy as np
 import pytorch_lightning as pl
-import segmentation_models_pytorch as smp
 import torch
-import torch.nn as nn
 import logging
-from thesis.utils.utils import get_transforms
 
 from affordance.hough_voting import hough_voting as hv
 from affordance.utils.losses import (
@@ -17,17 +14,13 @@ from affordance.utils.losses import (
 
 
 class AffordanceMaskModule(pl.LightningModule):
-    def __init__(self, cfg, in_shape=(3, 200, 200), n_classes=2, transforms=None, *args, **kwargs):
+    def __init__(self, cfg, in_shape=(3, 200, 200), n_classes=2, *args, **kwargs):
         super().__init__()
+        self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.cfg = cfg
         self.n_classes = n_classes
+        self.in_shape = in_shape
 
-        _in_channels = in_shape[-1]
-        # https://github.com/qubvel/segmentation_models.pytorch
-        self._build_model(
-            decoder_channels=cfg.unet_cfg.decoder_channels,
-            in_channels=_in_channels,
-            n_classes=self.n_classes,
-        )
         self.optimizer_cfg = cfg.optimizer
         # Loss function
         self.affordance_loss = get_affordance_loss(cfg.loss, self.n_classes)
@@ -43,42 +36,12 @@ class AffordanceMaskModule(pl.LightningModule):
         self.hough_voting_layer = hv.HoughVoting(**cfg.hough_voting)
         print("hvl init")
 
-        # Prediction act_fnc
-        if self.n_classes > 1:
-            # Softmax over channels
-            self.act_fnc = torch.nn.Softmax(1)
-        else:
-            self.act_fnc = torch.nn.Sigmoid()
-        
-        # Store transforms
-        if transforms is not None:
-            self.pred_transforms = get_transforms(transforms, self.in_shape[0])['transforms']
-        else:
-            self.pred_transforms = nn.Identity()
+        self._build_model()
         self.save_hyperparameters()
 
-
-    def _build_model(self, decoder_channels=None, n_classes=2, in_channels=1):
-        if decoder_channels is None:
-            decoder_channels = [128, 64, 32]
-        # encoder_depth Should be equal to number of layers in decoder
-        unet = smp.Unet(
-            encoder_name="resnet18",
-            encoder_weights="imagenet",
-            in_channels=in_channels,  # Grayscale
-            classes=n_classes,
-            encoder_depth=len(decoder_channels),
-            decoder_channels=tuple(decoder_channels),
-            activation=None,
-        )
-        # Fix encoder weights. Only train decoder
-        for param in unet.encoder.parameters():
-            param.requires_grad = False
-
-        # A 1x1 conv layer that goes from embedded features to 2d pixel direction
-        feature_dim = decoder_channels[-1]
-        self.center_direction_net = nn.Conv2d(feature_dim, 2, kernel_size=1, stride=1, padding=0, bias=False)
-        self.unet = unet
+    def _build_model(self):
+        self.attention = None
+        raise NotImplementedError()
 
     def compute_aff_loss(self, preds, labels):
         # Preds = (B, C, H, W)
@@ -104,10 +67,11 @@ class AffordanceMaskModule(pl.LightningModule):
             loss += self.loss_w.dice * dice_loss
         return loss, info
 
-    def criterion(self, preds, labels):
+    def criterion(self, preds, labels, compute_err=False):
         # Activation fnc is applied in loss fnc hence, use logits
         # Affordance loss
-        aff_loss, info = self.compute_aff_loss(preds["affordance_logits"], labels["affordance"])
+        aff_loss, info = self.compute_aff_loss(preds["aff_logits"], labels["affordance"])
+        info["aff_loss"] = aff_loss
 
         # Center prediction loss
         if self.n_classes > 2:
@@ -116,37 +80,63 @@ class AffordanceMaskModule(pl.LightningModule):
         else:
             bin_mask = labels["affordance"]
         center_loss = self.center_loss(preds["center_dirs"], labels["center_dirs"], bin_mask)
-
         info.update({"center_loss": center_loss})
 
         # Total loss
         total_loss = aff_loss + self.loss_w.centers * center_loss
+
+        info["total_loss"] = total_loss
         return total_loss, info
 
-    def eval_mode(self):
-        self.unet.eval()
-        self.center_direction_net.eval()
+    def forward(self, inp):
+        out = self.attn_forward(inp, softmax=True)
+        center_dir =  self.center_direction_net(out["decoder"])
+        preds = {"aff_logits": out["affordance"],
+                 "center_dirs": center_dir}
 
-    def train_mode(self):
-        self.unet.train()
-        self.center_direction_net.train()
+        return preds
 
-    # Affordance mask prediction
-    def forward(self, x):
-        # in lightning, forward defines the prediction/inference actions
-        features = self.unet.encoder(x)
-        decoder_output = self.unet.decoder(*features)
-        aff_logits = self.unet.segmentation_head(decoder_output)
-        center_direction_prediction = self.center_direction_net(decoder_output)
+    def attn_step(self, frame, label, compute_err=False):
+        inp_img = frame['img']
+        lang_goal = frame['lang_goal']
+        B = inp_img.shape[0]
 
-        # Affordance
-        aff_probs = self.act_fnc(aff_logits)  # [N x C x H x W]
-        aff_mask = torch.argmax(aff_probs, dim=1)  # [N x H x W]
-        return aff_logits, aff_probs, aff_mask, center_direction_prediction
+        inp = {'inp_img': inp_img, 'lang_goal': lang_goal}
+        logits = self.attn_forward(inp, softmax=False)
+        center_dir =  self.center_direction_net(logits["decoder"])
+        preds = {"aff_logits": logits["affordance"],
+                 "center_dirs": center_dir}
+
+        total_loss, info = self.criterion(preds, label)
+        info["miou"] = compute_mIoU(logits["affordance"], label["affordance"])
+        info["dice_score"] = compute_dice_score(logits["affordance"], label["affordance"])
+
+        if compute_err:
+            probs = self.attn_forward(inp, softmax=True)
+            aff_mask = torch.argmax(probs["affordance"], dim=1)  # [N x H x W]
+            _c_info = self.pred_centers(aff_mask, center_dir)
+            p0=label['p0'].detach().cpu().numpy()  # B, 2
+            pt_preds = []
+            for pred in _c_info[0]:
+                if(len(pred) > 0):
+                    p0_pred = pred.detach().cpu().numpy()
+                else:
+                    p0_pred = np.array([[1.0, 0.0]])
+                pt_preds.append(p0_pred)
+            p0_pred = np.stack(pt_preds)
+            info['err'] = np.sum(np.linalg.norm(p0 - p0_pred, axis=1))
+        return total_loss, info
+
+    def attn_forward(self, inp, softmax=False):
+        inp_img = inp['inp_img']
+        lang_goal = inp['lang_goal']
+        output = self.attention(inp_img, lang_goal, softmax=softmax)
+        return output
 
     # Center prediction
-    def get_centers(self, aff_mask, directions):
+    def pred_centers(self, aff_mask, directions):
         """
+        Take the direction vectors and foreground mask to get hough voting layer prediction
         :param aff_mask (torch.tensor, int64): [N x H x W]
         :param directions (torch.tensor, float32): [N x 2 x H x W]
 
@@ -174,15 +164,20 @@ class AffordanceMaskModule(pl.LightningModule):
             )
 
         # Compute list of object centers
-        object_centers = []
+        batch_centers = []
         for i in range(initial_masks.shape[0]):
             centers_padded = object_centers_padded[i]
             centers_padded = centers_padded.permute((1, 0))[: num_objects[i], :]
+            object_centers = []
             for obj_center in centers_padded:
                 if torch.norm(obj_center) > 0:
                     # cast to int for pixel
                     object_centers.append(obj_center.long())
-        return object_centers, directions, initial_masks
+            if(len(object_centers) > 0):
+                batch_centers.append(torch.stack(object_centers))
+            else:
+                batch_centers.append([])
+        return batch_centers, directions, initial_masks
 
     def log_stats(self, split, max_batch, batch_idx, loss, miou):
         if batch_idx >= max_batch - 1:
@@ -200,51 +195,40 @@ class AffordanceMaskModule(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         # training_step defined the train loop. It is independent of forward
         x, labels = batch
-
-        # B, N_classes, img_size, img_size
-        # Forward pass
-        aff_logits, _, _, center_dir = self.forward(x)
-        preds = {"affordance_logits": aff_logits, "center_dirs": center_dir}
-
-        # Compute loss
-        total_loss, info = self.criterion(preds, labels)
+        total_loss, info = self.attn_step(x, labels)
 
         # Metrics
-        mIoU = compute_mIoU(aff_logits, labels["affordance"])
-        dice_score = compute_dice_score(aff_logits, labels["affordance"])
+        mIoU = info["miou"]
 
-        self.log_stats("train", self.trainer.num_training_batches, batch_idx, total_loss, mIoU)
-        self.log("train_total_loss", total_loss, on_step=False, on_epoch=True)
-        self.log("train_dice_score", dice_score, on_step=False, on_epoch=True)
-        self.log("train_miou", mIoU, on_step=False, on_epoch=True)
+        # Log metrics
+        self.log_stats("Training", sum(self.trainer.num_val_batches), batch_idx, total_loss, mIoU)
         for k, v in info.items():
-            self.log("train_%s" % k, v, on_step=False, on_epoch=True)
+            self.log("Training/%s" % k, v, on_step=False, on_epoch=True)
 
         return total_loss
 
     def validation_step(self, val_batch, batch_idx):
         x, labels = val_batch
+
         # Predictions
-        aff_logits, _, aff_mask, directions = self.forward(x)
-        _, center_dir, _ = self.get_centers(aff_mask, directions)
-        preds = {"affordance_logits": aff_logits, "center_dirs": center_dir}
+        total_loss, info = self.attn_step(x, labels, compute_err=False)
 
-        # Compute loss
-        total_loss, info = self.compute_loss(preds, labels)
-
-        # Compute metrics
-        mIoU = compute_mIoU(aff_logits, labels["affordance"])
-        dice_score = compute_dice_score(aff_logits, labels["affordance"])
+        # Metrics
+        mIoU = info["miou"]
+        dice_score = info["dice_score"]
 
         # Log metrics
-        self.log_stats("validation", sum(self.trainer.num_val_batches), batch_idx, total_loss, mIoU)
-        self.log("val_miou", mIoU, on_step=False, on_epoch=True)
-        self.log("val_dice_score", dice_score, on_step=False, on_epoch=True)
-        self.log("val_total_loss", total_loss, on_step=False, on_epoch=True)
+        self.log_stats("Validation", sum(self.trainer.num_val_batches), batch_idx, total_loss, mIoU)
         for k, v in info.items():
-            self.log("val_%s" % k, v, on_step=False, on_epoch=True)
+            self.log("Validation/%s" % k, v, on_step=False, on_epoch=True)
 
-        return total_loss
+        return dict(
+            val_loss=total_loss,
+            val_miou=mIoU,
+            val_dice_score=dice_score,
+            # val_attn_dist_err=info['err'],
+            n_imgs=labels['p0'].shape[0],
+        )
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), **self.optimizer_cfg)

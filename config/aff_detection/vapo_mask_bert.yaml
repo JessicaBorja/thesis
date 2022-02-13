@@ -1,10 +1,16 @@
 # Unet Resnet 18 with respective decoder channels
 # BERT as sentence encoder
 # Affordance binary mask prediction
+name: vapo_mask_bert
 
 model:
-  _target_: thesis.affordance.vapo_lang_dector.VAPOAffLangDetector
+  _target_: thesis.affordance.vapo_lang_detector.VAPOAffLangDetector
+  _recursive_: False
   cfg:
+    attn_stream_fusion_type: 'add'
+    lang_fusion_type: 'mult'
+    streams: ${aff_detection.streams}
+    batchnorm: False
     loss:
       centers: 2.5
       dice: 5
@@ -25,13 +31,7 @@ model:
       percentage_threshold: 0.3
       object_center_kernel_radius: 10
 
-dataset: 
-  _target_: thesis.datasets.mask_label.MaskLabelLabelDataLang
-  transforms: ${aff_detection.streams.transforms}
-  radius:
-    static: 16
-    gripper: 10
-
 img_size: 224
 defaults:
+  - mask_data
   - streams: rn18_bert_lingunet

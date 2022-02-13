@@ -7,7 +7,7 @@ defaults:
 save_viz: True
 
 # folders
-run_name: 'cliport_lang'
+run_name: ${aff_detection.name}
 load_from_last_ckpt: True
 checkpoint:
   path: ./ # ${hydra_outputs}/2022-01-16/14-42-24_aff_rl
@@ -44,18 +44,8 @@ wandb:
     entity: affordance
     project: affordance_model
     offline: False
-  saver:
-    val_loss:
-      monitor: 'Validation/loss'
-      save_top_k: 2
-      mode: min
-      verbose: True
-    val_err:
-      monitor: 'Validation/total_attn_dist_err'
-      save_top_k: 2
-      mode: min
-      verbose: True
-      save_last: True
+  saver: ${aff_detection.wandb_saver}
+
 #-- Hydra config --#
 hydra_outputs: ./hydra_outputs/affordance_model/
 hydra:

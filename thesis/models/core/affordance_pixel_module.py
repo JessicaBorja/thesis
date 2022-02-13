@@ -97,7 +97,7 @@ class AffordancePixelModule(LightningModule):
         step = self.total_steps + 1
         loss0, err0 = self.attn_step(frame, label)
         total_loss = loss0
-        self.log('Training/loss', total_loss, on_step=False, on_epoch=True)
+        self.log('Training/total_loss', total_loss, on_step=False, on_epoch=True)
         self.total_steps = step
         # self.check_save_iteration()
 
@@ -125,19 +125,19 @@ class AffordancePixelModule(LightningModule):
 
     def validation_epoch_end(self, all_outputs):
         mean_val_total_loss = np.mean([v['val_loss'].item() for v in all_outputs])
-        total_attn_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
+        total_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
         total_imgs = np.sum([v['n_imgs'] for v in all_outputs])
-        mean_img_error = total_attn_dist_err/total_imgs
+        mean_img_error = total_dist_err/total_imgs
 
-        self.log('Validation/loss', mean_val_total_loss)
-        self.log('Validation/total_attn_dist_err', total_attn_dist_err)
-        self.log('Validation/mean_img_error', mean_img_error)
+        self.log('Validation/total_loss', mean_val_total_loss)
+        self.log('Validation/total_dist_err', total_dist_err)
+        self.log('Validation/mean_dist_error', mean_img_error)
 
-        print("\nAttn Err - Dist: {:.2f}".format(total_attn_dist_err))
+        print("\nAttn Err - Dist: {:.2f}".format(total_dist_err))
 
         return dict(
             val_loss=mean_val_total_loss,
-            total_attn_dist_err=total_attn_dist_err,
+            total_dist_err=total_dist_err,
         )
 
     def configure_optimizers(self):

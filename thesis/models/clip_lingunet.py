@@ -125,4 +125,4 @@ class CLIPLingUNet(nn.Module):
             x = layer(x)
 
         x = F.interpolate(x, size=(in_shape[-2], in_shape[-1]), mode='bilinear')
-        return x
+        return x, {}

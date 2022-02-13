@@ -115,7 +115,7 @@ class MaskLabelLabelDataLang(Dataset):
 
         # Get mask and direction vectors
         center_dirs, mask = self.label_directions(center)
-        mask = np.expand_dims(mask, 0) # 1, H, W
+        # mask = np.expand_dims(mask, 0) # 1, H, W
 
         # Select a language annotation
         annotations = [i.item() for i in data["lang_ann"]]

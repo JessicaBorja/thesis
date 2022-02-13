@@ -113,4 +113,4 @@ class ResNet43_8s(nn.Module):
 
     def forward(self, x):
         out = self.layers(x)
-        return out
+        return out, {}

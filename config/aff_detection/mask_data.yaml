@@ -1,0 +1,19 @@
+wandb_saver:
+  val_loss:
+    monitor: 'Validation/total_loss'
+    save_top_k: 2
+    mode: min
+    verbose: True
+  val_miou:
+    monitor: 'Validation/miou'
+    save_top_k: 2
+    mode: min
+    verbose: True
+    save_last: True
+
+dataset: 
+  _target_: thesis.datasets.mask_label.MaskLabelLabelDataLang
+  transforms: ${aff_detection.streams.transforms}
+  radius:
+    static: 16
+    gripper: 10

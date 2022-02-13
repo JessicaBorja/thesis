@@ -1,15 +1,14 @@
-from cv2 import imshow
-import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn as nn
 
 from thesis.models.core.affordance_mask_module import AffordanceMaskModule
-from thesis.models.streams.one_stream_attention_lang_fusion import AttentionLangFusion
+from thesis.models.streams.one_stream_attention_lang_fusion_mask import AttentionLangFusionMask
 from thesis.utils.utils import add_img_text, tt, blend_imgs
 from thesis.utils.utils import get_transforms
+import segmentation_models_pytorch as smp
 
 
-class AffLangDetector(AffordanceMaskModule):
+class VAPOAffLangDetector(AffordanceMaskModule):
 
     def __init__(self, cfg, transforms=None, *args, **kwargs):
         super().__init__(cfg, *args, **kwargs)
@@ -19,13 +18,15 @@ class AffLangDetector(AffordanceMaskModule):
             self.pred_transforms = nn.Identity()
 
     def _build_model(self):
-        self.attention = AttentionLangFusion(
+        self.attention = AttentionLangFusionMask(
             stream_fcn=self.cfg.streams.name,
             in_shape=self.in_shape,
             cfg=self.cfg,
             device=self.device_type,
             output_dim=self.n_classes
         )
+        feature_dim = self.attention.attn_stream.decoder_channels[-1]
+        self.center_direction_net = nn.Conv2d(feature_dim, 2, kernel_size=1, stride=1, padding=0, bias=False)
 
     def predict(self, obs, goal=None, info=None):
         """ Run inference and return best pixel given visual observations.
