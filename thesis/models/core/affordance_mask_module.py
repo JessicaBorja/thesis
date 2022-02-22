@@ -73,7 +73,7 @@ class AffordanceMaskModule(pl.LightningModule):
     def criterion(self, preds, labels, compute_err=False):
         # Activation fnc is applied in loss fnc hence, use logits
         # Affordance loss
-        aff_loss, info = self.compute_aff_loss(preds["aff_logits"], labels["affordance"])
+        aff_loss, info = self.compute_aff_loss(preds["affordance"], labels["affordance"])
         info["aff_loss"] = aff_loss
 
         # Center prediction loss
