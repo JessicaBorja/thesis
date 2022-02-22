@@ -40,7 +40,7 @@ dataloader:
 
 wandb:
   logger:
-    name: ${run_name}_${now:%y-%m-%d}_${now:%H-%M}
+    name: ${run_name}
     entity: affordance
     project: affordance_model
     offline: False
