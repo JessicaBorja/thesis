@@ -8,6 +8,8 @@ from PIL import Image
 import logging
 import cv2
 from torchvision.transforms import InterpolationMode
+from omegaconf import OmegaConf
+
 logger = logging.getLogger(__name__)
 
 def add_img_text(img, text_label):
@@ -28,13 +30,21 @@ def add_img_text(img, text_label):
     )
     return out_img
 
+
 def load_aff_model(hydra_run_dir, model_name, model_cfg, **kwargs):
     # Load model
     checkpoint_path = os.path.join(hydra_run_dir, 'checkpoints')
     checkpoint_path = os.path.join(checkpoint_path, model_name)
     if(os.path.isfile(checkpoint_path)):
+        aff_cfg = os.path.join(hydra_run_dir, ".hydra/config.yaml")
+        if os.path.isfile(aff_cfg):
+            train_cfg = OmegaConf.load(aff_cfg)
+            model_cfg = train_cfg.aff_detection.model
         model = hydra.utils.instantiate(model_cfg, **kwargs)
         model = model.load_from_checkpoint(checkpoint_path, **kwargs).cuda()
+        # Override default voting layer parameters
+        if 'hough_voting' in kwargs and 'hough_voting' in model.cfg:
+            model.init_voting_layer(kwargs['hough_voting'])
         logger.info("Model successfully loaded: %s" % checkpoint_path)
     else:
         model = hydra.utils.instantiate(model_cfg).cuda()
@@ -45,10 +55,10 @@ def load_aff_model(hydra_run_dir, model_name, model_cfg, **kwargs):
 def blend_imgs(background, foreground, alpha=0.5):
     """
     Blend two images of the same shape with an alpha value
-    img1: np.array(uint8)
+    background: np.array(uint8)
         - shape: (H, W)
         - range: 0 - 255
-    img1: np.array(uint8)
+    foreground: np.array(uint8)
         - shape: (H, W, 3)
         - range: 0 - 255
     alpha(float): (0, 1) value
@@ -98,6 +108,10 @@ def tt(x, device):
                         requires_grad=False)
 
 
+def torch_to_numpy(x):
+    return x.detach().cpu().numpy()
+
+
 def get_transforms(transforms_cfg, img_size=None):
     transforms_lst = []
     transforms_config = transforms_cfg.copy()
@@ -139,7 +153,7 @@ def overlay_flow(flow, img, mask):
     return result
 
 
-def get_hydra_launch_dir(path_str):
+def get_abspath(path_str):
     if not os.path.isabs(path_str):
         path_str = os.path.join(hydra.utils.get_original_cwd(), path_str)
         path_str = os.path.abspath(path_str)

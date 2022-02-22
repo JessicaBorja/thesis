@@ -5,21 +5,21 @@ import cv2
 import hydra
 import numpy as np
 import matplotlib.pyplot as plt
-import pytorch_lightning as pl
 
 from omegaconf import OmegaConf
-from thesis.utils.utils import add_img_text, blend_imgs, get_hydra_launch_dir, overlay_mask, load_aff_model
-from thesis.datasets.pixel_label import CalvinDataLang, DataLoader
+from thesis.utils.utils import add_img_text, blend_imgs, get_abspath, overlay_mask, load_aff_model
+from torch.utils.data import DataLoader
+import logging
 
 @hydra.main(config_path="./config", config_name='test_affordance')
 def main(cfg):
     # Checkpoint loader
-    hydra_run_dir = get_hydra_launch_dir(cfg.checkpoint.path)
+    hydra_run_dir = get_abspath(cfg.checkpoint.train_folder)
 
     hydra_cfg_path = os.path.join(hydra_run_dir, ".hydra/config.yaml")
     if os.path.exists(hydra_cfg_path):
         run_cfg = OmegaConf.load(hydra_cfg_path)
-        run_cfg.dataset.data_dir = cfg.dataset.data_dir
+        run_cfg.aff_detection.dataset.data_dir = cfg.aff_detection.dataset.data_dir
     else:
         print("path does not exist %s" % hydra_cfg_path)
         run_cfg = cfg
@@ -28,11 +28,13 @@ def main(cfg):
     model = load_aff_model(hydra_run_dir,
                            cfg.checkpoint.model_name,
                            run_cfg.aff_detection.model,
-                           transforms=run_cfg.aff_detection.transforms['validation'])
+                           transforms=run_cfg.aff_detection.dataset.transforms['validation'],
+                           hough_voting=cfg.aff_detection.hough_voting)
     model.eval()
 
     # Dataloaders
-    val = CalvinDataLang(split="validation", log=None, **run_cfg.dataset)
+    logger = logging.getLogger(__name__)
+    val = hydra.utils.instantiate(cfg.aff_detection.dataset, split="validation", log=logger)
     val_loader = DataLoader(val, num_workers=1, batch_size=1, pin_memory=True)
     print("val minibatches {}".format(len(val_loader)))
 
@@ -49,7 +51,7 @@ def main(cfg):
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
         obs = {
             "img": frame,
-            "lang_goal": inp["lang_goal"]
+            "lang_goal": inp["lang_goal"][0]
         }
         out_img = frame.copy()
         for label in range(0, val.n_classes):
@@ -72,43 +74,7 @@ def main(cfg):
         info = None  # labels
         pred = model.predict(obs, info=info)
         pred_img = frame.copy()
-
-        cm = plt.get_cmap('viridis')
-        heatmap = cm(pred["softmax"])[:, :, [0,1,2]] * 255
-        heatmap = blend_imgs(frame.copy(), heatmap, alpha=0.7)
-
-        pixel = pred["pixel"]
-        # print(pred["error"], pred["pixel"], (x, y))
-        pred_img = cv2.drawMarker(
-                pred_img,
-                (pixel[0], pixel[1]),
-                (0, 0, 0),
-                markerType=cv2.MARKER_CROSS,
-                markerSize=12,
-                thickness=2,
-                line_type=cv2.LINE_AA,
-            )
-
-        new_size = (400, 400)
-        heatmap = (heatmap * 255).astype('uint8')
-        pred_img = cv2.resize(pred_img, new_size, interpolation=cv2.INTER_CUBIC)
-        out_img = cv2.resize(out_img, new_size, interpolation=cv2.INTER_CUBIC)
-        heatmap = cv2.resize(heatmap, new_size, interpolation=cv2.INTER_CUBIC)
-        # out_img = out_img.astype(float) / 255
-        # pred_img = pred_img.astype(float) / 255
-        out_img = np.concatenate([out_img, pred_img, heatmap], axis=1)
-
-        # Prints the text.
-        out_img = add_img_text(out_img, inp['lang_goal'][0])
-        out_img = out_img[:, :, ::-1]
-
-        # file_dir = "./imgs"
-        # os.makedirs(file_dir, exist_ok=True)
-        # filename = os.path.join(file_dir, "img_%04d.png" % b_idx)
-        # cv2.imwrite(filename, out_img)
-
-        cv2.imshow("img", out_img)
-        cv2.waitKey(0)
+        model.viz_preds(obs, pred, waitkey=0)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,3 @@
+_target_: thesis.agents.lmp_agent.PlayLMPAgent
+_recursive_: False
+checkpoint: ${policy_checkpoint}

@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 import logging
-from thesis.utils.utils import add_img_text, resize_pixel, get_hydra_launch_dir, get_transforms, overlay_mask, overlay_flow
+from thesis.utils.utils import add_img_text, resize_pixel, get_abspath, get_transforms, overlay_mask, overlay_flow
 from thesis.datasets.transforms import NormalizeInverse
 import affordance.utils.flowlib as flowlib
 
@@ -31,7 +31,7 @@ class MaskLabelLabelDataLang(Dataset):
         self.cam = cam
         self.split = split
         self.log = log
-        self.data_dir = get_hydra_launch_dir(data_dir)
+        self.data_dir = get_abspath(data_dir)
         _data_info = self.read_json(os.path.join(self.data_dir, episodes_file))
         self.data = self._get_split_data(_data_info, split, cam, n_train_ep)
         self.img_resize = img_resize
@@ -216,7 +216,7 @@ def main(cfg):
 
         # Labels
         directions = labels["center_dirs"][0].detach().cpu().numpy()
-        mask = labels["affordance"][0].detach().cpu().numpy()
+        mask = labels["affordance"].detach().cpu().numpy()
         directions = np.transpose(directions, (1, 2, 0))
         flow_img = flowlib.flow_to_image(directions)  # RGB
 
@@ -236,10 +236,7 @@ def main(cfg):
 
         # Add flow + bin mask
         out_img = frame.copy()
-        fg_mask = mask.any(axis=0).astype("uint8")  # Binary (0,1)
-        fg_mask = torch.tensor(fg_mask).unsqueeze(0)
-        mask = np.transpose(mask, (1, 2, 0)) * 255
-        out_img = overlay_flow(flow_img, frame, mask)
+        out_img = overlay_flow(flow_img, frame, mask * 255)
 
         # Draw center in transformed img
         center_px = labels["p0"][0].numpy().squeeze()
@@ -254,7 +251,7 @@ def main(cfg):
             line_type=cv2.LINE_AA,
         )
 
-        hv_center_img = test_dir_labels(hv, out_img, fg_mask, labels["center_dirs"])
+        hv_center_img = test_dir_labels(hv, out_img, labels["affordance"], labels["center_dirs"])
 
         transformed_img = cv2.resize(transformed_img, (400, 400), interpolation=cv2.INTER_CUBIC)
         hv_center_img = cv2.resize(hv_center_img, (400, 400), interpolation=cv2.INTER_CUBIC)

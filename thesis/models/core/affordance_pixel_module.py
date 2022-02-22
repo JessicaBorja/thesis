@@ -8,7 +8,7 @@ import logging
 
 
 class AffordancePixelModule(LightningModule):
-    def __init__(self, cfg, in_shape=(3, 200, 200)):
+    def __init__(self, cfg, in_shape=(200, 200, 3)):
         super().__init__()
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg

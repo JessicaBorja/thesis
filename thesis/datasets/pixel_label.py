@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 import logging
-from thesis.utils.utils import add_img_text, resize_pixel, get_hydra_launch_dir, get_transforms
+from thesis.utils.utils import add_img_text, resize_pixel, get_abspath, get_transforms
 from thesis.datasets.transforms import NormalizeInverse
 
 class PixeLabelDataLang(Dataset):
@@ -28,7 +28,7 @@ class PixeLabelDataLang(Dataset):
         self.cam = cam
         self.split = split
         self.log = log
-        self.data_dir = get_hydra_launch_dir(data_dir)
+        self.data_dir = get_abspath(data_dir)
         _data_info = self.read_json(os.path.join(self.data_dir, episodes_file))
         self.data = self._get_split_data(_data_info, split, cam, n_train_ep)
         self.img_resize = img_resize

@@ -14,7 +14,7 @@ from affordance.utils.losses import (
 
 
 class AffordanceMaskModule(pl.LightningModule):
-    def __init__(self, cfg, in_shape=(3, 200, 200), n_classes=2, *args, **kwargs):
+    def __init__(self, cfg, in_shape=(200, 200, 3), n_classes=2, *args, **kwargs):
         super().__init__()
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
@@ -33,11 +33,14 @@ class AffordanceMaskModule(pl.LightningModule):
         self._batch_miou = []
 
         # Hough Voting stuff (this operates on CUDA only)
-        self.hough_voting_layer = hv.HoughVoting(**cfg.hough_voting)
+        self.init_voting_layer(cfg.hough_voting)
         print("hvl init")
 
         self._build_model()
         self.save_hyperparameters()
+
+    def init_voting_layer(self, cfg):
+        self.hough_voting_layer = hv.HoughVoting(**cfg)
 
     def _build_model(self):
         self.attention = None
@@ -88,12 +91,11 @@ class AffordanceMaskModule(pl.LightningModule):
         info["total_loss"] = total_loss
         return total_loss, info
 
-    def forward(self, inp):
-        out = self.attn_forward(inp, softmax=True)
+    def forward(self, inp, softmax=True):
+        out = self.attn_forward(inp, softmax=softmax)
         center_dir =  self.center_direction_net(out["decoder"])
-        preds = {"aff_logits": out["affordance"],
+        preds = {"affordance": out["affordance"],
                  "center_dirs": center_dir}
-
         return preds
 
     def attn_step(self, frame, label, compute_err=False):
@@ -102,30 +104,32 @@ class AffordanceMaskModule(pl.LightningModule):
         B = inp_img.shape[0]
 
         inp = {'inp_img': inp_img, 'lang_goal': lang_goal}
-        logits = self.attn_forward(inp, softmax=False)
-        center_dir =  self.center_direction_net(logits["decoder"])
-        preds = {"aff_logits": logits["affordance"],
-                 "center_dirs": center_dir}
+        preds = self.forward(inp, softmax=False)
 
         total_loss, info = self.criterion(preds, label)
-        info["miou"] = compute_mIoU(logits["affordance"], label["affordance"])
-        info["dice_score"] = compute_dice_score(logits["affordance"], label["affordance"])
+        info["miou"] = compute_mIoU(preds["affordance"], label["affordance"])
+        info["dice_score"] = compute_dice_score(preds["affordance"], label["affordance"])
 
         if compute_err:
-            probs = self.attn_forward(inp, softmax=True)
-            aff_mask = torch.argmax(probs["affordance"], dim=1)  # [N x H x W]
-            _c_info = self.pred_centers(aff_mask, center_dir)
+            probs = self.attn_forward(inp, softmax=True) # [B x N x H x W]
+            aff_mask = torch.argmax(probs["affordance"], 1)
+            aff_probs = probs["affordance"][:, 1] * aff_mask
+
+            indices = torch.argmax(aff_probs.reshape(B, -1), -1)
+            indices = indices.detach().cpu().numpy()
+            p0_pred = self.unravel_idx(indices, shape=aff_probs.shape[1:])
             p0=label['p0'].detach().cpu().numpy()  # B, 2
-            pt_preds = []
-            for pred in _c_info[0]:
-                if(len(pred) > 0):
-                    p0_pred = pred.detach().cpu().numpy()
-                else:
-                    p0_pred = np.array([[1.0, 0.0]])
-                pt_preds.append(p0_pred)
-            p0_pred = np.stack(pt_preds)
             info['err'] = np.sum(np.linalg.norm(p0 - p0_pred, axis=1))
         return total_loss, info
+
+    def unravel_idx(self, indices, shape):
+        coord = []
+        for dim in reversed(shape):
+            coord.append(indices % dim)
+            indices = indices // dim
+
+        coord = np.stack(coord[::-1], axis=-1)
+        return coord
 
     def attn_forward(self, inp, softmax=False):
         inp_img = inp['inp_img']
@@ -137,7 +141,7 @@ class AffordanceMaskModule(pl.LightningModule):
     def pred_centers(self, aff_mask, directions):
         """
         Take the direction vectors and foreground mask to get hough voting layer prediction
-        :param aff_mask (torch.tensor, int64): [N x H x W]
+        :param aff_mask (torch.tensor, int64): [N x H x W], binary {0, 1}
         :param directions (torch.tensor, float32): [N x 2 x H x W]
 
         :return object_centers (list(torch.tensor), int64)
@@ -157,6 +161,7 @@ class AffordanceMaskModule(pl.LightningModule):
 
         with torch.no_grad():
             # Center direction
+            directions = directions.contiguous()
             directions /= torch.norm(directions, dim=1, keepdim=True).clamp(min=1e-10)
             directions = directions.float()
             initial_masks, num_objects, object_centers_padded = self.hough_voting_layer(
@@ -211,7 +216,7 @@ class AffordanceMaskModule(pl.LightningModule):
         x, labels = val_batch
 
         # Predictions
-        total_loss, info = self.attn_step(x, labels, compute_err=False)
+        total_loss, info = self.attn_step(x, labels, compute_err=True)
 
         # Metrics
         mIoU = info["miou"]
@@ -226,8 +231,22 @@ class AffordanceMaskModule(pl.LightningModule):
             val_loss=total_loss,
             val_miou=mIoU,
             val_dice_score=dice_score,
-            # val_attn_dist_err=info['err'],
+            val_attn_dist_err=info['err'],
             n_imgs=labels['p0'].shape[0],
+        )
+
+    def validation_epoch_end(self, all_outputs):
+        total_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
+        total_imgs = np.sum([v['n_imgs'] for v in all_outputs])
+        mean_img_error = total_dist_err/total_imgs
+
+        self.log('Validation/total_dist_err', total_dist_err)
+        self.log('Validation/mean_dist_error', mean_img_error)
+
+        print("\nAttn Err - Dist: {:.2f}".format(total_dist_err))
+
+        return dict(
+            total_dist_err=total_dist_err,
         )
 
     def configure_optimizers(self):

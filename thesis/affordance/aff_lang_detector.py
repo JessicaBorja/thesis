@@ -1,15 +1,11 @@
-import nntplib
 import cv2
-from cv2 import imshow
 import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn as nn
 
 from thesis.models.core.affordance_pixel_module import AffordancePixelModule
 from thesis.models.streams.one_stream_attention_lang_fusion_pixel import AttentionLangFusionPixel
-from thesis.utils.utils import add_img_text, tt, blend_imgs
-from thesis.utils.utils import get_transforms
-
+from thesis.utils.utils import add_img_text, tt, blend_imgs,get_transforms, resize_pixel
 
 class AffLangDetector(AffordancePixelModule):
 
@@ -70,23 +66,21 @@ class AffLangDetector(AffordancePixelModule):
                 "pixel": (p0_pix[1], p0_pix[0]),
                 "error": err}
 
-    def viz_preds(self, inp):
+    def viz_preds(self, inp, pred, out_size=(300, 300), waitkey=0):
         '''
             Arguments:
                 inp(dict):
-                    img(float.Tensor): between 0-1, shape= H, W, C
-                    lang(list): language instruction
+                    img(np.ndarray): between 0-1, shape= H, W, C
+                    lang_goal(list): language instruction
+                pred(dict): output of self.predict(inp)
         '''
-        frame = inp["img"][0].detach().cpu().numpy()
-        frame = (frame * 255).astype("uint8")
-        frame = np.transpose(frame, (1, 2, 0))
-        if frame.shape[-1] == 1:
-            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+        # frame = inp["img"][0].detach().cpu().numpy()
+        # frame = (frame * 255).astype("uint8")
+        # frame = np.transpose(frame, (1, 2, 0))
+        # if frame.shape[-1] == 1:
+        #     frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
-        obs = {"img": frame.copy(),
-               "lang_goal": inp["lang_goal"][0]}
-        info = None  # labels
-        pred = self.predict(obs, info=info)
+        frame = inp["img"].copy()
         pred_img = frame.copy()
 
         cm = plt.get_cmap('viridis')
@@ -94,6 +88,7 @@ class AffLangDetector(AffordancePixelModule):
         heatmap = blend_imgs(frame.copy(), heatmap, alpha=0.7)
 
         pixel = pred["pixel"]
+        pixel = resize_pixel(pixel, self.in_shape[:2], pred_img.shape[:2])
         # print(pred["error"], pred["pixel"], (x, y))
         pred_img = cv2.drawMarker(
                 pred_img,
@@ -105,14 +100,13 @@ class AffLangDetector(AffordancePixelModule):
                 line_type=cv2.LINE_AA,
             )
 
-        new_size = (400, 400)
-        pred_img = cv2.resize(pred_img, new_size, interpolation=cv2.INTER_CUBIC)
-        heatmap = cv2.resize(heatmap, new_size, interpolation=cv2.INTER_CUBIC)
+        pred_img = cv2.resize(pred_img, out_size, interpolation=cv2.INTER_CUBIC)
+        heatmap = cv2.resize(heatmap, out_size, interpolation=cv2.INTER_CUBIC)
         pred_img = pred_img.astype(float) / 255
         out_img = np.concatenate([pred_img, heatmap], axis=1)
 
 
         # Prints the text.
-        out_img = add_img_text(out_img, obs["lang_goal"])
+        out_img = add_img_text(out_img, inp["lang_goal"][0])
         cv2.imshow("img", out_img[:, :, ::-1])
-        cv2.waitKey(0)
+        cv2.waitKey(waitkey)

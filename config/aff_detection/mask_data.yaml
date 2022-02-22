@@ -11,6 +11,16 @@ wandb_saver:
     verbose: True
     save_last: True
 
+model:
+  cfg:
+    hough_voting:
+      skip_pixels: 3
+      inlier_threshold: 0.8
+      angle_discretization: 100
+      inlier_distance: 16
+      percentage_threshold: 0.4
+      object_center_kernel_radius: 16
+
 dataset: 
   _target_: thesis.datasets.mask_label.MaskLabelLabelDataLang
   transforms: ${aff_detection.streams.transforms}

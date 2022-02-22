@@ -1,6 +1,8 @@
 import numpy as np
 from thesis.utils.utils import add_img_text, resize_pixel
 import cv2
+import time
+import logging
 
 class BaseAgent:
     def __init__(self, env):
@@ -8,10 +10,31 @@ class BaseAgent:
         _info = self.env.robot.get_observation()[-1]
         self.origin = np.array(_info["tcp_pos"])
         self.target_orn = np.array(_info["tcp_orn"])
+        self.logger = logging.getLogger(__name__)
+        self.device = 'cuda'
 
     @property
     def env(self):
         return self._env
+
+    def load_policy(self, train_folder, model_name, **kwargs):
+        self.logger.info("Base Agent has no policy implemented. Step will be a waiting period...")
+
+    def step(self, obs, goal):
+        '''
+            obs(dict):  Observation comming from the environment
+                - rgb_obs:
+                - depth_obs:
+                - robot_obs:
+            goal(dict): Either a language or image goal. If language contains key "lang" which is used by the policy to make the prediction, otherwise the goal is provided in the form of an image.
+                - lang: caption used to contidion the policy
+                Only used if "lang" not in dictionary...
+                - depth_obs: 
+                - rgb_obs: 
+        '''
+        action = np.zeros(7)
+        action[-1] = 1  # gripper
+        return action
 
     def reset_position(self):
         return self.move_to(self.origin,
@@ -61,4 +84,4 @@ class BaseAgent:
 
             cv2.imshow("obs", ns["rgb_obs"]["rgb_static"][:, :, ::-1])
             cv2.waitKey(1)
-        return ns
+        return ns, r, d, info

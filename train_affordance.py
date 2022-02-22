@@ -9,7 +9,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import logging
 from omegaconf import OmegaConf
-from thesis.utils.utils import get_hydra_launch_dir
+from thesis.utils.utils import get_abspath
 
 
 def print_cfg(cfg):
@@ -30,7 +30,7 @@ def main(cfg):
     wandb_logger = WandbLogger(**cfg.wandb.logger)
 
     # Checkpoint saver
-    checkpoint_dir = get_hydra_launch_dir(cfg.checkpoint.path)
+    checkpoint_dir = get_abspath(cfg.checkpoint.path)
     checkpoint_path = os.path.join(checkpoint_dir, 'checkpoints')
     checkpoint_path = os.path.join(checkpoint_path, cfg.checkpoint.model_name)
     last_checkpoint = checkpoint_path if os.path.exists(checkpoint_path) and cfg.load_from_last_ckpt else None
