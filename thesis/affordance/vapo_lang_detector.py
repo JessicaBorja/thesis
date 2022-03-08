@@ -97,7 +97,7 @@ class VAPOAffLangDetector(AffordanceMaskModule):
         pred_img = frame.copy()
 
         cm = plt.get_cmap('viridis')
-        heatmap = cm(pred["softmax"])[:, :, [0,1,2]] * 255
+        heatmap = cm(pred["softmax"])[:, :, [0,1,2]] * 255.0
         heatmap = blend_imgs(frame.copy(), heatmap, alpha=0.7)
 
         mask = np.zeros_like(pred["softmax"], dtype='uint8')
@@ -115,18 +115,29 @@ class VAPOAffLangDetector(AffordanceMaskModule):
         # Resize images
         mask = cv2.resize(mask, out_shape)
         frame = cv2.resize(frame, out_shape)
+        if('img_label' in inp):
+            label = cv2.resize(inp["img_label"].copy(), out_shape)
+        else: 
+            label = frame
         pred_img = cv2.resize(pred_img, out_shape, interpolation=cv2.INTER_CUBIC)
         heatmap = cv2.resize(heatmap, out_shape, interpolation=cv2.INTER_CUBIC)     
         flow_img = cv2.resize(flow_img, out_shape)
         pred_img = overlay_flow(flow_img, pred_img, mask)
+
+        centers_vals = [pred['softmax'][c[0], c[1]] for c in centers]
+        max_val_idx = np.argmax(centers_vals)
         # Draw centers
-        for c in centers:
+        for i, c in enumerate(centers):
             c = resize_pixel(c, self.in_shape[:2], out_shape)
             u, v = int(c[1]), int(c[0])  # center stored in matrix convention
+            if i == max_val_idx:
+                color = (0, 0, 0)
+            else:
+                color = (255, 255, 255)
             pred_img = cv2.drawMarker(
                     pred_img,
                     (u, v),
-                    (0, 0, 0),
+                    color,
                     markerType=cv2.MARKER_CROSS,
                     markerSize=12,
                     thickness=2,
@@ -135,9 +146,9 @@ class VAPOAffLangDetector(AffordanceMaskModule):
 
 
         pred_img = pred_img.astype(float) / 255
-        frame = frame.astype(float) / 255
+        label = label.astype(float) / 255
         flow_img = flow_img.astype(float) / 255
-        out_img = np.concatenate([frame, pred_img, heatmap, flow_img], axis=1)
+        out_img = np.concatenate([label, pred_img, heatmap, flow_img], axis=1)
 
 
         # Prints the text.

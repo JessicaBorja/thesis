@@ -1,6 +1,6 @@
 defaults:
   - robot: panda_longer_finger
-  - scene: calvin_scene_D
+  - scene: calvin_scene_A
   - env: env
   - aff_detection: cliport_pixel_lang
   - cameras: static_and_gripper_calvin
@@ -21,7 +21,7 @@ policy_checkpoint:
 aff_checkpoint:
   train_folder: ./hydra_outputs/affordance_model/2022-02-15/13-08-08_aff_rl
   model_name: val_miou.ckpt
-  img_resize: 200
+  img_resize: 224
 
 hough_voting:
   skip_pixels: 4

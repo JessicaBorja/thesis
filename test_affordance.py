@@ -73,7 +73,7 @@ def main(cfg):
             )
         info = None  # labels
         pred = model.predict(obs, info=info)
-        pred_img = frame.copy()
+        obs['img_label'] = out_img
         model.viz_preds(obs, pred, waitkey=0)
 
 

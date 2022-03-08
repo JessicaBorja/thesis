@@ -22,7 +22,7 @@ aff_detection:
     _recursive_: False
     data_dir: ${paths.datasets}/${dataset_name}
     cam: static
-    episodes_file: episodes_split_mini.json
+    episodes_file: episodes_split.json
     img_resize:
       static: 224  # clip img size
       gripper: 96
