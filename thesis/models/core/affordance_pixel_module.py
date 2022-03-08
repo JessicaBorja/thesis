@@ -99,7 +99,7 @@ class AffordancePixelModule(LightningModule):
         total_loss = loss0
         bs = frame["img"].shape[0]
         self.log('Training/total_loss', total_loss,
-                 on_step=False, on_epoch=True,
+                 on_step=True, on_epoch=True,
                  batch_size=bs)
         self.total_steps = step
         # self.check_save_iteration()
