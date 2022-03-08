@@ -1,0 +1,23 @@
+# Unet Resnet 18 with respective decoder channels
+# CLIP as sentence encoder
+# Single pixel prediction
+name: vapo_pixel_clip
+
+model:
+  _target_: thesis.affordance.aff_lang_detector.AffLangDetector
+  _recursive_: False
+  cfg:
+    lr: 1e-5
+    attn_stream_fusion_type: 'add'
+    lang_fusion_type: 'mult'
+    load_from_last_ckpt: True
+    val_repeats: 1
+    streams: ${aff_detection.streams}
+    batchnorm: False 
+    unet_cfg: # [256, 128, 64, 32, 16]
+      decoder_channels: [128, 64, 32]
+
+img_size: 224
+defaults:
+  - pixel_data
+  - streams: rn18_clip_lingunet

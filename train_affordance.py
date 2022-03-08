@@ -1,9 +1,7 @@
 """Main training script."""
 
 import os
-
-import torch
-from thesis.datasets.calvin_data import CalvinDataLang, DataLoader
+from torch.utils.data import DataLoader
 
 import hydra
 from pytorch_lightning import Trainer
@@ -11,12 +9,12 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import logging
 from omegaconf import OmegaConf
-from thesis.utils.utils import get_hydra_launch_dir
+from thesis.utils.utils import get_abspath
 
 
 def print_cfg(cfg):
     print_cfg = OmegaConf.to_container(cfg)
-    print_cfg.pop("dataset")
+    print_cfg.pop("paths")
     print_cfg.pop("trainer")
     return OmegaConf.create(print_cfg)
 
@@ -29,10 +27,12 @@ def main(cfg):
     logger.info("Running configuration: %s", OmegaConf.to_yaml(print_cfg(cfg)))
 
     # Logger
+    if(cfg.aff_detection.name != cfg.run_name):
+        cfg.wandb.logger.name = "%s_%s" % (cfg.aff_detection.name, cfg.run_name)
     wandb_logger = WandbLogger(**cfg.wandb.logger)
 
     # Checkpoint saver
-    checkpoint_dir = get_hydra_launch_dir(cfg.checkpoint.path)
+    checkpoint_dir = get_abspath(cfg.checkpoint.path)
     checkpoint_path = os.path.join(checkpoint_dir, 'checkpoints')
     checkpoint_path = os.path.join(checkpoint_path, cfg.checkpoint.model_name)
     last_checkpoint = checkpoint_path if os.path.exists(checkpoint_path) and cfg.load_from_last_ckpt else None
@@ -54,8 +54,8 @@ def main(cfg):
     )
 
     # Dataloaders
-    train = CalvinDataLang(split="training", log=logger, **cfg.dataset)
-    val = CalvinDataLang(split="validation", log=logger, **cfg.dataset)
+    train = hydra.utils.instantiate(cfg.aff_detection.dataset, split="training", log=logger)
+    val = hydra.utils.instantiate(cfg.aff_detection.dataset, split="validation", log=logger)
     logger.info("train_data {}".format(train.__len__()))
     logger.info("val_data {}".format(val.__len__()))
 

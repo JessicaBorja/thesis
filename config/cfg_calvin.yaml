@@ -1,28 +1,35 @@
 defaults:
   - robot: panda_longer_finger
-  - scene: calvin_scene_D
+  - scene: calvin_scene_A
   - env: env
-  - aff_detection: cliport_lang
+  - aff_detection: cliport_pixel_lang
   - cameras: static_and_gripper_calvin
   - paths: general_paths
+  - agent: base
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
 
 data_path: ${paths.vr_data}
 model_name: full
 
+max_timesteps: 100
+
+policy_checkpoint: 
+  train_folder: ./trained_agents/D_D_static_rgb_baseline
+  model_name: mcil_baseline.ckpt
+
 aff_checkpoint:
-  path: ./hydra_outputs/affordance_model/2022-01-27/17-06-54_aff_rl
-  model_name: vapo_endpt_randShift_epoch=00_val_loss.ckpt #last.ckpt
-  # path: ./hydra_outputs/affordance_model/2022-01-24/20-19-09_aff_rl
-  # model_name: cliport_bs32_randShift_epoch=00_val_err.ckpt
-  # path: ./hydra_outputs/affordance_model/2022-01-18/16-20-15_aff_rl
-  # model_name: cliport_bs32_notrasforms_epoch=00_val_err.ckpt
+  train_folder: ./hydra_outputs/affordance_model/2022-02-15/13-08-08_aff_rl
+  model_name: val_miou.ckpt
   img_resize: 224
 
-agent:
-  _target_: thesis.agents.base_agent.BaseAgent
-  _recursive_: False
+hough_voting:
+  skip_pixels: 4
+  inlier_threshold: 0.7
+  angle_discretization: 100
+  inlier_distance: 15
+  percentage_threshold: 0.3
+  object_center_kernel_radius: 10
 
 save_dir: ./hydra_outputs/calvin
 hydra:
