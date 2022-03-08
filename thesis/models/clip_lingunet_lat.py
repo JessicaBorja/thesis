@@ -141,5 +141,5 @@ class CLIPLingUNetLat(nn.Module):
 
         x = self.conv2(x)
 
-        x = F.interpolate(x, size=(in_shape[-2], in_shape[-1]), mode='bilinear')
+        x = F.interpolate(x, size=(in_shape[-2], in_shape[-1]), mode='bilinear', align_corners=True)
         return x

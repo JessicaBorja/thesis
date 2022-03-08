@@ -207,8 +207,11 @@ class AffordanceMaskModule(pl.LightningModule):
 
         # Log metrics
         self.log_stats("Training", sum(self.trainer.num_val_batches), batch_idx, total_loss, mIoU)
+        bs = x["img"].shape[0]
         for k, v in info.items():
-            self.log("Training/%s" % k, v, on_step=False, on_epoch=True)
+            self.log("Training/%s" % k, v,
+                     on_step=False, on_epoch=True,
+                     batch_size=bs)
 
         return total_loss
 
@@ -223,9 +226,12 @@ class AffordanceMaskModule(pl.LightningModule):
         dice_score = info["dice_score"]
 
         # Log metrics
+        bs = x["img"].shape[0]
         self.log_stats("Validation", sum(self.trainer.num_val_batches), batch_idx, total_loss, mIoU)
         for k, v in info.items():
-            self.log("Validation/%s" % k, v, on_step=False, on_epoch=True)
+            self.log("Validation/%s" % k, v,
+                      on_step=False, on_epoch=True,
+                      batch_size=bs)
 
         return dict(
             val_loss=total_loss,

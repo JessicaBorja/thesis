@@ -1,4 +1,4 @@
-name: cliport_pixel_clip
+name: cliport_pixel_lang
 
 model:
   _target_: thesis.affordance.aff_lang_detector.AffLangDetector
