@@ -1,7 +1,6 @@
 training:
   - _target_: torchvision.transforms.Resize
     size: ${aff_detection.img_size}
-    interpolation: bicubic
   - _target_: thesis.datasets.transforms.ScaleImageTensor  # Scale 0-255 to 0-1
   - _target_: thesis.datasets.transforms.ColorTransform
     contrast: 0.05
@@ -15,7 +14,6 @@ training:
 validation:
   - _target_: torchvision.transforms.Resize
     size: ${aff_detection.img_size}
-    interpolation: bicubic
   - _target_:  thesis.datasets.transforms.ScaleImageTensor  # Scale 0-255 to 0-1
   - _target_: torchvision.transforms.Normalize
     mean: [0.48145466, 0.4578275, 0.40821073]

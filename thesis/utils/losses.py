@@ -166,14 +166,3 @@ def compute_dice_loss(true, logits, eps=1e-7):
     cardinality = torch.sum(probas + true_1_hot, dims)
     dice_loss = (2.0 * intersection / (cardinality + eps)).mean()
     return 1 - dice_loss
-
-
-def cross_entropy_with_logits(pred, labels, reduction='mean'):
-    # Lucas found that both sum and mean work equally well
-    x = (-labels * F.log_softmax(pred, -1))
-    if reduction == 'sum':
-        return x.sum()
-    elif reduction == 'mean':
-        return x.mean()
-    else:
-        raise NotImplementedError()

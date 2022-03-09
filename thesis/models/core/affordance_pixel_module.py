@@ -25,7 +25,6 @@ class AffordancePixelModule(LightningModule):
         raise NotImplementedError()
 
     def cross_entropy_with_logits(self, pred, labels, reduction='mean'):
-        # Lucas found that both sum and mean work equally well
         x = (-labels * F.log_softmax(pred, -1))
         if reduction == 'sum':
             return x.sum()
