@@ -85,6 +85,9 @@ class AffLangDetector(AffordancePixelModule):
 
         cm = plt.get_cmap('viridis')
         heatmap = cm(pred["softmax"])[:, :, [0,1,2]] * 255
+        heatmap = heatmap.astype('uint8')
+
+        frame = cv2.resize(frame, heatmap.shape[:2])
         heatmap = blend_imgs(frame.copy(), heatmap, alpha=0.7)
 
         pixel = pred["pixel"]
@@ -107,6 +110,6 @@ class AffLangDetector(AffordancePixelModule):
 
 
         # Prints the text.
-        out_img = add_img_text(out_img, inp["lang_goal"][0])
+        out_img = add_img_text(out_img, inp["lang_goal"])
         cv2.imshow("img", out_img[:, :, ::-1])
         cv2.waitKey(waitkey)

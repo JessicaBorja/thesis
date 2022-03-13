@@ -1,8 +1,8 @@
 import torch
 import clip
 from PIL import Image
-from thesis.grad_cam.grad_cam import gradCAM
-from thesis.grad_cam.utils import *
+from thesis.affordance.grad_cam import gradCAM
+from thesis.utils.utils import *
 
 
 if __name__ == "__main__":

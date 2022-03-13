@@ -1,23 +1,31 @@
 import numpy as np
-from thesis.utils.utils import add_img_text, resize_pixel
 import cv2
-import time
 import logging
+from thesis.affordance.base_detector import BaseDetector
+from thesis.utils.utils import add_img_text, resize_pixel
+import torch
 
 class BaseAgent:
-    def __init__(self, env):
+    def __init__(self, env, point_detector=BaseDetector(), *args, **kwargs):
         self._env = env
         _info = self.env.robot.get_observation()[-1]
         self.origin = np.array(_info["tcp_pos"])
         self.target_orn = np.array(_info["tcp_orn"])
         self.logger = logging.getLogger(__name__)
-        self.device = 'cuda'
+        _device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+        self.device = torch.device(_device)
+        self.point_detector=point_detector
+        self.model_free = None
 
     @property
     def env(self):
         return self._env
 
-    def load_policy(self, train_folder, model_name, **kwargs):
+    @env.setter
+    def env(self, value):
+        self._env = value
+
+    def load_model_free(self, train_folder, model_name, **kwargs):
         self.logger.info("Base Agent has no policy implemented. Step will be a waiting period...")
 
     def step(self, obs, goal):

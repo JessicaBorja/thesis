@@ -9,6 +9,16 @@ import logging
 import cv2
 from torchvision.transforms import InterpolationMode
 from omegaconf import OmegaConf
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.ndimage import filters
+from pathlib import Path
+import re
+import subprocess
+import time
+from typing import Union
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +123,9 @@ def torch_to_numpy(x):
 
 
 def get_transforms(transforms_cfg, img_size=None):
+    '''
+        transforms_
+    '''
     transforms_lst = []
     transforms_config = transforms_cfg.copy()
     normalize_values, rand_shift = None, None
@@ -171,3 +184,81 @@ def resize_pixel(pixel, old_shape, new_shape):
     assert len(old_shape) == len(new_shape)
     c = np.array(pixel) * new_shape // old_shape
     return c
+
+def normalize(x: np.ndarray) -> np.ndarray:
+    # Normalize to [0, 1].
+    x = x - x.min()
+    if x.max() > 0:
+        x = x / x.max()
+    return x
+
+# Modified from: https://github.com/salesforce/ALBEF/blob/main/visualization.ipynb
+def getAttMap(img, attn_map, blur=True):
+    if blur:
+        attn_map = filters.gaussian_filter(attn_map, 0.02*max(img.shape[:2]))
+    attn_map = normalize(attn_map)
+    pixel_max = np.unravel_index(attn_map.argmax(), attn_map.shape)[:2]
+    
+    cmap = plt.get_cmap('jet')
+    attn_map_c = np.delete(cmap(attn_map), 3, 2)
+    attn_map = 1*(1-attn_map**0.7).reshape(attn_map.shape + (1,))*img + \
+            (attn_map**0.7).reshape(attn_map.shape+(1,)) * attn_map_c
+    return attn_map, pixel_max
+
+def viz_attn(img, attn_map, blur=True):
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    axes[0].imshow(img)
+    attn_map, pixel_max = getAttMap(img, attn_map, blur)
+    y, x = pixel_max
+    axes[1].plot(x, y,'x', color='black', markersize=12)
+    axes[1].imshow(attn_map)
+    for ax in axes:
+        ax.axis("off")
+    plt.show()
+    
+def load_image(img_path, resize=None):
+    image = Image.open(img_path).convert("RGB")
+    if resize is not None:
+        image = image.resize((resize, resize))
+    return np.asarray(image).astype(np.float32) / 255.
+
+
+def load_hydra_config(train_folder):
+    checkpoint_path = get_abspath(train_folder)
+    policy_cfg = os.path.join(checkpoint_path, "./.hydra/config.yaml")
+    if os.path.isfile(policy_cfg):
+        run_cfg = OmegaConf.load(policy_cfg)
+    else: run_cfg = None
+    return run_cfg
+
+
+def get_egl_device_id(cuda_id: int) -> Union[int]:
+    """
+    >>> i = get_egl_device_id(0)
+    >>> isinstance(i, int)
+    True
+    """
+    assert isinstance(cuda_id, int), "cuda_id has to be integer"
+    dir_path = Path(__file__).absolute().parents[2] / "egl_check"
+    if not os.path.isfile(dir_path / "EGL_options.o"):
+        if os.environ.get("LOCAL_RANK", "0") == "0":
+            print("Building EGL_options.o")
+            subprocess.call(["bash", "build.sh"], cwd=dir_path)
+        else:
+            # In case EGL_options.o has to be built and multiprocessing is used, give rank 0 process time to build
+            time.sleep(5)
+    result = subprocess.run(["./EGL_options.o"], capture_output=True, cwd=dir_path)
+    n = int(result.stderr.decode("utf-8").split(" of ")[1].split(".")[0])
+    for egl_id in range(n):
+        my_env = os.environ.copy()
+        my_env["EGL_VISIBLE_DEVICE"] = str(egl_id)
+        result = subprocess.run(["./EGL_options.o"], capture_output=True, cwd=dir_path, env=my_env)
+        match = re.search(r"CUDA_DEVICE=[0-9]+", result.stdout.decode("utf-8"))
+        if match:
+            current_cuda_id = int(match[0].split("=")[1])
+            if cuda_id == current_cuda_id:
+                return egl_id
+    raise EglDeviceNotFoundError
+
+class EglDeviceNotFoundError(Exception):
+    """Raised when EGL device cannot be found"""

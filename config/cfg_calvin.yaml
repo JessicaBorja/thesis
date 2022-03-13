@@ -5,7 +5,7 @@ defaults:
   - aff_detection: cliport_pixel_lang
   - cameras: static_and_gripper_calvin
   - paths: general_paths
-  - agent: base
+  - agent: play_lmp
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
 
@@ -19,8 +19,8 @@ policy_checkpoint:
   model_name: mcil_baseline.ckpt
 
 aff_checkpoint:
-  train_folder: ./hydra_outputs/affordance_model/2022-02-15/13-08-08_aff_rl
-  model_name: val_miou.ckpt
+  train_folder: ./hydra_outputs/affordance_model/2022-03-09/01-38-55_aff_rl
+  model_name: val_err-v1.ckpt
   img_resize: 224
 
 hough_voting:
