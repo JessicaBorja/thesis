@@ -28,6 +28,9 @@ class BaseAgent:
     def load_model_free(self, train_folder, model_name, **kwargs):
         self.logger.info("Base Agent has no policy implemented. Step will be a waiting period...")
 
+    def encode(self, goal):
+        return goal
+
     def step(self, obs, goal):
         '''
             obs(dict):  Observation comming from the environment

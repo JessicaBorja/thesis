@@ -23,7 +23,8 @@ def main(cfg):
     obs = env.reset()
     for i in range(100):  # n instructions
         rgb_obs =  obs["rgb_obs"]["rgb_static"]
-        caption = "open the drawer" # input("Type an instruction \n")
+        caption = "use the switch to turn on the light bulb" # input("Type an instruction \n")
+
         inp = {"img": rgb_obs,
                "lang_goal": caption}
 
@@ -38,7 +39,7 @@ def main(cfg):
 
         # Rollout
         obs, _, _, info = agent.move_to(world_pos, gripper_action=1)
-        goal={"lang": caption}
+        goal = agent.encode(caption)
         for j in range(cfg.max_timesteps):
             action = agent.step(obs, goal)
             obs, _, _, info = env.step(action)

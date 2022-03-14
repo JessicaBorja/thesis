@@ -1,3 +1,4 @@
 _target_: thesis.agents.lmp_agent.PlayLMPAgent
 _recursive_: False
+dataset_path: ${paths.datasets}/unprocessed/task_D_D
 checkpoint: ${policy_checkpoint}
