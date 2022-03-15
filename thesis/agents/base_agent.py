@@ -2,11 +2,11 @@ import numpy as np
 import cv2
 import logging
 from thesis.affordance.base_detector import BaseDetector
-from thesis.utils.utils import add_img_text, resize_pixel
+from thesis.utils.utils import add_img_text, resize_pixel, pos_orn_to_matrix
 import torch
 
 class BaseAgent:
-    def __init__(self, env, point_detector=BaseDetector(), *args, **kwargs):
+    def __init__(self, env, offset, point_detector=BaseDetector(), *args, **kwargs):
         self._env = env
         _info = self.env.robot.get_observation()[-1]
         self.origin = np.array(_info["tcp_pos"])
@@ -16,6 +16,7 @@ class BaseAgent:
         self.device = torch.device(_device)
         self.point_detector=point_detector
         self.model_free = None
+        self.offset = np.array([*offset, 1])
 
     @property
     def env(self):
@@ -81,18 +82,36 @@ class BaseAgent:
             target_orn = np.array(curr_info["tcp_orn"])
         if(gripper_action is None):
             gripper_action = curr_info["gripper_action"]
-        action = [target_pos.copy(),
-                  target_orn.copy(),
-                  gripper_action]
+
+        
+        tcp_pos = np.array(curr_info["tcp_pos"])
+        # Move in xy
+        reach_target = [*target_pos[:2], tcp_pos[-1]]
+        a = [reach_target.copy(), target_orn.copy(), gripper_action]
+        tcp_pos, _ = self.move_to_pos(tcp_pos, a)
+
+        # Offset relative to gripper frame
+        tcp_mat = pos_orn_to_matrix(target_pos, target_orn)
+        offset_global_frame = tcp_mat @ self.offset
+        move_to = offset_global_frame[:3]
+
+        # Move to target
+        a = [move_to, target_orn, gripper_action]
+        _, transition = self.move_to_pos(tcp_pos, a)
+        return transition
+
+    def move_to_pos(self, target_pos, action):
         last_pos = target_pos.copy()
         # When robot is moving and far from target
         ns, r, d, info = self.env.step(action)
         curr_pos = np.array(info["robot_info"]["tcp_pos"])
-        while(np.linalg.norm(curr_pos - target_pos) > 0.01 and np.linalg.norm(last_pos - curr_pos) > 0.001):
+        while(np.linalg.norm(curr_pos - target_pos) > 0.01 
+              and np.linalg.norm(last_pos - curr_pos) > 0.001):
             last_pos = curr_pos
             ns, r, d, info = self.env.step(action)             
             curr_pos = np.array(info["robot_info"]["tcp_pos"])
 
-            cv2.imshow("obs", ns["rgb_obs"]["rgb_static"][:, :, ::-1])
+            img = cv2.resize(ns['rgb_obs']['rgb_static'][:, :, ::-1], (300,300))
+            cv2.imshow("static_cam", img)
             cv2.waitKey(1)
-        return ns, r, d, info
+        return curr_pos, (ns, r, d, info)

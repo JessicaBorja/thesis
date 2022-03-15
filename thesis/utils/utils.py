@@ -17,10 +17,36 @@ import re
 import subprocess
 import time
 from typing import Union
+from scipy.spatial.transform.rotation import Rotation as R
 
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+def np_quat_to_scipy_quat(quat):
+    """wxyz to xyzw"""
+    return np.array([quat.x, quat.y, quat.z, quat.w])
+
+
+def pos_orn_to_matrix(pos, orn):
+    """
+    :param pos: np.array of shape (3,)
+    :param orn: np.array of shape (4,) -> quaternion xyzw
+                np.quaternion -> quaternion wxyz
+                np.array of shape (3,) -> euler angles xyz
+    :return: 4x4 homogeneous transformation
+    """
+    mat = np.eye(4)
+    if isinstance(orn, np.quaternion):
+        orn = np_quat_to_scipy_quat(orn)
+        mat[:3, :3] = R.from_quat(orn).as_matrix()
+    elif len(orn) == 4:
+        mat[:3, :3] = R.from_quat(orn).as_matrix()
+    elif len(orn) == 3:
+        mat[:3, :3] = R.from_euler('xyz', orn).as_matrix()
+    mat[:3, 3] = pos
+    return mat
+
 
 def add_img_text(img, text_label):
     font_scale = 0.6

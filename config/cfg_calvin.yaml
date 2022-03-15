@@ -12,8 +12,8 @@ defaults:
 data_path: ${paths.vr_data}
 model_name: full
 
-max_timesteps: 100
-
+max_timesteps: 364
+gripper_offset: [-0.02, 0.0, -0.06]
 policy_checkpoint: 
   train_folder: ./trained_agents/D_D_static_rgb_baseline
   model_name: mcil_baseline.ckpt

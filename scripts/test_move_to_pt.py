@@ -21,9 +21,15 @@ def main(cfg):
     agent = hydra.utils.instantiate(cfg.agent, env=env, point_detector=point_detector)    
 
     obs = env.reset()
-    for i in range(100):  # n instructions
+    captions = ["Open the drawer",
+                "Move the sliding door",
+                "Turn on the light switch",
+                "Lift the pink block",
+                "Turn on the green led"]
+    for caption in captions:  # n instructions
         rgb_obs =  obs["rgb_obs"]["rgb_static"]
-        caption = "use the switch to turn on the light bulb" # input("Type an instruction \n")
+        # caption = "use the switch to turn on the light bulb" # input("Type an instruction \n")
+        # caption = "open the drawer"
 
         inp = {"img": rgb_obs,
                "lang_goal": caption}
@@ -43,6 +49,9 @@ def main(cfg):
         for j in range(cfg.max_timesteps):
             action = agent.step(obs, goal)
             obs, _, _, info = env.step(action)
+            img = cv2.resize(obs['rgb_obs']['rgb_static'][:, :, ::-1], (300,300))
+            cv2.imshow("static_cam", img)
+            cv2.waitKey(1)
 
         obs, _, _, info = agent.reset_position()
 
