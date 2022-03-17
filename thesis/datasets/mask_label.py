@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, Dataset
 import logging
 from thesis.utils.utils import add_img_text, resize_pixel, get_abspath, get_transforms, overlay_mask, overlay_flow
 from thesis.datasets.transforms import NormalizeInverse
-import affordance.utils.flowlib as flowlib
+import thesis.affordance.utils.flowlib as flowlib
 
 
 class MaskLabelLabelDataLang(Dataset):
@@ -205,7 +205,7 @@ def main(cfg):
     data = MaskLabelLabelDataLang(split="training", log=None, **cfg.aff_detection.dataset)
     loader = DataLoader(data, num_workers=1, batch_size=1, pin_memory=True)
     print("val minibatches {}".format(len(loader)))
-    from affordance.hough_voting import hough_voting as hv
+    from thesis.affordance.hough_voting import hough_voting as hv
     hv = hv.HoughVoting(**cfg.aff_detection.model.cfg.hough_voting)
 
     cm = plt.get_cmap("jet")

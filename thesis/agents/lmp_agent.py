@@ -1,6 +1,6 @@
 from thesis.agents.base_agent import BaseAgent
 from thesis.utils.utils import get_abspath
-from thesis.models.language_encoders.language_network import SBert
+from thesis.models.core.language_network import SBert
 
 from calvin_agent.models.play_lmp import PlayLMP
 from calvin_agent.datasets.utils.episode_utils import process_depth, process_rgb, process_state
@@ -26,7 +26,7 @@ class PlayLMPAgent(BaseAgent):
     def __init__(self, env, dataset_path, checkpoint=None, *args, **kwargs):
         super().__init__(env, *args, **kwargs)
         self.dataset_path = Path(get_abspath(dataset_path))  # Dataset on which agent was trained
-        self.lang_enc = SBert(nlp_model='mini')
+        self.lang_enc = SBert('paraphrase-MiniLM-L3-v2')
 
         if checkpoint:
             self.model_free, self.transforms = self.load_model_free(**checkpoint)

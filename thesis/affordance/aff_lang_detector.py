@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn as nn
 
-from thesis.models.core.affordance_pixel_module import AffordancePixelModule
-from thesis.models.streams.one_stream_attention_lang_fusion_pixel import AttentionLangFusionPixel
+from thesis.affordance.core.affordance_pixel_module import AffordancePixelModule
+from thesis.models.lang_fusion.one_stream_attention_lang_fusion_pixel import AttentionLangFusionPixel
 from thesis.utils.utils import add_img_text, tt, blend_imgs,get_transforms, resize_pixel
 
 class AffLangDetector(AffordancePixelModule):

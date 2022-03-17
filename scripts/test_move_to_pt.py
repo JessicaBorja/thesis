@@ -1,7 +1,7 @@
 import hydra
 import cv2
 from thesis.env_wrappers.play_lmp_wrapper import PlayLMPWrapper
-from thesis.utils.utils import add_img_text, get_abspath, load_aff_model, resize_pixel
+from thesis.utils.utils import get_abspath, load_aff_model, resize_pixel
 
 
 @hydra.main(config_path="../config", config_name="cfg_calvin")

@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import cv2
 import torch
 
-from thesis.models.core.affordance_mask_module import AffordanceMaskModule
-from thesis.models.streams.one_stream_attention_lang_fusion_mask import AttentionLangFusionMask
+from thesis.affordance.core.affordance_mask_module import AffordanceMaskModule
+from thesis.models.lang_fusion.one_stream_attention_lang_fusion_mask import AttentionLangFusionMask
 from thesis.utils.utils import add_img_text, tt, blend_imgs,get_transforms, resize_pixel, torch_to_numpy, overlay_flow
 import affordance.utils.flowlib as flowlib
 
