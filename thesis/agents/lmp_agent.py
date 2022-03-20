@@ -18,6 +18,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import logging
+import importlib
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,11 @@ class PlayLMPAgent(BaseAgent):
             run_cfg = OmegaConf.load(policy_cfg)
             run_cfg = OmegaConf.create(OmegaConf.to_yaml(run_cfg).replace("calvin_models.", ""))
             checkpoint = os.path.join(checkpoint_path, model_name)
-            model = PlayLMP.load_from_checkpoint(checkpoint)
+            model_class = run_cfg.model._target_.split('.')
+            model_file = '.'.join(run_cfg.model._target_.split('.')[:-1])
+            model_file = importlib.import_module(model_file)
+            model_class = getattr(model_file, model_class[-1])
+            model = model_class.load_from_checkpoint(checkpoint)
             model.freeze()
             # if cfg.model.action_decoder.get("load_action_bounds", False):
             #     model.action_decoder._setup_action_bounds(cfg.datamodule.root_data_dir, None, None, True)

@@ -4,7 +4,7 @@ from typing import Any, Dict, Tuple, Union
 
 import gym
 import torch
-from calvin_env.utils.utils import EglDeviceNotFoundError, get_egl_device_id
+from thesis.utils.utils import EglDeviceNotFoundError, get_egl_device_id
 
 logger = logging.getLogger(__name__)
 

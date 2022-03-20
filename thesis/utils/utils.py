@@ -258,6 +258,19 @@ def load_hydra_config(train_folder):
     return run_cfg
 
 
+def get_combined_agent(env, agent_cfg, aff_cfg):
+    checkpoint_path = get_abspath(aff_cfg.checkpoint.train_folder)
+    point_detector = load_aff_model(checkpoint_path,
+                                    aff_cfg.checkpoint.model_name,
+                                    aff_cfg.model,
+                                    transforms=aff_cfg.dataset.transforms['validation'])
+                                    # hough_voting=cfg.hough_voting)
+    point_detector.eval()
+    agent = hydra.utils.instantiate(agent_cfg, env=env, 
+    point_detector=point_detector)    
+    return agent
+
+
 def get_egl_device_id(cuda_id: int) -> Union[int]:
     """
     >>> i = get_egl_device_id(0)
