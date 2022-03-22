@@ -4,7 +4,8 @@ from typing import Any, Dict, Tuple, Union
 
 import gym
 import torch
-from thesis.utils.utils import EglDeviceNotFoundError, get_egl_device_id
+from vr_env.utils.utils import EglDeviceNotFoundError, get_egl_device_id
+import pybullet as p
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ class PlayLMPWrapper(gym.Wrapper):
             obs = self.env.reset(scene_obs=scene_obs, robot_obs=robot_obs)
         else:
             obs = self.env.reset()
+        
 
         return obs
 

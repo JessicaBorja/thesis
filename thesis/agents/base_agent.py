@@ -2,19 +2,20 @@ import numpy as np
 import cv2
 import logging
 from thesis.affordance.base_detector import BaseDetector
-from thesis.utils.utils import add_img_text, resize_pixel, pos_orn_to_matrix
+from thesis.utils.utils import add_img_text, resize_pixel
+from thesis.utils.utils import get_abspath, load_aff_model, resize_pixel
 import torch
+import os
 
 class BaseAgent:
-    def __init__(self, env, offset, point_detector=BaseDetector(), *args, **kwargs):
+    def __init__(self, env, offset, aff_cfg, *args, **kwargs):
         self._env = env
         _info = self.env.robot.get_observation()[-1]
         self.origin = np.array(_info["tcp_pos"])
         self.target_orn = np.array(_info["tcp_orn"])
         self.logger = logging.getLogger(__name__)
-        _device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-        self.device = torch.device(_device)
-        self.point_detector=point_detector
+        self.point_detector = self.get_point_detector(aff_cfg)
+        self.device = self.env.device
         self.model_free = None
         self.offset = np.array([*offset, 1])
 
@@ -25,6 +26,20 @@ class BaseAgent:
     @env.setter
     def env(self, value):
         self._env = value
+
+    def get_point_detector(self, aff_cfg):
+        checkpoint_path = get_abspath(aff_cfg.checkpoint.train_folder)
+        if os.path.exists(checkpoint_path):
+            point_detector = load_aff_model(checkpoint_path,
+                                            aff_cfg.checkpoint.model_name,
+                                            aff_cfg.model,
+                                            transforms=aff_cfg.dataset.transforms['validation'])
+                                            # hough_voting=cfg.hough_voting)
+            point_detector.eval()
+        else:
+            point_detector = BaseDetector()
+        return point_detector
+
 
     def load_model_free(self, train_folder, model_name, **kwargs):
         self.logger.info("Base Agent has no policy implemented. Step will be a waiting period...")
@@ -90,13 +105,8 @@ class BaseAgent:
         a = [reach_target.copy(), target_orn.copy(), gripper_action]
         tcp_pos, _ = self.move_to_pos(tcp_pos, a)
 
-        # Offset relative to gripper frame
-        tcp_mat = pos_orn_to_matrix(target_pos, target_orn)
-        offset_global_frame = tcp_mat @ self.offset
-        move_to = offset_global_frame[:3]
-
         # Move to target
-        a = [move_to, target_orn, gripper_action]
+        a = [target_pos, target_orn, gripper_action]
         _, transition = self.move_to_pos(tcp_pos, a)
         return transition
 

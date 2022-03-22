@@ -3,57 +3,50 @@ import logging
 from pathlib import Path
 
 import cv2
-import hydra
 import numpy as np
 from numpy import pi
-from omegaconf import OmegaConf
 import pyhash
 import torch
-
-from lfp.models.play_lmp import PlayLMP
-from lfp.utils.utils import add_text, format_sftp_path
+import os
 
 hasher = pyhash.fnv1_32()
 logger = logging.getLogger(__name__)
 
+def format_sftp_path(path):
+    """
+    When using network mount from nautilus, format path
+    """
+    if path.as_posix().startswith("sftp"):
+        uid = os.getuid()
+        path = Path(f"/run/user/{uid}/gvfs/sftp:host={path.as_posix()[6:]}")
+    return path
 
-def get_default_model_and_env(train_folder, dataset_path, checkpoint, env=None, lang_embeddings=None, device_id=0):
-    train_cfg_path = Path(train_folder) / ".hydra/config.yaml"
-    train_cfg_path = format_sftp_path(train_cfg_path)
-    cfg = OmegaConf.load(train_cfg_path)
-    cfg = OmegaConf.create(OmegaConf.to_yaml(cfg).replace("calvin_models.", ""))
-    lang_folder = cfg.datamodule.datasets.lang_dataset.lang_folder
-    if not hydra.core.global_hydra.GlobalHydra.instance().is_initialized():
-        hydra.initialize("../../conf/datamodule/datasets")
-    # we don't want to use shm dataset for evaluation
-    datasets_cfg = hydra.compose("vision_lang.yaml", overrides=["lang_dataset.lang_folder=" + lang_folder])
-    # since we don't use the trainer during inference, manually set up data_module
-    cfg.datamodule.datasets = datasets_cfg
-    cfg.datamodule.root_data_dir = dataset_path
-    data_module = hydra.utils.instantiate(cfg.datamodule, num_workers=0)
-    data_module.prepare_data()
-    data_module.setup()
-    dataloader = data_module.val_dataloader()
-    dataset = dataloader.dataset.datasets["lang"]
-    device = torch.device(f"cuda:{device_id}")
-
-    if lang_embeddings is None:
-        lang_embeddings = LangEmbeddings(dataset.abs_datasets_dir, lang_folder, device=device)
-
-    if env is None:
-        rollout_cfg = OmegaConf.load(Path(__file__).parents[2] / "conf/callbacks/rollout/default.yaml")
-        env = hydra.utils.instantiate(rollout_cfg.env_cfg, dataset, device, show_gui=False)
-
-    checkpoint = format_sftp_path(checkpoint)
-    print(f"Loading model from {checkpoint}")
-    model = PlayLMP.load_from_checkpoint(checkpoint)
-    model.freeze()
-    if cfg.model.action_decoder.get("load_action_bounds", False):
-        model.action_decoder._setup_action_bounds(cfg.datamodule.root_data_dir, None, None, True)
-    model = model.cuda(device)
-    print("Successfully loaded model.")
-
-    return model, env, data_module, lang_embeddings
+def add_text(img, lang_text):
+    height, width, _ = img.shape
+    if lang_text != "":
+        coord = (1, int(height - 10))
+        font_scale = (0.7 / 500) * width
+        thickness = 1
+        cv2.putText(
+            img,
+            text=lang_text,
+            org=coord,
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+            fontScale=font_scale,
+            color=(0, 0, 0),
+            thickness=thickness * 3,
+            lineType=cv2.LINE_AA,
+        )
+        cv2.putText(
+            img,
+            text=lang_text,
+            org=coord,
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+            fontScale=font_scale,
+            color=(255, 255, 255),
+            thickness=thickness,
+            lineType=cv2.LINE_AA,
+        )
 
 
 def join_vis_lang(img, lang_text):

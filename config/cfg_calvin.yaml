@@ -13,15 +13,16 @@ data_path: ${paths.vr_data}
 model_name: full
 
 max_timesteps: 364
-gripper_offset: [-0.02, 0.0, -0.06]
+gripper_offset: [0.02, 0.0, -0.04]
 policy_checkpoint: 
-  train_folder: ./trained_agents/D_D_static_rgb_baseline
-  model_name: mcil_baseline.ckpt
+  train_folder: ./trained_agents/lfp
+  model_name: epoch=30.ckpt
 
-aff_checkpoint:
-  train_folder: ./hydra_outputs/affordance_model/2022-03-09/01-38-55_aff_rl
-  model_name: val_err-v1.ckpt
-  img_resize: 224
+aff_detection:
+  checkpoint:
+    train_folder: ./hydra_outputs/affordance_model/2022-03-09/01-38-55_aff_rl
+    model_name: val_err-v1.ckpt
+    img_resize: 224
 
 hough_voting:
   skip_pixels: 4

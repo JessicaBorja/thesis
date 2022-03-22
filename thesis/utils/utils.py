@@ -194,7 +194,12 @@ def overlay_flow(flow, img, mask):
 
 def get_abspath(path_str):
     if not os.path.isabs(path_str):
-        path_str = os.path.join(hydra.utils.get_original_cwd(), path_str)
+        hydra_cfg = hydra.utils.HydraConfig().cfg
+        if hydra_cfg is not None:
+            cwd = hydra.utils.get_original_cwd()
+        else:
+            cwd = os.getcwd()
+        path_str = os.path.join(cwd, path_str)
         path_str = os.path.abspath(path_str)
     return path_str
 
@@ -269,35 +274,3 @@ def get_combined_agent(env, agent_cfg, aff_cfg):
     agent = hydra.utils.instantiate(agent_cfg, env=env, 
     point_detector=point_detector)    
     return agent
-
-
-def get_egl_device_id(cuda_id: int) -> Union[int]:
-    """
-    >>> i = get_egl_device_id(0)
-    >>> isinstance(i, int)
-    True
-    """
-    assert isinstance(cuda_id, int), "cuda_id has to be integer"
-    dir_path = Path(__file__).absolute().parents[2] / "egl_check"
-    if not os.path.isfile(dir_path / "EGL_options.o"):
-        if os.environ.get("LOCAL_RANK", "0") == "0":
-            print("Building EGL_options.o")
-            subprocess.call(["bash", "build.sh"], cwd=dir_path)
-        else:
-            # In case EGL_options.o has to be built and multiprocessing is used, give rank 0 process time to build
-            time.sleep(5)
-    result = subprocess.run(["./EGL_options.o"], capture_output=True, cwd=dir_path)
-    n = int(result.stderr.decode("utf-8").split(" of ")[1].split(".")[0])
-    for egl_id in range(n):
-        my_env = os.environ.copy()
-        my_env["EGL_VISIBLE_DEVICE"] = str(egl_id)
-        result = subprocess.run(["./EGL_options.o"], capture_output=True, cwd=dir_path, env=my_env)
-        match = re.search(r"CUDA_DEVICE=[0-9]+", result.stdout.decode("utf-8"))
-        if match:
-            current_cuda_id = int(match[0].split("=")[1])
-            if cuda_id == current_cuda_id:
-                return egl_id
-    raise EglDeviceNotFoundError
-
-class EglDeviceNotFoundError(Exception):
-    """Raised when EGL device cannot be found"""
