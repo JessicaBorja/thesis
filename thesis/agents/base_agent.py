@@ -11,13 +11,14 @@ class BaseAgent:
     def __init__(self, env, offset, aff_cfg, *args, **kwargs):
         self._env = env
         _info = self.env.robot.get_observation()[-1]
-        self.origin = np.array(_info["tcp_pos"])
+        self.origin = np.array([-0.25, -0.3, 0.5])  # np.array(_info["tcp_pos"])
         self.target_orn = np.array(_info["tcp_orn"])
         self.logger = logging.getLogger(__name__)
         self.point_detector = self.get_point_detector(aff_cfg)
         self.device = self.env.device
         self.model_free = None
         self.offset = np.array([*offset, 1])
+        self.reset_position()
 
     @property
     def env(self):
@@ -110,13 +111,13 @@ class BaseAgent:
         _, transition = self.move_to_pos(tcp_pos, a)
         return transition
 
-    def move_to_pos(self, target_pos, action):
-        last_pos = target_pos.copy()
+    def move_to_pos(self, tcp_pos, action):
+        last_pos = tcp_pos.copy()
+        target_pos = action[0]
         # When robot is moving and far from target
         ns, r, d, info = self.env.step(action)
         curr_pos = np.array(info["robot_info"]["tcp_pos"])
-        while(np.linalg.norm(curr_pos - target_pos) > 0.01 
-              and np.linalg.norm(last_pos - curr_pos) > 0.001):
+        while(np.linalg.norm(curr_pos - target_pos) > 0.01):
             last_pos = curr_pos
             ns, r, d, info = self.env.step(action)             
             curr_pos = np.array(info["robot_info"]["tcp_pos"])

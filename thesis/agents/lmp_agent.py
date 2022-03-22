@@ -1,3 +1,4 @@
+from turtle import color
 from thesis.agents.base_agent import BaseAgent
 from thesis.utils.utils import get_abspath, resize_pixel, pos_orn_to_matrix
 from thesis.models.core.language_network import SBert
@@ -119,17 +120,23 @@ class PlayLMPAgent(BaseAgent):
 
     def encode(self, goal):
         _goal_embd = self.lang_enc(goal).permute(1,0)
-        return _goal_embd
+        return {'lang': _goal_embd}
 
-    def reset(self, inp):
+    def reset(self, caption):
+        self.reset_position()
         self.model_free.reset()
+
+        obs = self.env.get_obs()
+        inp = {"img": obs["rgb_obs"]["rgb_static"],
+               "lang_goal": caption}
         im_shape = inp["img"].shape[:2]
+
         pred = self.point_detector.predict(inp)
         self.point_detector.viz_preds(inp, pred, waitkey=1)
         pixel = resize_pixel(pred["pixel"], pred['softmax'].shape[:2], im_shape)
 
         # World pos
-        depth = inp["depth"]
+        depth = obs["depth_obs"]["depth_static"]
         n = 5
         x_range =[max(pixel[0] - n, 0), min(pixel[0] + n, im_shape[1])]
         y_range =[max(pixel[1] - n, 0), min(pixel[1] + n, im_shape[1])]
@@ -153,6 +160,8 @@ class PlayLMPAgent(BaseAgent):
         # img = self.print_px_img(img, pixel)
         # cv2.imshow("move_to", img[:, :, ::-1])
         # cv2.waitKey(1)
+        # import pybullet as p
+        # p.addUserDebugText("t", target_pos, [1,0,0])
 
         obs, _, _, info = self.move_to(target_pos, gripper_action=1)
 
@@ -194,6 +203,6 @@ class PlayLMPAgent(BaseAgent):
         '''
         obs = self.transform_observation(obs)
         # imgs: B, S, C, W, H
-        action = self.model_free.step(obs, {"lang": goal_embd})
+        action = self.model_free.step(obs, goal_embd)
         action = self.transform_action(action)
         return action

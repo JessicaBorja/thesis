@@ -25,16 +25,11 @@ class PolicyManager:
         lang_annotation = val_annotations[subtask][0]
         # get language goal embedding
         goal = lang_embeddings.get_lang_goal(lang_annotation)
-        # Model inputs
-        inp = {"img": obs["rgb_obs"]["rgb_static"],
-               "lang_goal": lang_annotation,
-               "depth": obs["depth_obs"]["depth_static"]}
-
-        model.reset(inp)
+        model.reset(lang_annotation)
         start_info = env.get_info()
 
         t_obs = model.transform_observation(obs)
-        plan, latent_goal = model.get_pp_plan_lang(t_obs, goal)
+        plan, latent_goal = model.model_free.get_pp_plan_lang(t_obs, goal)
         plans[subtask].append((plan.cpu(), latent_goal.cpu()))
 
         for step in range(args.ep_len):
