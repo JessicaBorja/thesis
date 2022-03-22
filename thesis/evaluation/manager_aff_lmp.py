@@ -13,21 +13,23 @@ logger = logging.getLogger(__name__)
 
 
 class PolicyManager:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, debug=False) -> None:
+        self.debug = debug
 
     def rollout(self, env, model, task_oracle, args, subtask, lang_embeddings, val_annotations, plans):
         if args.debug:
             print(f"{subtask} ", end="")
             time.sleep(0.5)
-        obs = env.get_obs()
         # get lang annotation for subtask
         lang_annotation = val_annotations[subtask][0]
         # get language goal embedding
         goal = lang_embeddings.get_lang_goal(lang_annotation)
-        model.reset(lang_annotation)
+        width = env.robot.get_observation()[-1]["gripper_opening_width"]
+        if width > 0.055 or width< 0.01:
+            model.reset(lang_annotation)
         start_info = env.get_info()
 
+        obs = env.get_obs()
         t_obs = model.transform_observation(obs)
         plan, latent_goal = model.model_free.get_pp_plan_lang(t_obs, goal)
         plans[subtask].append((plan.cpu(), latent_goal.cpu()))
@@ -89,7 +91,7 @@ class PolicyManager:
         cfg = hydra.compose(config_name="cfg_calvin")
         cfg.policy_checkpoint.train_folder = train_folder
         cfg.policy_checkpoint.model_name = checkpoint.name
-        model = hydra.utils.instantiate(cfg.agent, env=env, aff_cfg=cfg.aff_detection)
+        model = hydra.utils.instantiate(cfg.agent, viz_obs=self.debug, env=env, aff_cfg=cfg.aff_detection)
         print("Successfully loaded model.")
 
         return model, env, data_module, lang_embeddings
