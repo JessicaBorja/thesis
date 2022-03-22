@@ -122,7 +122,7 @@ class BaseAgent:
             ns, r, d, info = self.env.step(action)             
             curr_pos = np.array(info["robot_info"]["tcp_pos"])
 
-            img = cv2.resize(ns['rgb_obs']['rgb_static'][:, :, ::-1], (300,300))
-            cv2.imshow("static_cam", img)
-            cv2.waitKey(1)
+            # img = cv2.resize(ns['rgb_obs']['rgb_static'][:, :, ::-1], (300,300))
+            # cv2.imshow("static_cam", img)
+            # cv2.waitKey(1)
         return curr_pos, (ns, r, d, info)
