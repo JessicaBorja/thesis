@@ -1,6 +1,7 @@
 _target_: thesis.agents.lmp_agent.PlayLMPAgent
 _recursive_: False
 dataset_path: ${paths.datasets}/unprocessed/task_D_D
+move_outside: False
 checkpoint: 
   train_folder: ./trained_agents/lfp
   model_name: epoch=30.ckpt

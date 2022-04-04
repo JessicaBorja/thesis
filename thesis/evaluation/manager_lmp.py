@@ -50,7 +50,7 @@ class PolicyManager:
             print(colored("fail", "red"), end=" ")
         return False
 
-    def get_default_model_and_env(self, train_folder, dataset_path, checkpoint, env=None, lang_embeddings=None, device_id=0):
+    def get_default_model_and_env(self, train_folder, dataset_path, checkpoint, env=None, lang_embeddings=None, device_id=0, scene=None):
         train_cfg_path = Path(train_folder) / ".hydra/config.yaml"
         train_cfg_path = format_sftp_path(train_cfg_path)
         cfg = OmegaConf.load(train_cfg_path)
@@ -77,7 +77,7 @@ class PolicyManager:
 
         if env is None:
             rollout_cfg = OmegaConf.load(Path(__file__).parents[2] / "config/lfp/rollout/default.yaml")
-            env = hydra.utils.instantiate(rollout_cfg.env_cfg, dataset, device, show_gui=False)
+            env = hydra.utils.instantiate(rollout_cfg.env_cfg, dataset, device, show_gui=False,scene=scene)
 
         checkpoint = format_sftp_path(checkpoint)
         print(f"Loading model from {checkpoint}")

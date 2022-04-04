@@ -4,7 +4,7 @@ from thesis.utils.utils import get_abspath, resize_pixel, pos_orn_to_matrix
 from thesis.models.core.language_network import SBert
 
 from calvin_agent.models.play_lmp import PlayLMP
-from lfp.datasets.utils.episode_utils import process_depth, process_rgb, process_state, load_dataset_statistics
+from thesis.utils.episode_utils import load_dataset_statistics, process_depth, process_rgb, process_state
 from omegaconf import DictConfig, OmegaConf
 import torch.nn as nn
 import os
@@ -25,11 +25,11 @@ logger = logging.getLogger(__name__)
 
 
 class PlayLMPAgent(BaseAgent):
-    def __init__(self, env, dataset_path, checkpoint=None, *args, **kwargs):
+    def __init__(self, env, dataset_path, checkpoint=None, move_outside=True, *args, **kwargs):
         super().__init__(env, *args, **kwargs)
+        self.move_outside = move_outside
         self.dataset_path = Path(get_abspath(dataset_path))  # Dataset on which agent was trained
         self.lang_enc = SBert('paraphrase-MiniLM-L3-v2')
-
         if checkpoint:
             self.model_free, self.transforms = self.load_model_free(**checkpoint)
             self.relative_actions = "rel_actions" in self.observation_space_keys["actions"]
@@ -59,7 +59,8 @@ class PlayLMPAgent(BaseAgent):
             model_file = importlib.import_module(model_file)
             model_class = getattr(model_file, model_class[-1])
             # Parameter added after model was trained
-            if 'spatial_softmax_temp' not in run_cfg.model.perceptual_encoder.rgb_static:
+            if ('rgb_static' in run_cfg.model.perceptual_encoder and
+                'spatial_softmax_temp' not in run_cfg.model.perceptual_encoder.rgb_static):
                 perceptual_encoder = OmegaConf.to_container(run_cfg.model.perceptual_encoder)
                 for k in perceptual_encoder.keys():
                     v = perceptual_encoder[k]
@@ -67,7 +68,9 @@ class PlayLMPAgent(BaseAgent):
                     and v['_target_'] == 'lfp.models.perceptual_encoders.vision_network.VisionNetwork':
                         perceptual_encoder[k]['spatial_softmax_temp'] = 1.0
                 perceptual_encoder = DictConfig(perceptual_encoder)
-            model = model_class.load_from_checkpoint(checkpoint, perceptual_encoder=perceptual_encoder)
+                model = model_class.load_from_checkpoint(checkpoint, perceptual_encoder=perceptual_encoder)
+            else:
+                model = model_class.load_from_checkpoint(checkpoint)
             model.freeze()
             print("Successfully loaded model.")
             _transforms = run_cfg.datamodule.transforms
@@ -122,10 +125,7 @@ class PlayLMPAgent(BaseAgent):
         _goal_embd = self.lang_enc(goal).permute(1,0)
         return {'lang': _goal_embd}
 
-    def reset(self, caption):
-        self.reset_position()
-        self.model_free.reset()
-
+    def get_aff_pred(self, caption):
         obs = self.env.get_obs()
         inp = {"img": obs["rgb_obs"]["rgb_static"],
                "lang_goal": caption}
@@ -170,6 +170,12 @@ class PlayLMPAgent(BaseAgent):
         # Update target pos and orn
         self.env.robot.target_pos = obs["robot_obs"][:3]
         self.env.robot.target_orn = obs["robot_obs"][3:6]
+
+    def reset(self, caption):
+        if self.move_outside:
+            self.reset_position()
+        self.model_free.reset()
+        self.get_aff_pred(caption)
 
     def print_px_img(self, img, px):
         out_shape = (300, 300)

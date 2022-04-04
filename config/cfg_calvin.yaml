@@ -20,8 +20,9 @@ policy_checkpoint:
 
 aff_detection:
   checkpoint:
-    train_folder: ./hydra_outputs/affordance_model/2022-03-09/01-38-55_aff_rl
-    model_name: val_err-v1.ckpt
+    train_folder: ./hydra_outputs/affordance_model/2022-03-03/17-07-29_aff_rl 
+    # train_folder: ./hydra_outputs/affordance_model/2022-03-09/01-38-55_aff_rl
+    model_name: val_err.ckpt
     img_resize: 224
 
 hough_voting:

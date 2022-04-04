@@ -1,6 +1,6 @@
 import hydra
 import cv2
-from thesis.env_wrappers.play_lmp_wrapper import PlayLMPWrapper
+from thesis.env_wrappers.play_aff_lmp_wrapper import PlayLMPWrapper
 import torch
 
 @hydra.main(config_path="../config", config_name="cfg_calvin")

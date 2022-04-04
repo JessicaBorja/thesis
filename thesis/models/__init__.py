@@ -9,9 +9,9 @@ from .visual_lang_encoders.rn18_bert_lingunet import RN18BertLingunet
 
 
 names = {
-    'clip_lingunet': CLIPLingUNet,
     'rn50_bert_lingunet': RN50BertLingUNet,
     'untrained_rn50_bert_lingunet': UntrainedRN50BertLingUNet,
+    'clip_lingunet': CLIPLingUNet,
     'rn18_clip_lingunet': RN18CLIPLingunet,
     'rn18_bert_lingunet': RN18BertLingunet,
 }

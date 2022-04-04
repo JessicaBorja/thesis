@@ -12,7 +12,6 @@ import numpy as np
 from omegaconf import OmegaConf
 import torch
 from tqdm.auto import tqdm
-from vr_env.envs.play_table_env import get_env
 
 from thesis.evaluation.multistep_sequences import get_sequences
 from thesis.evaluation.utils import get_env_state_for_initial_condition
@@ -28,11 +27,18 @@ class Evaluation:
             self.policy_manager = AffLMPManager(debug=True)
         else:
             self.policy_manager = LMPManager()
+        
+        scene = args.scene
+        if args.scene is not None:
+            s = "config/scene/%s.yaml" % args.scene
+            scene = OmegaConf.load(Path(__file__).parents[2] / s)
+
         model, env, _, lang_embeddings = self.policy_manager.get_default_model_and_env(
             args.train_folder,
             args.dataset_path,
             checkpoint,
             device_id=args.device,
+            scene=scene,
         )
         self.model = model
         self.env = env

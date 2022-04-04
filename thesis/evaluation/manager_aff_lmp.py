@@ -6,8 +6,7 @@ from termcolor import colored
 from omegaconf import OmegaConf
 import torch
 import time
-from vr_env.envs.play_table_env import get_env
-from thesis.evaluation.utils import join_vis_lang, format_sftp_path, LangEmbeddings
+from thesis.evaluation.utils import join_vis_lang, format_sftp_path, LangEmbeddings, get_env
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +21,17 @@ class PolicyManager:
             time.sleep(0.5)
         # get lang annotation for subtask
         lang_annotation = val_annotations[subtask][0]
+
         # get language goal embedding
         goal = lang_embeddings.get_lang_goal(lang_annotation)
+
+        # Do not reset model if holding something
         width = env.robot.get_observation()[-1]["gripper_opening_width"]
         if width > 0.055 or width< 0.01:
             model.reset(lang_annotation)
+        
+        # Reset environment
         start_info = env.get_info()
-
         obs = env.get_obs()
         t_obs = model.transform_observation(obs)
         plan, latent_goal = model.model_free.get_pp_plan_lang(t_obs, goal)
@@ -51,7 +54,7 @@ class PolicyManager:
             print(colored("fail", "red"), end=" ")
         return False
 
-    def get_default_model_and_env(self, train_folder, dataset_path, checkpoint, env=None, lang_embeddings=None, device_id=0):
+    def get_default_model_and_env(self, train_folder, dataset_path, checkpoint, env=None, lang_embeddings=None, device_id=0, scene=None):
         train_cfg_path = Path(train_folder) / ".hydra/config.yaml"
         train_cfg_path = format_sftp_path(train_cfg_path)
         cfg = OmegaConf.load(train_cfg_path)
@@ -79,7 +82,8 @@ class PolicyManager:
             lang_embeddings = LangEmbeddings(dataset.abs_datasets_dir, lang_folder, device=device)
 
         if env is None:
-            env = get_env(dataset.abs_datasets_dir, show_gui=False, obs_space=dataset.observation_space)
+            env = get_env(dataset.abs_datasets_dir, show_gui=False, obs_space=dataset.observation_space,
+                          scene=scene)
             rollout_cfg = OmegaConf.load(Path(__file__).parents[2] / "config/lfp/rollout/aff_lfp.yaml")
             env = hydra.utils.instantiate(rollout_cfg.env_cfg, env=env, device=device)
 
@@ -89,8 +93,8 @@ class PolicyManager:
         # Load model model-free + model-based + aff_model from cfg_calvin
         # overwrite model-free from checkpoint
         cfg = hydra.compose(config_name="cfg_calvin")
-        cfg.policy_checkpoint.train_folder = train_folder
-        cfg.policy_checkpoint.model_name = checkpoint.name
+        cfg.agent.checkpoint.train_folder = train_folder
+        cfg.agent.checkpoint.model_name = checkpoint.name
         model = hydra.utils.instantiate(cfg.agent, viz_obs=self.debug, env=env, aff_cfg=cfg.aff_detection)
         print("Successfully loaded model.")
 

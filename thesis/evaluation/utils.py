@@ -8,6 +8,11 @@ from numpy import pi
 import pyhash
 import torch
 import os
+import re
+import hydra
+from omegaconf import ListConfig, OmegaConf
+
+import vr_env
 
 hasher = pyhash.fnv1_32()
 logger = logging.getLogger(__name__)
@@ -186,3 +191,28 @@ def get_env_state_for_initial_condition(initial_condition):
         scene_obs[23] = np.random.uniform(*block_rot_z_range)
 
     return robot_obs, scene_obs
+
+
+def get_env(dataset_path, obs_space=None, show_gui=True, scene=None, **kwargs):
+    from pathlib import Path
+
+    from omegaconf import OmegaConf
+
+    render_conf = OmegaConf.load(Path(dataset_path) / ".hydra" / "merged_config.yaml")
+    if scene is not None:
+        render_conf.scene = scene
+    if obs_space is not None:
+        exclude_keys = set(render_conf.cameras.keys()) - {
+            re.split("_", key)[1] for key in obs_space["rgb_obs"] + obs_space["depth_obs"]
+        }
+        for k in exclude_keys:
+            del render_conf.cameras[k]
+    if "scene" in kwargs:
+        scene_cfg = OmegaConf.load(Path(vr_env.__file__).parents[1] / "conf/scene" / f"{kwargs['scene']}.yaml")
+        OmegaConf.merge(render_conf, scene_cfg)
+    # Hack for maintaining two repositories
+    render_conf = OmegaConf.create(OmegaConf.to_yaml(render_conf).replace("calvin_env", "vr_env"))
+    if not hydra.core.global_hydra.GlobalHydra.instance().is_initialized():
+        hydra.initialize(".")
+    env = hydra.utils.instantiate(render_conf.env, show_gui=show_gui, use_vr=False, use_scene_info=True)
+    return env

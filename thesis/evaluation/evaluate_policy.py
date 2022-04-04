@@ -52,6 +52,11 @@ def main():
     
     parser.add_argument("--aff_lmp", action="store_true", help="Use model-based model-free combination method.")
 
+    # Overriding scene
+    parser.add_argument(
+        "--scene", default=None, type=str, help="Name of scene file inside /config/scene/ without extension"
+    )
+
     args = parser.parse_args()
 
     # Do not change
