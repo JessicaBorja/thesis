@@ -10,7 +10,7 @@ from thesis.utils.utils import add_img_text, tt, blend_imgs,get_transforms, resi
 import affordance.utils.flowlib as flowlib
 
 
-class VAPOAffLangDetector(AffordanceMaskModule):
+class MaskAffLangDetector(AffordanceMaskModule):
 
     def __init__(self, cfg, transforms=None, *args, **kwargs):
         super().__init__(cfg, *args, **kwargs)

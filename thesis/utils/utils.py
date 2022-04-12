@@ -18,6 +18,12 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+
+def calc_cnn_out_size(in_size, k, p=0, s=1):
+    out_size = ((in_size + 2 * p - k) / s) + 1
+    return int(out_size)
+
+
 def np_quat_to_scipy_quat(quat):
     """wxyz to xyzw"""
     return np.array([quat.x, quat.y, quat.z, quat.w])

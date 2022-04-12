@@ -1,5 +1,5 @@
 defaults:
-  - aff_detection: cliport_pixel_lang
+  - aff_detection: rn50_clip_pixel
   - paths: general_paths
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
@@ -16,14 +16,16 @@ checkpoint:
 trainer:
   # script configs
   gpus: -1
-  max_epochs: 15
+  max_epochs: 30
   check_val_every_n_epoch: 1
   num_sanity_val_steps: 1
   strategy: ddp
   precision: 32
 
-dataset_name: calvin_lang_contactEndPt
+dataset_name: calvin_lang_MoCEndPt
 aff_detection:
+  model:
+    pred_depth: True
   dataset:
     _recursive_: False
     data_dir: ${paths.datasets}/${dataset_name}

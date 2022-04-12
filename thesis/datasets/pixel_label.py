@@ -92,6 +92,7 @@ class PixeLabelDataLang(Dataset):
         data = np.load(self.data_dir + "/%s/data/%s/%s.npz" % (episode, cam_folder, filename))
 
         # Images are stored in BGR
+        # tcp_world = data['tcp_pos_world_frame']
         old_shape = data["frame"].shape[:2]
         frame = data["frame"]
         orig_frame = torch.from_numpy(frame).permute(2, 0, 1)  # C, W, H
@@ -118,10 +119,15 @@ class PixeLabelDataLang(Dataset):
         inp = {"img": frame,  # RGB
                "lang_goal": lang_ann,
                "orig_frame": orig_frame.float() / 255}
+        
+        # Cam point in -z direction, but depth should be positive
+        tcp_cam = data['tcp_pos_cam_frame']
+        depth = tcp_cam[-1] * -1  
 
         # CE Loss requires mask in form (B, H, W)
         labels = {"task": task,
                   "p0": center,
+                  "depth": depth,
                   "tetha0": []}
         return inp, labels
 
@@ -130,7 +136,7 @@ class PixeLabelDataLang(Dataset):
 def main(cfg):
     data = PixeLabelDataLang(split="training", log=None, **cfg.aff_detection.dataset)
     loader = DataLoader(data, num_workers=1, batch_size=1, pin_memory=True)
-    print("val minibatches {}".format(len(loader)))
+    print("minibatches {}".format(len(loader)))
 
     cm = plt.get_cmap("jet")
     colors = cm(np.linspace(0, 1, data.n_classes))

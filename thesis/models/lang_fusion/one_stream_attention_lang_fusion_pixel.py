@@ -36,6 +36,10 @@ class AttentionLangFusionPixel(nn.Module):
         self.output_dim = output_dim
         self._build_nets()
 
+    @property
+    def decoder_layers(self):
+        return self.attn_stream.decoder_layers
+
     def _build_nets(self):
         stream_one_fcn = self.stream_fcn
         stream_one_model = models.names[stream_one_fcn]
@@ -65,4 +69,4 @@ class AttentionLangFusionPixel(nn.Module):
         if softmax:
             output = F.softmax(output, dim=-1)
             output = output.reshape(logits.shape)
-        return output
+        return output, _info

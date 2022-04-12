@@ -33,22 +33,7 @@ class AffordancePixelModule(LightningModule):
         else:
             raise NotImplementedError()
 
-    def attn_forward(self, inp, softmax=True):
-        inp_img = inp['inp_img']
-        lang_goal = inp['lang_goal']
-        out = self.attention(inp_img, lang_goal, softmax=softmax)
-        return out  # B, H, W
-
-    def attn_step(self, frame, label, compute_err=False):
-        inp_img = frame['img']
-        lang_goal = frame['lang_goal']
-
-        inp = {'inp_img': inp_img, 'lang_goal': lang_goal}
-        out = self.attn_forward(inp, softmax=False)
-        return self.attn_criterion(compute_err, inp, out, label)
-
-    def attn_criterion(self, compute_err, inp, out, label):
-
+    def attn_criterion(self, compute_err, inp, out, label, reparametrize=False):
         inp_img = inp['inp_img']
         B = inp_img.shape[0]
 
@@ -61,21 +46,41 @@ class AffordancePixelModule(LightningModule):
         # B, 1, H, W
         # aff_label = aff_label.permute((2, 0, 1))
         aff_label = aff_label.reshape(B, np.prod(aff_label.shape[1:]))  # B, H*W
-        aff_label = aff_label.to(dtype=torch.float, device=out.device)
+        aff_label = aff_label.to(dtype=torch.float, device=out['aff'].device)
 
         # Get loss.
-        loss = self.cross_entropy_with_logits(out, aff_label)
+        aff_loss = self.cross_entropy_with_logits(out["aff"], aff_label)
+        if self.pred_depth:
+            gt_depth = label["depth"].unsqueeze(-1).float()
+            depth_loss = -out["depth_dist"].log_prob(gt_depth).mean()
+            neg_samples = out["depth_dist"].sample()
+            depth_loss += out["depth_dist"].log_prob(neg_samples).mean()
+            # pred_depth = out["depth_dist"].rsample()
+            # depth_loss = F.mse_loss(pred_depth, gt_depth)
+        else: 
+            depth_loss = 0
 
         # Pixel and Rotation error (not used anywhere).
         err = {}
         if compute_err:
-            pick_conf = self.attn_forward(inp)[:, :, :, 0]  # B, H, W 
+            # Pixel distance error
+            pick_conf = self.attn_forward(inp)['aff'][:, :, :, 0]  # B, H, W 
             pick_conf = pick_conf.detach().cpu().numpy()
             indices = np.argmax(pick_conf.reshape((B,-1)), -1)
             p0_pix = self.unravel_idx(indices, shape=pick_conf.shape[1:])
-            err = {
-                'dist': np.sum(np.linalg.norm(p0 - p0_pix, axis=1)),
-            }
+            err = {'px_dist': np.sum(np.linalg.norm(p0 - p0_pix, axis=1))}
+
+            # Depth error
+            depth_error = 0
+            if self.pred_depth:
+                sample = self.sample_dist(out["depth_dist"], reparametrize)
+                sample = sample.squeeze().detach().cpu().numpy()
+                gt_depth = label["depth"].detach().cpu().numpy()
+                depth_error = np.sum(np.abs(sample - gt_depth))
+            err = {"px_dist": np.sum(np.linalg.norm(p0 - p0_pix, axis=1)),
+                    "depth": depth_error}
+
+        loss = aff_loss + 1.0 * depth_loss
         return loss, err
 
     def unravel_idx(self, indices, shape):
@@ -88,18 +93,22 @@ class AffordancePixelModule(LightningModule):
         return coord
 
     def training_step(self, batch, batch_idx):
-        self.attention.train()
-
         frame, label = batch
 
         # Get training losses.
         step = self.total_steps + 1
-        loss0, err0 = self.attn_step(frame, label)
+        loss0, err0 = self.attn_step(frame, label, compute_err=True)
         total_loss = loss0
         bs = frame["img"].shape[0]
         self.log('Training/total_loss', total_loss,
                  on_step=True, on_epoch=True,
                  batch_size=bs)
+
+        if self.pred_depth:
+            self.log('Training/depth_err', err0['depth'],
+                    on_step=True, on_epoch=True,
+                    batch_size=bs)
+
         self.total_steps = step
         # self.check_save_iteration()
 
@@ -108,8 +117,6 @@ class AffordancePixelModule(LightningModule):
         )
 
     def validation_step(self, batch, batch_idx):
-        self.attention.eval()
-
         loss0 = 0
         assert self.val_repeats >= 1
         for i in range(self.val_repeats):
@@ -121,12 +128,13 @@ class AffordancePixelModule(LightningModule):
 
         return dict(
             val_loss=val_total_loss,
-            val_attn_dist_err=err0['dist'],
+            val_attn_dist_err=err0['px_dist'],
+            val_depth_err=err0["depth"],
             n_imgs=batch[1]['p0'].shape[0],
         )
 
     def validation_epoch_end(self, all_outputs):
-        mean_val_total_loss = np.mean([v['val_loss'].item() for v in all_outputs])
+        mean_val_total_loss = np.mean([v['val_loss'].item() for v in all_outputs])        
         total_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
         total_imgs = np.sum([v['n_imgs'] for v in all_outputs])
         mean_img_error = total_dist_err/total_imgs
@@ -134,6 +142,10 @@ class AffordancePixelModule(LightningModule):
         self.log('Validation/total_loss', mean_val_total_loss)
         self.log('Validation/total_dist_err', total_dist_err)
         self.log('Validation/mean_dist_error', mean_img_error)
+
+        if self.pred_depth:
+            mean_val_depth_err = np.mean([v['val_depth_err'].item() for v in all_outputs])
+            self.log('Validation/mean_val_depth_err', mean_val_depth_err)
 
         print("\nAttn Err - Dist: {:.2f}".format(total_dist_err))
 
@@ -143,5 +155,5 @@ class AffordancePixelModule(LightningModule):
         )
 
     def configure_optimizers(self):
-        optim = torch.optim.Adam(self.attention.parameters(), lr=self.cfg.lr)
+        optim = torch.optim.Adam(self.parameters(), lr=self.cfg.lr)
         return optim

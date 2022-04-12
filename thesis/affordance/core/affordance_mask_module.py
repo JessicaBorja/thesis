@@ -93,7 +93,7 @@ class AffordanceMaskModule(pl.LightningModule):
 
     def forward(self, inp, softmax=True):
         out = self.attn_forward(inp, softmax=softmax)
-        center_dir =  self.center_direction_net(out["decoder"])
+        center_dir =  self.center_direction_net(out["decoder_out"][-1])
         preds = {"affordance": out["affordance"],
                  "center_dirs": center_dir}
         return preds

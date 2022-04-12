@@ -1,4 +1,4 @@
-name: 'clip_lingunet'
+name: 'rn50_clip_lingunet'
 
 defaults:
   - /transforms: clip

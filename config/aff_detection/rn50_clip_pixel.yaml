@@ -1,7 +1,7 @@
 name: cliport_pixel_lang
 
 model:
-  _target_: thesis.affordance.aff_lang_detector.AffLangDetector
+  _target_: thesis.affordance.pixel_aff_lang_detector.PixelAffLangDetector
   _recursive_: False
   cfg:
     batchnorm: False # important: False because batch_size=1

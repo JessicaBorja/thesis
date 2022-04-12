@@ -4,7 +4,7 @@
 name: vapo_pixel_bert
 
 model:
-  _target_: thesis.affordance.aff_lang_detector.AffLangDetector
+  _target_: thesis.affordance.pixel_aff_lang_detector.PixelAffLangDetector
   _recursive_: False
   cfg:
     lr: 1e-5

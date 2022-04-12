@@ -4,7 +4,7 @@
 name: vapo_mask_bert
 
 model:
-  _target_: thesis.affordance.vapo_lang_detector.VAPOAffLangDetector
+  _target_: thesis.affordance.mask_aff_lang_detector.MaskAffLangDetector
   _recursive_: False
   cfg:
     attn_stream_fusion_type: 'add'
