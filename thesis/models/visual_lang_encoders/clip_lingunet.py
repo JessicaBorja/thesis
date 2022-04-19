@@ -1,3 +1,4 @@
+from turtle import forward
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,6 +10,20 @@ from thesis.models.core import fusion
 
 from thesis.utils.utils import calc_cnn_out_size
 
+class LangFusionBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, fusion_input_dim,
+                 proj_input_dim, lang_fusion_type='mult'):
+        _fusion_fnc = fusion.names[lang_fusion_type]
+
+        self.lang_fuser = _fusion_fnc(input_dim=fusion_input_dim).to(self.device)
+        self.lang_proj = nn.Linear(proj_input_dim, out_channels).to(self.device)
+        self.up_conv = Up(in_channels, out_channels // self.up_factor, self.bilinear).to(self.device)
+        return
+
+    def forward(self, inp, skip_conn, l_input, l_mask=None):
+        x = self.lang_fuser(inp, l_input, x2_mask=l_mask, x2_proj=self.lang_proj)
+        x = self.up_conv(x, skip_conn)
+        return x
 
 class CLIPLingUNet(nn.Module):
     """ CLIP RN50 with U-Net skip connections """
@@ -46,7 +61,7 @@ class CLIPLingUNet(nn.Module):
 
     def _build_decoder(self):
         # language
-        self.proj_input_dim = 512 if 'word' in self.lang_fusion_type else 1024
+        self.proj_input_dim = 1024
         out_channels = 1024
         self.conv1 = nn.Sequential(
             nn.Conv2d(self.input_dim, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
@@ -60,16 +75,17 @@ class CLIPLingUNet(nn.Module):
                         "shape": (out_channels, h, h)}]
 
         # Decoder layers w/language conditioning
-        self.lang_blocks = []
+        _lang_blocks = []
         in_channels = out_channels * 2
         for i in range(1, 4):
             out_channels = in_channels // 2
-            lang_fuser = fusion.names[self.lang_fusion_type](input_dim=self.input_dim // (2 * i)).to(self.device)
-            lang_proj = nn.Linear(self.proj_input_dim, out_channels).to(self.device)
-            up_conv = Up(in_channels, out_channels // self.up_factor, self.bilinear).to(self.device)
+            lang_block = LangFusionBlock(in_channels,
+                                         out_channels,
+                                         self.input_dim // (2 * i),
+                                         self.proj_input_dim,
+                                         self.lang_fusion_type)
             in_channels = out_channels
-
-            self.lang_blocks.append((lang_fuser, lang_proj, up_conv))
+            _lang_blocks.append(lang_block)
 
             # Save shape
             h = layers_info[-1]["shape"][-1] * 2
@@ -77,10 +93,10 @@ class CLIPLingUNet(nn.Module):
             h = calc_cnn_out_size(h, k=3, p=1)
             layers_info.append({"name": "conv_lang%d" % i,
                                 "shape": (out_channels // self.up_factor, h, h)})
-
+        self.lang_blocks = nn.ModuleList(_lang_blocks)
 
         # Decoder layers w/o language
-        self.decoder_blocks = []
+        _decoder_blocks = []
         in_channels = 128
         h = self.input_shape[0] // 2
         for i in range(1, 4):
@@ -89,7 +105,7 @@ class CLIPLingUNet(nn.Module):
             layer = nn.Sequential(
                 ConvBlock(in_channels, out_c, kernel_size=3, stride=1, batchnorm=self.batchnorm),
                 IdentityBlock(out_channels, out_c, kernel_size=3, stride=1, batchnorm=self.batchnorm),nn.UpsamplingBilinear2d(scale_factor=2)).to(self.device)
-            self.decoder_blocks.append(layer)
+            _decoder_blocks.append(layer)
             in_channels = out_channels
 
             # Calc out shape
@@ -97,7 +113,7 @@ class CLIPLingUNet(nn.Module):
                                 "shape": (out_channels, h, h)})
             h = layers_info[-1]["shape"][-1] * 2
 
-
+        self.decoder_blocks = nn.ModuleList(_decoder_blocks)
         self.conv2 = nn.Sequential(
             nn.Conv2d(out_channels, self.output_dim, kernel_size=1)
         )
@@ -129,8 +145,7 @@ class CLIPLingUNet(nn.Module):
         # encode text
         text_enc = self.encode_text(l)
         l_enc, l_emb, l_mask  = text_enc
-        l_input = l_emb if 'word' in self.lang_fusion_type else l_enc
-        l_input = l_input.to(dtype=x.dtype)
+        l_input = l_enc.to(dtype=x.dtype)
     
         _info = {"hidden_layers": [x],
                  "text_enc": text_enc,
@@ -140,9 +155,8 @@ class CLIPLingUNet(nn.Module):
         assert x.shape[1] == self.input_dim
         x = self.conv1(x)
 
-        for i, (lang_fuser, lang_proj, up_conv) in enumerate(self.lang_blocks, 2):
-            x = lang_fuser(x, l_input, x2_mask=l_mask, x2_proj=lang_proj)
-            x = up_conv(x, im[-i])
+        for i, lang_block in enumerate(self.lang_blocks, 2):
+            x = lang_block(x, im[-i], l_input, x2_mask=l_mask)
             _info["hidden_layers"].append(x)
 
         for layer in self.decoder_blocks:

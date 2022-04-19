@@ -44,11 +44,11 @@ class AttentionLangFusionPixel(nn.Module):
         stream_one_fcn = self.stream_fcn
         stream_one_model = models.names[stream_one_fcn]
 
-        self.attn_stream = stream_one_model(self.in_shape, self.output_dim, self.cfg, self.device)
+        self.stream_one = stream_one_model(self.in_shape, self.output_dim, self.cfg, self.device)
         print(f"Attn FCN: {stream_one_fcn}")
 
     def attend(self, x, l):
-        x = self.attn_stream(x, l)
+        x = self.stream_one(x, l)
         return x
 
     def forward(self, inp_img, lang_goal, softmax=True):

@@ -12,8 +12,6 @@ from thesis.utils.utils import calc_cnn_out_size
 
 
 class DepthEstimation(nn.Module):
-    """ CLIP RN50 with U-Net skip connections """
-
     def __init__(self, input_shape, output_dim, cfg, device):
         super(DepthEstimation, self).__init__()
         self.input_shape = input_shape
@@ -55,7 +53,7 @@ class DepthEstimation(nn.Module):
 
     def _build_decoder(self):
         # B, C, H, W
-        self.proj_input_dim = 512 if 'word' in self.lang_fusion_type else 1024
+        self.proj_input_dim = 1024
         _test_tensor = torch.zeros(self.input_shape).permute((2, 0, 1)).unsqueeze(0)
         shape = self.encode_image(_test_tensor).shape
 
@@ -96,8 +94,7 @@ class DepthEstimation(nn.Module):
 
         # encode text
         l_enc, l_emb, l_mask = l_enc
-        l_input = l_emb if 'word' in self.lang_fusion_type else l_enc
-        l_input = l_input.to(dtype=x.dtype)
+        l_input = l_enc.to(dtype=x.dtype)
     
         _info = {"hidden_layers": [x],
                  "l_mask": l_mask,

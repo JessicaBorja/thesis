@@ -33,7 +33,7 @@ class UntrainedRN50BertLingUNet(RN50BertLingUNet):
         self.lang_fuser2 = fusion.names[self.lang_fusion_type](input_dim=self.input_dim // 4)
         self.lang_fuser3 = fusion.names[self.lang_fusion_type](input_dim=self.input_dim // 8)
 
-        self.proj_input_dim = 512 if 'word' in self.lang_fusion_type else 1024
+        self.proj_input_dim = 1024
         self.lang_proj1 = nn.Linear(self.proj_input_dim, 1024)
         self.lang_proj2 = nn.Linear(self.proj_input_dim, 512)
         self.lang_proj3 = nn.Linear(self.proj_input_dim, 256)

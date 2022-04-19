@@ -75,7 +75,7 @@ class ResNet43_8s_lang(nn.Module):
         self.lang_fuser2 = fusion.names[self.lang_fusion_type](input_dim=self.input_dim // 4)
         self.lang_fuser3 = fusion.names[self.lang_fusion_type](input_dim=self.input_dim // 8)
 
-        self.proj_input_dim = 512 if 'word' in self.lang_fusion_type else 1024
+        self.proj_input_dim = 1024
         self.lang_proj1 = nn.Linear(self.proj_input_dim, 512)
         self.lang_proj2 = nn.Linear(self.proj_input_dim, 256)
         self.lang_proj3 = nn.Linear(self.proj_input_dim, 128)
@@ -93,8 +93,7 @@ class ResNet43_8s_lang(nn.Module):
     def forward(self, x, l):
         # encode language
         l_enc, l_emb, l_mask = self.encode_text(l)
-        l_input = l_emb if 'word' in self.lang_fusion_type else l_enc
-        l_input = l_input.to(dtype=x.dtype)
+        l_input = l_enc.to(dtype=x.dtype)
 
         x = self.conv1(x)
 

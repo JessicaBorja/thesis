@@ -51,8 +51,7 @@ class RN18Lingunet(nn.Module):
 
         # encode text
         l_enc, l_emb = self.encode_text(l)
-        l_input = l_emb if 'word' in self.lang_fusion_type else l_enc
-        l_input = l_input.to(dtype=x.dtype)
+        l_input = l_enc.to(dtype=x.dtype)
     
         # Decoder
         # encode image

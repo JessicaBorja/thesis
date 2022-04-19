@@ -71,7 +71,7 @@ class DepthEstimation(nn.Module):
 
     def _build_decoder(self):
         # B, C, H, W
-        self.proj_input_dim = 512 if 'word' in self.lang_fusion_type else 1024
+        self.proj_input_dim = 1024
         _test_tensor = torch.zeros(self.input_shape).permute((2, 0, 1)).unsqueeze(0)
         shape = self.encode_image(_test_tensor).shape
 

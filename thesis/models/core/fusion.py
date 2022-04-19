@@ -340,7 +340,6 @@ names = {
     'concat': FusionConcat,
     'conv': FusionConv,
     'deep_conv': FusionDeepConv,
-    'word_attn': FusionWordAttention,
     'sent_attn': FusionSentenceAttention,
     'multi_headed_word_attn': FusionMultiHeadedWordAttention,
 }

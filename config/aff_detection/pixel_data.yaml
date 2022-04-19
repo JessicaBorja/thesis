@@ -5,7 +5,7 @@ wandb_saver:
     mode: min
     verbose: True
   val_err:
-    monitor: 'Validation/dist_err'
+    monitor: 'Validation/total_dist_err'
     save_top_k: 2
     mode: min
     verbose: True
