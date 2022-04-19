@@ -10,19 +10,18 @@ import logging
 class AffordancePixelModule(LightningModule):
     def __init__(self, cfg, in_shape=(200, 200, 3)):
         super().__init__()
+        self.loss_weights = cfg.loss_weights
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
-        self.val_repeats = cfg.val_repeats
         self.total_steps = 0
         self.in_shape = in_shape
         self._batch_loss = []
         self.cmd_log = logging.getLogger(__name__)
         self._build_model()
         self.save_hyperparameters()
-
+    
     def _build_model(self):
-        self.attention = None
-        raise NotImplementedError()
+        self.attention=None
 
     def cross_entropy_with_logits(self, pred, labels, reduction='mean'):
         x = (-labels * F.log_softmax(pred, -1))
@@ -33,7 +32,7 @@ class AffordancePixelModule(LightningModule):
         else:
             raise NotImplementedError()
 
-    def attn_criterion(self, compute_err, inp, out, label, reparametrize=False):
+    def attn_criterion(self, compute_err, inp, pred, label, reparametrize=False):
         inp_img = inp['inp_img']
         B = inp_img.shape[0]
 
@@ -46,17 +45,13 @@ class AffordancePixelModule(LightningModule):
         # B, 1, H, W
         # aff_label = aff_label.permute((2, 0, 1))
         aff_label = aff_label.reshape(B, np.prod(aff_label.shape[1:]))  # B, H*W
-        aff_label = aff_label.to(dtype=torch.float, device=out['aff'].device)
+        aff_label = aff_label.to(dtype=torch.float, device=pred['aff'].device)
 
         # Get loss.
-        aff_loss = self.cross_entropy_with_logits(out["aff"], aff_label)
+        aff_loss = self.cross_entropy_with_logits(pred["aff"], aff_label)
         if self.pred_depth:
             gt_depth = label["depth"].unsqueeze(-1).float()
-            depth_loss = -out["depth_dist"].log_prob(gt_depth).mean()
-            neg_samples = out["depth_dist"].sample()
-            depth_loss += out["depth_dist"].log_prob(neg_samples).mean()
-            # pred_depth = out["depth_dist"].rsample()
-            # depth_loss = F.mse_loss(pred_depth, gt_depth)
+            depth_loss = self.depth_est.loss(pred, gt_depth)
         else: 
             depth_loss = 0
 
@@ -73,15 +68,18 @@ class AffordancePixelModule(LightningModule):
             # Depth error
             depth_error = 0
             if self.pred_depth:
-                sample = self.sample_dist(out["depth_dist"], reparametrize)
+                sample = self.depth_est.sample(pred["depth_dist"], reparametrize)
                 sample = sample.squeeze().detach().cpu().numpy()
                 gt_depth = label["depth"].detach().cpu().numpy()
                 depth_error = np.sum(np.abs(sample - gt_depth))
             err = {"px_dist": np.sum(np.linalg.norm(p0 - p0_pix, axis=1)),
                     "depth": depth_error}
 
-        loss = aff_loss + 1.0 * depth_loss
-        return loss, err
+        loss = self.loss_weights.aff * aff_loss
+        loss += self.loss_weights.depth * depth_loss
+        info = {"aff_loss": aff_loss,
+                "depth_loss": depth_loss}
+        return loss, err, info
 
     def unravel_idx(self, indices, shape):
         coord = []
@@ -93,67 +91,79 @@ class AffordancePixelModule(LightningModule):
         return coord
 
     def training_step(self, batch, batch_idx):
+        self.attention.train()
+
         frame, label = batch
 
         # Get training losses.
         step = self.total_steps + 1
-        loss0, err0 = self.attn_step(frame, label, compute_err=True)
-        total_loss = loss0
+        total_loss, err, info = self.attn_step(frame, label, compute_err=True)
         bs = frame["img"].shape[0]
+
         self.log('Training/total_loss', total_loss,
-                 on_step=True, on_epoch=True,
+                 on_step=False, on_epoch=True,
                  batch_size=bs)
+        for loss_fnc, value in info.items():
+            self.log('Validation/%s' % loss_fnc, value,
+                     on_step=False, on_epoch=True)
 
         if self.pred_depth:
-            self.log('Training/depth_err', err0['depth'],
-                    on_step=True, on_epoch=True,
+            self.log('Training/depth_err', err['depth'],
+                    on_step=False, on_epoch=True,
                     batch_size=bs)
 
         self.total_steps = step
-        # self.check_save_iteration()
-
-        return dict(
-            loss=total_loss,
-        )
+        return total_loss
 
     def validation_step(self, batch, batch_idx):
-        loss0 = 0
-        assert self.val_repeats >= 1
-        for i in range(self.val_repeats):
-            frame, label = batch
-            l0, err0 = self.attn_step(frame, label, compute_err=True)
-            loss0 += l0
-        loss0 /= self.val_repeats
-        val_total_loss = loss0
+        self.attention.eval()
 
-        return dict(
-            val_loss=val_total_loss,
-            val_attn_dist_err=err0['px_dist'],
-            val_depth_err=err0["depth"],
-            n_imgs=batch[1]['p0'].shape[0],
-        )
+        frame, label = batch
+        val_total_loss, err, info = self.attn_step(frame, label, compute_err=True)
+        bs = frame["img"].shape[0]
 
-    def validation_epoch_end(self, all_outputs):
-        mean_val_total_loss = np.mean([v['val_loss'].item() for v in all_outputs])        
-        total_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
-        total_imgs = np.sum([v['n_imgs'] for v in all_outputs])
-        mean_img_error = total_dist_err/total_imgs
 
-        self.log('Validation/total_loss', mean_val_total_loss)
-        self.log('Validation/total_dist_err', total_dist_err)
-        self.log('Validation/mean_dist_error', mean_img_error)
+        self.log('Validation/dist_err', err['px_dist'])
+        self.log('Validation/total_loss', val_total_loss,
+                 on_step=False, on_epoch=True,
+                 batch_size=bs)
+        for loss_fnc, value in info.items():
+            self.log('Validation/%s' % loss_fnc, value,
+                     on_step=False, on_epoch=True,)
 
         if self.pred_depth:
-            mean_val_depth_err = np.mean([v['val_depth_err'].item() for v in all_outputs])
-            self.log('Validation/mean_val_depth_err', mean_val_depth_err)
+            self.log('Validation/depth_err', err['depth'],
+                    on_step=False, on_epoch=True,
+                    batch_size=bs)
 
-        print("\nAttn Err - Dist: {:.2f}".format(total_dist_err))
+        # return dict(
+        #     val_loss=val_total_loss,
+        #     val_attn_dist_err=err['px_dist'],
+        #     val_depth_err=err["depth"],
+        #     n_imgs=batch[1]['p0'].shape[0],
+        # )
 
-        return dict(
-            val_loss=mean_val_total_loss,
-            total_dist_err=total_dist_err,
-        )
+    # def validation_epoch_end(self, all_outputs):
+    #     mean_val_total_loss = np.mean([v['val_loss'].item() for v in all_outputs])        
+    #     total_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
+    #     total_imgs = np.sum([v['n_imgs'] for v in all_outputs])
+    #     mean_img_error = total_dist_err/total_imgs
+
+    #     self.log('Validation/total_loss', mean_val_total_loss)
+    #     self.log('Validation/total_dist_err', total_dist_err)
+    #     self.log('Validation/mean_dist_error', mean_img_error)
+
+    #     if self.pred_depth:
+    #         mean_val_depth_err = np.mean([v['val_depth_err'].item() for v in all_outputs])
+    #         self.log('Validation/mean_val_depth_err', mean_val_depth_err)
+
+    #     print("\nAttn Err - Dist: {:.2f}".format(total_dist_err))
+
+    #     return dict(
+    #         val_loss=mean_val_total_loss,
+    #         total_dist_err=total_dist_err,
+    #     )
 
     def configure_optimizers(self):
-        optim = torch.optim.Adam(self.parameters(), lr=self.cfg.lr)
+        optim = torch.optim.Adam(self.attention.parameters(), lr=self.cfg.lr)
         return optim

@@ -2,15 +2,11 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn as nn
-from torch.distributions import Normal, Independent
-import torch.nn.functional as F
-import torch
 
 from thesis.affordance.core.affordance_pixel_module import AffordancePixelModule
+from thesis.models.depth.depth_gaussian import DepthEstimation
 from thesis.models.lang_fusion.one_stream_attention_lang_fusion_pixel import AttentionLangFusionPixel
 from thesis.utils.utils import add_img_text, tt, blend_imgs,get_transforms, resize_pixel
-from thesis.utils.utils import calc_cnn_out_size
-from thesis.models.core import fusion
 
 
 class PixelAffLangDetector(AffordancePixelModule):
@@ -30,54 +26,8 @@ class PixelAffLangDetector(AffordancePixelModule):
             cfg=self.cfg,
             device=self.device_type,
         )
-        shape = self.attention.decoder_layers[0]["shape"]
-        fusion_type = self.attention.attn_stream.lang_fusion_type
         if self.pred_depth:
-            hidden_channels = 32
-            self.conv1 = nn.Conv2d(shape[0], hidden_channels, kernel_size=3, padding=1)
-            self.lang_fuser = fusion.names[fusion_type]()
-            self.lang_proj = nn.Linear(1024, hidden_channels).to(self.device)
-            self.conv2 = nn.Conv2d(hidden_channels, 16,  kernel_size=3, padding=1)
-
-            linear_in = calc_cnn_out_size(shape[-1], k=3, p=1)
-            linear_in = calc_cnn_out_size(linear_in, k=3, p=1)
-            linear_in *= linear_in * 16
-            self.fc_layer = nn.Linear(linear_in, 256)
-            self.depth_mu = nn.Linear(256, 1)
-            self.depth_sigma = nn.Linear(256, 1)
-
-
-    def sample_dist(self, dist, reparametrize):
-        if reparametrize:
-            sample = dist.rsample()
-        else:
-            sample = dist.sample()
-        return sample
-
-    def depth_forward(self, inp, _info):
-        ''' 
-            Depth compute forward pass
-        '''
-        B, C, H, W = inp.shape
-        x = F.relu(self.conv1(inp))
-
-        # Language conditioning
-        l_input = _info["l_input"]
-        l_mask = _info["l_mask"]
-        x = self.lang_fuser(x, l_input, x2_mask=l_mask, x2_proj=self.lang_proj)
-        x = F.relu(self.conv2(x))
-
-        x = x.reshape((B, -1))
-
-        x = F.relu(self.fc_layer(x))
-        mu = self.depth_mu(x)
-        log_sigma = self.depth_sigma(x)
-        # avoid log_sigma to go to infinity
-        sigma = torch.clamp(log_sigma, -20, 2).exp()
-
-        # Sample
-        dist = Independent(Normal(mu, sigma), 1)
-        return dist
+            self.depth_est = DepthEstimation(self.in_shape, 1, self.cfg, self.device_type)
 
     def attn_forward(self, inp, softmax=True):
         inp_img = inp['inp_img']
@@ -85,9 +35,7 @@ class PixelAffLangDetector(AffordancePixelModule):
         out_aff, _info = self.attention(inp_img, lang_goal, softmax=softmax)
         out = {"aff": out_aff}
         if self.pred_depth:
-            # Output of encoder output
-            depth_inp = _info["hidden_layers"][0]
-            dist = self.depth_forward(depth_inp, _info)
+            dist, _info = self.depth_est(inp_img, _info['text_enc'])
             out.update({"depth_dist": dist})
         return out  # B, H, W
 
@@ -139,7 +87,7 @@ class PixelAffLangDetector(AffordancePixelModule):
         pick_logits_disp_masked = np.ma.masked_where(pick_logits_disp < 0, pick_logits_disp)
 
         # Get depth
-        depth = self.sample_dist(out["depth_dist"])
+        depth = self.depth_est.sample(out["depth_dist"])
 
         return {"softmax": pick_logits_disp,
                 "pixel": (p0_pix[1], p0_pix[0]),

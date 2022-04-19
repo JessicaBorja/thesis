@@ -9,7 +9,6 @@ model:
     attn_stream_fusion_type: 'add'
     lang_fusion_type: 'mult'
     load_from_last_ckpt: True
-    val_repeats: 1
     streams: ${aff_detection.streams}
 
 img_size: 224

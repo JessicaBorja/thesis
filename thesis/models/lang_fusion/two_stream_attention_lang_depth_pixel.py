@@ -43,8 +43,10 @@ class AttentionLangFusionPixel(nn.Module):
     def _build_nets(self):
         stream_one_fcn = self.stream_fcn
         stream_one_model = models.names[stream_one_fcn]
+        stream_two_model = models.names[stream_one_fcn]
 
-        self.attn_stream = stream_one_model(self.in_shape, self.output_dim, self.cfg, self.device)
+        self.attn_stream1 = stream_one_model(self.in_shape, self.output_dim, self.cfg, self.device)
+        self.attn_stream2 = stream_two_model(self.in_shape, self.output_dim, self.cfg, self.device)
         print(f"Attn FCN: {stream_one_fcn}")
 
     def attend(self, x, l):

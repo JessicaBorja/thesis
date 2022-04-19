@@ -8,7 +8,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 import thesis.models as models
-from thesis.models.streams.one_stream_attention_lang_fusion_pixel import AttentionLangFusionPixel
+from thesis.models.lang_fusion.one_stream_attention_lang_fusion_pixel import AttentionLangFusionPixel
 
 
 class AttentionLangFusionMask(AttentionLangFusionPixel):

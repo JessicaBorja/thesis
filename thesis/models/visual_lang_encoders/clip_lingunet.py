@@ -127,13 +127,13 @@ class CLIPLingUNet(nn.Module):
         x = x.to(in_type)
 
         # encode text
-        l_enc, l_emb, l_mask = self.encode_text(l)
+        text_enc = self.encode_text(l)
+        l_enc, l_emb, l_mask  = text_enc
         l_input = l_emb if 'word' in self.lang_fusion_type else l_enc
         l_input = l_input.to(dtype=x.dtype)
     
         _info = {"hidden_layers": [x],
-                 "l_mask": l_mask,
-                 "l_input": l_input,
+                 "text_enc": text_enc,
                  "fusion_type": self.lang_fusion_type}
         # Decoder
         # encode image

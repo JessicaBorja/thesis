@@ -25,7 +25,12 @@ trainer:
 dataset_name: calvin_lang_MoCEndPt
 aff_detection:
   model:
-    pred_depth: True
+    pred_depth: False
+    cfg:
+      loss_weights:
+        aff: 1.0
+        depth: 1.0
+
   dataset:
     _recursive_: False
     data_dir: ${paths.datasets}/${dataset_name}

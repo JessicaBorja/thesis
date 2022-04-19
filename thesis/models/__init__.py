@@ -9,6 +9,9 @@ from .visual_lang_encoders.rn18_bert_lingunet import RN18BertLingunet
 
 
 names = {
+    # Depth Nets
+    
+    # Lang Nets
     'untrained_rn50_bert_lingunet': UntrainedRN50BertLingUNet,
     'rn50_bert_lingunet': RN50BertLingUNet,
     'rn50_clip_lingunet': CLIPLingUNet,
