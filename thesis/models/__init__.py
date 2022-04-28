@@ -1,4 +1,3 @@
-from kornia import depth
 from .visual_lang_encoders.rn50_bert_lingunet import RN50BertLingUNet
 from .visual_lang_encoders.untrained_rn50_bert_lingunet import UntrainedRN50BertLingUNet
 
