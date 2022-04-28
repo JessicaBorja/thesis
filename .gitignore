@@ -4,3 +4,5 @@
 __pycache__/
 images/
 trained_agents/
+build/
+dist/
