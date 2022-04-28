@@ -1,4 +1,5 @@
 import cv2
+import hydra
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -7,14 +8,14 @@ import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 import logging
 
-from thesis.models.depth.depth_gaussian import DepthEstimation
+import thesis.models as models
 from thesis.models.lang_fusion.one_stream_attention_lang_fusion_pixel import AttentionLangFusionPixel
 from thesis.utils.utils import add_img_text, tt, blend_imgs,get_transforms, resize_pixel
 from thesis.utils.losses import cross_entropy_with_logits
 
 class PixelAffLangDetector(LightningModule):
     def __init__(self, cfg, in_shape=(200, 200, 3), transforms=None,
-                 pred_depth=False, *args, **kwargs):
+                 depth_dist=None, *args, **kwargs):
         super().__init__()
         self.loss_weights = cfg.loss_weights
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -23,7 +24,9 @@ class PixelAffLangDetector(LightningModule):
         self.in_shape = in_shape
         self._batch_loss = []
         self.cmd_log = logging.getLogger(__name__)
-        self.pred_depth = pred_depth
+        self.pred_depth = depth_dist is not None
+        self.depth_est_dist = depth_dist
+
         if transforms is not None:
             self.pred_transforms = get_transforms(transforms, self.in_shape[0])['transforms']
         else:
@@ -62,13 +65,14 @@ class PixelAffLangDetector(LightningModule):
         frame, label = batch
         val_total_loss, err, info = self.attn_step(frame, label, compute_err=True)
         bs = frame["img"].shape[0]
-        # self.log('Validation/dist_err', err['px_dist'])
         self.log('Validation/total_loss', val_total_loss,
                  on_step=False, on_epoch=True,
                  batch_size=bs)
-        # for loss_fnc, value in info.items():
-        #     self.log('Validation/%s' % loss_fnc, value,
-        #              on_step=False, on_epoch=True,)
+        for loss_fnc, value in info.items():
+            self.log('Validation/%s' % loss_fnc, value,
+                     on_step=False, on_epoch=True,)
+
+        # self.log('Validation/dist_err', err['px_dist'])
         # if self.pred_depth:
         #     self.log('Validation/depth_err', err['depth'],
         #             on_step=False, on_epoch=True,
@@ -81,7 +85,7 @@ class PixelAffLangDetector(LightningModule):
         )
 
     def validation_epoch_end(self, all_outputs):
-        mean_val_total_loss = np.mean([v['val_loss'].item() for v in all_outputs])        
+        # mean_val_total_loss = np.mean([v['val_loss'].item() for v in all_outputs])        
         total_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
         total_imgs = np.sum([v['n_imgs'] for v in all_outputs])
         mean_img_error = total_dist_err/total_imgs
@@ -117,7 +121,8 @@ class PixelAffLangDetector(LightningModule):
             device=self.device_type,
         )
         if self.pred_depth:
-            self.depth_est = DepthEstimation(self.in_shape, 1, self.cfg, self.device_type)
+            _depth_est = models.deth_est_nets[self.depth_est_dist]
+            self.depth_est = _depth_est(self.in_shape, 1, self.cfg, self.device_type)
 
     def attn_forward(self, inp, softmax=True):
         inp_img = inp['inp_img']
@@ -148,7 +153,7 @@ class PixelAffLangDetector(LightningModule):
         aff_loss = cross_entropy_with_logits(pred["aff"], aff_label)
         if self.pred_depth:
             gt_depth = label["depth"].unsqueeze(-1).float()
-            depth_loss = self.depth_est.loss(pred, gt_depth)
+            depth_loss = self.depth_est.loss(pred['depth_dist'], gt_depth)
         else: 
             depth_loss = 0
 
@@ -172,7 +177,7 @@ class PixelAffLangDetector(LightningModule):
                     "depth": depth_error}
 
         loss = self.loss_weights.aff * aff_loss
-        # loss += self.loss_weights.depth * depth_loss
+        loss += self.loss_weights.depth * depth_loss
         info = {"aff_loss": aff_loss,
                 "depth_loss": depth_loss}
         return loss, err, info

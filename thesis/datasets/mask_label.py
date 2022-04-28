@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, Dataset
 import logging
 from thesis.utils.utils import add_img_text, resize_pixel, get_abspath, get_transforms, overlay_mask, overlay_flow
 from thesis.datasets.transforms import NormalizeInverse
-import thesis.affordance.utils.flowlib as flowlib
+import thesis.utils.flowlib as flowlib
 
 
 class MaskLabelLabelDataLang(Dataset):

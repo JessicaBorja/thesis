@@ -59,5 +59,6 @@ class RN18Lingunet(nn.Module):
         aff_out = self.unet.segmentation_head(decoder_feat)
 
         info = {"decoder_out": [decoder_feat],
-               "affordance": aff_out}
+                "affordance": aff_out,
+                "text_enc": l_input}
         return aff_out, info

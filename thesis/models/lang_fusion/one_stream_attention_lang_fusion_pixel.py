@@ -42,7 +42,7 @@ class AttentionLangFusionPixel(nn.Module):
 
     def _build_nets(self):
         stream_one_fcn = self.stream_fcn
-        stream_one_model = models.names[stream_one_fcn]
+        stream_one_model = models.lang_img_nets[stream_one_fcn]
 
         self.stream_one = stream_one_model(self.in_shape, self.output_dim, self.cfg, self.device)
         print(f"Attn FCN: {stream_one_fcn}")

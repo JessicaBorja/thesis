@@ -11,25 +11,26 @@ import numpy as np
 from thesis.utils.utils import calc_cnn_out_size
 
 
-class DepthEstimation(nn.Module):
+class DepthEstimationLogistics(nn.Module):
     """ CLIP RN50 with U-Net skip connections """
 
     def __init__(self, input_shape, output_dim, cfg, device):
-        super(DepthEstimation, self).__init__()
+        super(DepthEstimationLogistics, self).__init__()
         self.input_shape = input_shape
         self.output_dim = output_dim
         self.input_dim = 2048  # penultimate layer channel-size of CLIP-RN50
         self.cfg = cfg
         self.device = device
-        self.batchnorm = self.cfg['batchnorm']
         self.lang_fusion_type = self.cfg['lang_fusion_type']
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
 
-        self.one_hot_embedding_eye = torch.eye(self.n_dist)
-        self.action_max_bound = torch.tensor([4.0])
-        self.action_min_bound = torch.tensor([2.0])
-        self.n_dist = 100 # cfg.depth_resolution
+        # Distribution parameters / bounds
+        self.n_dist = 10 # cfg.depth_resolution
+        self.num_classes = 128
+        self.one_hot_embedding_eye = torch.eye(self.n_dist).to(self.device)
+        self.action_max_bound = torch.tensor([4.5]).to(self.device)
+        self.action_min_bound = torch.tensor([1.5]).to(self.device)
         self.img_encoder = self._load_img_encoder()
         self._build_decoder()
     
@@ -90,8 +91,9 @@ class DepthEstimation(nn.Module):
         # Appropriate scale
         log_scales = torch.clamp(log_scales, min=-7.0)
         
-        # Broadcast actions (B, 1, N_DIST)
-        gt_depth = gt_depth.unsqueeze(-1) * torch.ones(1, 1, self.n_dist)
+        # Broadcast gt (B, 1, N_DIST)
+        B, _ = gt_depth.shape
+        gt_depth = gt_depth.unsqueeze(-1) * torch.ones(B, 1, self.n_dist).to(self.device)
 
         # Approximation of CDF derivative (PDF)
         centered_actions = gt_depth - means
@@ -100,10 +102,10 @@ class DepthEstimation(nn.Module):
         assert torch.is_tensor(self.action_max_bound)
         assert torch.is_tensor(self.action_min_bound)
 
-        act_range = (self.action_max_bound - self.action_min_bound) / 2.0
-        plus_in = inv_stdv * (centered_actions + act_range / (self.num_classes - 1))
+        pred_range = (self.action_max_bound - self.action_min_bound) / 2.0
+        plus_in = inv_stdv * (centered_actions + pred_range / (self.num_classes - 1))
         cdf_plus = torch.sigmoid(plus_in)
-        min_in = inv_stdv * (centered_actions - act_range / (self.num_classes - 1))
+        min_in = inv_stdv * (centered_actions - pred_range / (self.num_classes - 1))
         cdf_min = torch.sigmoid(min_in)
 
         # Corner Cases
@@ -147,11 +149,9 @@ class DepthEstimation(nn.Module):
         x = x.to(in_type)
 
         # encode text
-        l_enc, _, l_mask = l_enc
         l_input = l_enc.to(dtype=x.dtype)
     
         _info = {"hidden_layers": [x],
-                 "l_mask": l_mask,
                  "l_input": l_input,
                  "fusion_type": self.lang_fusion_type}
         # Decoder

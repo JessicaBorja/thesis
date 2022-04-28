@@ -11,15 +11,14 @@ import numpy as np
 from thesis.utils.utils import calc_cnn_out_size
 
 
-class DepthEstimation(nn.Module):
+class DepthEstimationGaussian(nn.Module):
     def __init__(self, input_shape, output_dim, cfg, device):
-        super(DepthEstimation, self).__init__()
+        super(DepthEstimationGaussian, self).__init__()
         self.input_shape = input_shape
         self.output_dim = output_dim
         self.input_dim = 2048  # penultimate layer channel-size of CLIP-RN50
         self.cfg = cfg
         self.device = device
-        self.batchnorm = self.cfg['batchnorm']
         self.lang_fusion_type = self.cfg['lang_fusion_type']
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
@@ -58,14 +57,16 @@ class DepthEstimation(nn.Module):
         shape = self.encode_image(_test_tensor).shape
 
         linear_in = np.prod(shape)
-        self.fc1 = nn.Linear(linear_in, self.proj_input_dim)
-        self.fc2 = nn.Linear(self.proj_input_dim, 256)
-        self.depth_mu = nn.Linear(256, 1)
-        self.depth_sigma = nn.Linear(256, 1)
+        hidden_dim = 256
+        self.fc1 = nn.Linear(linear_in + self.proj_input_dim, hidden_dim)
+        # self.fc1 = nn.Linear(linear_in, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.depth_mu = nn.Linear(hidden_dim, 1)
+        self.depth_sigma = nn.Linear(hidden_dim, 1)
 
     def depth_forward(self, x, l_input):
+        x = torch.cat([x, l_input], -1)
         x = F.relu(self.fc1(x))
-        x = x * l_input
         x = F.relu(self.fc2(x))
         mu = self.depth_mu(x)
         log_sigma = self.depth_sigma(x)
@@ -93,11 +94,9 @@ class DepthEstimation(nn.Module):
         x = x.to(in_type)
 
         # encode text
-        l_enc, l_emb, l_mask = l_enc
         l_input = l_enc.to(dtype=x.dtype)
     
         _info = {"hidden_layers": [x],
-                 "l_mask": l_mask,
                  "l_input": l_input,
                  "fusion_type": self.lang_fusion_type}
         # Decoder

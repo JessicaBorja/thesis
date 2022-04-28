@@ -7,7 +7,7 @@ wandb_saver:
   val_miou:
     monitor: 'Validation/miou'
     save_top_k: 2
-    mode: min
+    mode: max
     verbose: True
     save_last: True
 

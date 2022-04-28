@@ -10,18 +10,20 @@ from thesis.models.core import fusion
 
 from thesis.utils.utils import calc_cnn_out_size
 
+
 class LangFusionBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, fusion_input_dim,
-                 proj_input_dim, lang_fusion_type='mult'):
+    def __init__(self, in_channels, out_channels,
+                 fusion_input_dim, proj_input_dim, device,
+                 up_factor=2, bilinear=True, lang_fusion_type='mult'):
+        super().__init__()
         _fusion_fnc = fusion.names[lang_fusion_type]
 
-        self.lang_fuser = _fusion_fnc(input_dim=fusion_input_dim).to(self.device)
-        self.lang_proj = nn.Linear(proj_input_dim, out_channels).to(self.device)
-        self.up_conv = Up(in_channels, out_channels // self.up_factor, self.bilinear).to(self.device)
-        return
+        self.lang_fuser = _fusion_fnc(input_dim=fusion_input_dim).to(device)
+        self.lang_proj = nn.Linear(proj_input_dim, out_channels).to(device)
+        self.up_conv = Up(in_channels, out_channels // up_factor, bilinear).to(device)
 
-    def forward(self, inp, skip_conn, l_input, l_mask=None):
-        x = self.lang_fuser(inp, l_input, x2_mask=l_mask, x2_proj=self.lang_proj)
+    def forward(self, inp, skip_conn, l_input, x2_mask=None):
+        x = self.lang_fuser(inp, l_input, x2_mask=x2_mask, x2_proj=self.lang_proj)
         x = self.up_conv(x, skip_conn)
         return x
 
@@ -83,6 +85,9 @@ class CLIPLingUNet(nn.Module):
                                          out_channels,
                                          self.input_dim // (2 * i),
                                          self.proj_input_dim,
+                                         self.device,
+                                         self.up_factor,
+                                         self.bilinear,
                                          self.lang_fusion_type)
             in_channels = out_channels
             _lang_blocks.append(lang_block)
@@ -148,7 +153,7 @@ class CLIPLingUNet(nn.Module):
         l_input = l_enc.to(dtype=x.dtype)
     
         _info = {"hidden_layers": [x],
-                 "text_enc": text_enc,
+                 "text_enc": l_input,
                  "fusion_type": self.lang_fusion_type}
         # Decoder
         # encode image
