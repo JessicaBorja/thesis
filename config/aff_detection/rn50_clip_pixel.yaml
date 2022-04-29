@@ -1,4 +1,4 @@
-name: cliport_pixel_lang
+name: rn50_clip_pixel
 
 model:
   _target_: thesis.affordance.pixel_aff_lang_detector.PixelAffLangDetector

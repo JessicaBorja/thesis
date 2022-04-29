@@ -25,7 +25,7 @@ trainer:
 dataset_name: calvin_lang_MoCEndPt
 aff_detection:
   model:
-    depth_dist: logistic  # logistic / gaussian
+    depth_dist: null  # logistic / gaussian
     cfg:
       loss_weights:
         aff: 1.0
@@ -48,8 +48,8 @@ dataloader:
 wandb:
   logger:
     name: ${run_name}
-    entity: affordance
-    project: affordance_model
+    entity: jessibd
+    project: aff_lang
     offline: False
   saver: ${aff_detection.wandb_saver}
 

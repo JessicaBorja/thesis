@@ -1,7 +1,7 @@
 # Unet Resnet 18 with respective decoder channels
 # CLIP as sentence encoder
 # Single pixel prediction
-name: vapo_pixel_clip
+name: rn18_clip_pixel
 
 model:
   _target_: thesis.affordance.pixel_aff_lang_detector.PixelAffLangDetector
