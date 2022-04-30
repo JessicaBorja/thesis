@@ -19,6 +19,15 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
+def unravel_idx(indices, shape):
+    coord = []
+    for dim in reversed(shape):
+        coord.append(indices % dim)
+        indices = indices // dim
+
+    coord = np.stack(coord[::-1], axis=-1)
+    return coord
+
 def calc_cnn_out_size(in_size, k, p=0, s=1):
     out_size = ((in_size + 2 * p - k) / s) + 1
     return int(out_size)

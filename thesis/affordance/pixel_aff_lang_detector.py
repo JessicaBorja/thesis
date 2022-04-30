@@ -104,15 +104,6 @@ class PixelAffLangDetector(LightningModule):
         optim = torch.optim.Adam(self.attention.parameters(), lr=self.cfg.lr)
         return optim
 
-    def unravel_idx(self, indices, shape):
-        coord = []
-        for dim in reversed(shape):
-            coord.append(indices % dim)
-            indices = indices // dim
-
-        coord = np.stack(coord[::-1], axis=-1)
-        return coord
-
     def _build_model(self):
         self.attention = AttentionLangFusionPixel(
             stream_fcn=self.cfg.streams.name,
@@ -164,7 +155,7 @@ class PixelAffLangDetector(LightningModule):
             pick_conf = self.attn_forward(inp)['aff'][:, :, :, 0]  # B, H, W 
             pick_conf = pick_conf.detach().cpu().numpy()
             indices = np.argmax(pick_conf.reshape((B,-1)), -1)
-            p0_pix = self.unravel_idx(indices, shape=pick_conf.shape[1:])
+            p0_pix = unravel_idx(indices, shape=pick_conf.shape[1:])
 
             # Depth error
             depth_error = 0

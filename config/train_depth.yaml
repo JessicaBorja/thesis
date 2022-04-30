@@ -53,8 +53,8 @@ dataloader:
 wandb:
   logger:
     name: ${run_name}
-    entity: affordance
-    project: affordance_model
+    entity: jessibd
+    project: depth_est
     offline: False
   saver:
     val_loss:

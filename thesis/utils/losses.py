@@ -2,18 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-def cross_entropy_with_logits(pred, labels, reduction='mean'):
-    x = (-labels * F.log_softmax(pred, -1))
-    if reduction == 'sum':
-        return x.sum()
-    elif reduction == 'mean':
-        return x.mean()
-    else:
-        raise NotImplementedError()
 
-def get_affordance_loss(cfg, n_classes):
-    add_dice = cfg.dice_loss.add
-    class_weights = cfg.ce_loss.class_weights
+def get_ce_loss(cfg, n_classes):
+    add_dice = cfg.affordance.add_dice
+    class_weights = cfg.affordance.ce_class_weights
     _criterion = nn.BCEWithLogitsLoss if n_classes == 1 else nn.CrossEntropyLoss
 
     # Only CE
@@ -31,24 +23,6 @@ def get_affordance_loss(cfg, n_classes):
     return affordance_loss
 
 
-def get_loss(add_dice, n_classes, class_weights):
-    _criterion = nn.BCEWithLogitsLoss if n_classes == 1 else nn.CrossEntropyLoss
-
-    # Only CE
-    # -> CE loss w/weight
-    if not add_dice and n_classes > 1:
-        assert len(class_weights) == n_classes, "Number of weights [%d] != n_classes [%d]" % (
-            len(class_weights),
-            n_classes,
-        )
-        loss_fnc = _criterion(weight=torch.tensor(class_weights))
-    else:
-        # either BCE w or w/o dice
-        # or CE w dice
-        loss_fnc = _criterion()
-    return loss_fnc
-
-
 # https://github.com/chrisdxie/uois/blob/515c92f63bc83411be21da8449d22660863affbd/src/losses.py#L34
 class CosineSimilarityLossWithMask(nn.Module):
     """Compute Cosine Similarity loss"""
@@ -62,7 +36,7 @@ class CosineSimilarityLossWithMask(nn.Module):
         """Compute masked cosine similarity loss
         @param x: a [N x C x H x W] torch.FloatTensor of values
         @param target: a [N x C x H x W] torch.FloatTensor of values
-        @param mask: a [N x H x W] torch.FloatTensor with values in {0, 1, 2, ..., K+1}, where K is number of objects. {0,1} are background/table.
+        @param mask: a [N x H x W] torch.FloatTensor with values in {0, 1, 2, ..., K+1}, where K is number of objects. {0} are background/table.
                                    Could also be None
         """
         # Shape: [N x H x W]. values are in [0, 1]
@@ -73,16 +47,16 @@ class CosineSimilarityLossWithMask(nn.Module):
 
         # Compute tabletop objects mask
         # Shape: [N x H x W]
-        OBJECTS_LABEL = 2
-        binary_object_mask = mask.clamp(0, 2).long() == OBJECTS_LABEL
+        OBJECTS_LABEL = 1
+        binary_object_mask = mask.clamp(0, OBJECTS_LABEL).long() == OBJECTS_LABEL
 
         if torch.sum(binary_object_mask) > 0:
             if self.weighted:
                 # Compute pixel weights
                 # Shape: [N x H x W]. weighted mean over pixels
-                weight_mask = torch.zeros_like(mask)
+                weight_mask = torch.zeros_like(mask).float()
                 unique_object_labels = torch.unique(mask)
-                unique_object_labels = unique_object_labels[unique_object_labels >= 2]
+                unique_object_labels = unique_object_labels[unique_object_labels >= OBJECTS_LABEL]
                 for obj in unique_object_labels:
                     num_pixels = torch.sum(mask == obj, dtype=torch.float)
                     # inversely proportional to number of pixels

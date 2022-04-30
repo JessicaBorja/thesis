@@ -4,11 +4,14 @@ import logging
 from thesis.affordance.base_detector import BaseDetector
 from thesis.utils.utils import add_img_text, resize_pixel
 from thesis.utils.utils import get_abspath, load_aff_model, resize_pixel
-import torch
+from thesis.models.depth.depth_module import DepthModule
+
+from omegaconf import OmegaConf
 import os
+logger = logging.getLogger(__name__)
 
 class BaseAgent:
-    def __init__(self, env, offset, aff_cfg, viz_obs=False, *args, **kwargs):
+    def __init__(self, env, offset, aff_cfg, depth_cfg=None, viz_obs=False, *args, **kwargs):
         self._env = env
         self.viz_obs = viz_obs
         _info = self.env.robot.get_observation()[-1]
@@ -16,6 +19,7 @@ class BaseAgent:
         self.target_orn = np.array(_info["tcp_orn"])
         self.logger = logging.getLogger(__name__)
         self.point_detector = self.get_point_detector(aff_cfg)
+        self.depth_pred = self.get_depth_predictor(depth_cfg)
         self.device = self.env.device
         self.model_free = None
         self.offset = np.array([*offset, 1])
@@ -28,6 +32,26 @@ class BaseAgent:
     @env.setter
     def env(self, value):
         self._env = value
+
+    def get_depth_predictor(self, depth_cfg):
+        depth_checkpoint = depth_cfg.checkpoint
+        hydra_run_dir = get_abspath(depth_checkpoint.train_folder)
+        if os.path.exists(hydra_run_dir):
+            # Load model
+            checkpoint_path = os.path.join(hydra_run_dir, 'checkpoints')
+            checkpoint_path = os.path.join(checkpoint_path, depth_checkpoint.model_name)
+            if(os.path.isfile(checkpoint_path)):
+                run_cfg = os.path.join(hydra_run_dir, ".hydra/config.yaml")
+                if os.path.isfile(run_cfg):
+                    train_cfg = OmegaConf.load(run_cfg)
+                    model_cfg = train_cfg.model
+                    model = DepthModule(model_cfg)
+                    model = model.load_from_checkpoint(checkpoint_path).cuda()
+                    logger.info("Depth pred model successfully loaded: %s" % checkpoint_path)
+            else:
+                logger.info("No checkpoint file found %s" % checkpoint_path)
+            return model
+        return None
 
     def get_point_detector(self, aff_cfg):
         checkpoint_path = get_abspath(aff_cfg.checkpoint.train_folder)

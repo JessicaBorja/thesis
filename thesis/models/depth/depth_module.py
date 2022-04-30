@@ -1,10 +1,7 @@
-import os
 import numpy as np
 
 import torch
-import torch.nn.functional as F
 from pytorch_lightning import LightningModule
-import logging
 import thesis.models as models
 from thesis.models.language_encoders.lang_clip import CLIPLang
 

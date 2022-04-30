@@ -8,7 +8,10 @@ def main(cfg):
     # Load env
     env = hydra.utils.instantiate(cfg.env)
     env = PlayLMPWrapper(env, torch.device('cuda:0'))
-    agent = hydra.utils.instantiate(cfg.agent, env=env, aff_cfg=cfg.aff_detection)    
+    agent = hydra.utils.instantiate(cfg.agent,
+                                    env=env,
+                                    aff_cfg=cfg.aff_detection,
+                                    depth_cfg=cfg.depth_pred)
     obs = env.reset()
 
     captions = ["Open the drawer",

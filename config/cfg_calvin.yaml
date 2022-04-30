@@ -2,7 +2,7 @@ defaults:
   - robot: panda_longer_finger
   - scene: calvin_scene_A
   - env: env
-  - aff_detection: cliport_pixel_lang
+  - aff_detection: rn50_clip_pixel
   - cameras: static_and_gripper_calvin
   - paths: general_paths
   - agent: play_lmp
@@ -18,9 +18,15 @@ policy_checkpoint:
   train_folder: ./trained_agents/lfp
   model_name: epoch=30.ckpt
 
+depth_pred:
+  checkpoint:
+    train_folder: ./hydra_outputs/depth_pred/23-58-14_aff_rl
+    model_name: val_err.ckpt
+    img_resize: 224
+
 aff_detection:
   checkpoint:
-    train_folder: ./hydra_outputs/affordance_model/2022-03-03/17-07-29_aff_rl 
+    train_folder: ./hydra_outputs/affordance_model/2022-04-29/14-05-55_aff_rl
     # train_folder: ./hydra_outputs/affordance_model/2022-03-09/01-38-55_aff_rl
     model_name: val_err.ckpt
     img_resize: 224

@@ -2,13 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from thesis.models.core.clip import build_model, load_clip, tokenize
-from thesis.models.core import fusion
 from torch.distributions import Normal, Independent
 import torchvision.models as models
 
 import numpy as np
-from thesis.utils.utils import calc_cnn_out_size
+from thesis.models.language_encoders.lang_clip import CLIPLang
 
 
 class DepthEstimationGaussian(nn.Module):
@@ -24,6 +22,7 @@ class DepthEstimationGaussian(nn.Module):
         self.up_factor = 2 if self.bilinear else 1
 
         # Use clip preprocessing
+        self.text_enc = CLIPLang(self.device)
         self.loss_fcn = nn.GaussianNLLLoss()
         self.img_encoder = self._load_img_encoder()
         self._build_decoder()
@@ -76,6 +75,13 @@ class DepthEstimationGaussian(nn.Module):
         # Sample
         dist = Independent(Normal(mu, sigma), 1)
         return dist, mu, sigma
+
+    def predict(self, x, l_ann):
+        l_enc = self.text_enc(l_ann)[0]
+        x = self.depth_forward(x, l_enc)
+        sample = self.sample(x)
+        sample = sample.squeeze().detach().cpu().numpy()
+        return sample
 
     def loss(self, pred, gt_depth):
         dist, mu, sigma = pred['depth_dist']

@@ -138,17 +138,23 @@ class PlayLMPAgent(BaseAgent):
         pixel = resize_pixel(pred["pixel"], pred['softmax'].shape[:2], im_shape)
 
         # World pos
+
         depth = obs["depth_obs"]["depth_static"]
         n = 5
         x_range =[max(pixel[0] - n, 0), min(pixel[0] + n, im_shape[1])]
         y_range =[max(pixel[1] - n, 0), min(pixel[1] + n, im_shape[1])]
 
-        target_pos = self.env.cameras[0].deproject(pixel, depth)
-        for i in range(x_range[0], x_range[1]):
-            for j in range(y_range[0], y_range[1]):
-                pos = self.env.cameras[0].deproject((i, j), depth)
-                if pos[1] < target_pos[1]:
-                    target_pos = pos
+        if self.depth_pred is not None:
+            depth_sample = self.depth_pred.sample(inp["img"])
+            target_pos = self.env.cameras[0].deproject_single_depth(pixel, depth_sample)
+        else:
+            target_pos = self.env.cameras[0].deproject(pixel, depth)
+            for i in range(x_range[0], x_range[1]):
+                for j in range(y_range[0], y_range[1]):
+                    pos = self.env.cameras[0].deproject((i, j), depth)
+                    if pos[1] < target_pos[1]:
+                        target_pos = pos
+
 
         # Add offset
         obs = self.env.get_obs()
