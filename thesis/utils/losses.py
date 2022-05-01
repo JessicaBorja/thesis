@@ -2,6 +2,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+def cross_entropy_with_logits(pred, labels, reduction='mean'):
+    x = (-labels * F.log_softmax(pred, -1))
+    if reduction == 'sum':
+        return x.sum()
+    elif reduction == 'mean':
+        return x.mean()
+    else:
+        raise NotImplementedError()
 
 def get_ce_loss(cfg, n_classes):
     add_dice = cfg.affordance.add_dice

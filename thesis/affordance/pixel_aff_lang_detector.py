@@ -10,7 +10,7 @@ import logging
 
 import thesis.models as models
 from thesis.models.lang_fusion.one_stream_attention_lang_fusion_pixel import AttentionLangFusionPixel
-from thesis.utils.utils import add_img_text, tt, blend_imgs,get_transforms, resize_pixel
+from thesis.utils.utils import add_img_text, tt, blend_imgs,get_transforms, resize_pixel, unravel_idx
 from thesis.utils.losses import cross_entropy_with_logits
 
 class PixelAffLangDetector(LightningModule):
@@ -221,11 +221,11 @@ class PixelAffLangDetector(LightningModule):
         pick_logits_disp_masked = np.ma.masked_where(pick_logits_disp < 0, pick_logits_disp)
 
         # Get depth
-        depth = self.depth_est.sample(out["depth_dist"])
+        # depth = self.depth_est.sample(out["depth_dist"])
 
         return {"softmax": pick_logits_disp,
                 "pixel": (p0_pix[1], p0_pix[0]),
-                "depth": depth,
+                # "depth": depth,
                 "error": err}
 
     def viz_preds(self, inp, pred, out_size=(300, 300), waitkey=0):

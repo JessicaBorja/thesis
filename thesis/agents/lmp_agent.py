@@ -20,7 +20,7 @@ import numpy as np
 import torch
 import logging
 import importlib
-
+import pybullet as p
 logger = logging.getLogger(__name__)
 
 
@@ -38,6 +38,7 @@ class PlayLMPAgent(BaseAgent):
             self.transforms = nn.Idendity()
             self.relative_actions = True
         self.model_free = self.model_free.to(self.device)
+        self.aff_transforms = self.point_detector.pred_transforms
         logger.info(f"Initialized PlayLMPAgent for device {self.device}")
 
     def instantiate_transforms(self, transforms):
@@ -145,7 +146,7 @@ class PlayLMPAgent(BaseAgent):
         y_range =[max(pixel[1] - n, 0), min(pixel[1] + n, im_shape[1])]
 
         if self.depth_pred is not None:
-            depth_sample = self.depth_pred.sample(inp["img"])
+            depth_sample = self.depth_pred.predict(inp, self.aff_transforms)
             target_pos = self.env.cameras[0].deproject_single_depth(pixel, depth_sample)
         else:
             target_pos = self.env.cameras[0].deproject(pixel, depth)
@@ -159,9 +160,9 @@ class PlayLMPAgent(BaseAgent):
         # Add offset
         obs = self.env.get_obs()
         robot_orn = obs['robot_obs'][3:6]
-        tcp_mat = pos_orn_to_matrix(target_pos, robot_orn)
-        offset_global_frame = tcp_mat @ self.offset
-        target_pos = offset_global_frame[:3]
+        # tcp_mat = pos_orn_to_matrix(target_pos, robot_orn)
+        # offset_global_frame = tcp_mat @ self.offset
+        # target_pos = offset_global_frame[:3]
 
         # img = obs["rgb_obs"]["rgb_static"]
         # pixel = self.env.cameras[0].project(np.array([*target_pos, 1]))
@@ -169,7 +170,7 @@ class PlayLMPAgent(BaseAgent):
         # cv2.imshow("move_to", img[:, :, ::-1])
         # cv2.waitKey(1)
         # import pybullet as p
-        # p.addUserDebugText("t", target_pos, [1,0,0])
+        p.addUserDebugText("t", target_pos, [1,0,0])
 
         obs, _, _, info = self.move_to(target_pos, gripper_action=1)
 

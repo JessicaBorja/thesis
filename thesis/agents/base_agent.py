@@ -63,6 +63,7 @@ class BaseAgent:
                                             # hough_voting=cfg.hough_voting)
             point_detector.eval()
         else:
+            self.logger.info("No point detector checkpoint found, loading base detector...")
             point_detector = BaseDetector()
         return point_detector
 

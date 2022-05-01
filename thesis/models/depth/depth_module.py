@@ -20,11 +20,24 @@ class DepthModule(LightningModule):
         _depth_est = models.deth_est_nets[self.cfg.depth_dist]
         self.depth_est = _depth_est(self.in_shape, 1, self.cfg, self.device_type)
 
-    def forward(self, frame):
-        text_enc = self.text_enc(frame['lang_goal'])
-        dist, _info = self.depth_est(frame['img'], text_enc[0])
+    def forward(self, inp):
+        '''
+            inp(dict):
+                - 'img'(torch.Tensor): 
+        '''
+        text_enc = self.text_enc(inp['lang_goal'])
+        dist, _info = self.depth_est(inp['img'], text_enc[0])
         out = {"depth_dist": dist}
         return out
+
+    def predict(self, inp, transforms):
+        inp['img'] = torch.tensor(inp['img']).permute((2, 0, 1)).unsqueeze(0).to(self.device)
+        inp['img'] = transforms(inp['img'])
+        # dist, _info = self.depth_est(inp['img'], inp['lang_goal'])
+        dist = self.forward(inp)
+        sample = self.depth_est.sample(dist["depth_dist"])
+        sample = sample.squeeze().detach().cpu().numpy()
+        return sample
 
     def criterion(self, pred, label, compute_err):
         gt_depth = label["depth"].unsqueeze(-1).float()
