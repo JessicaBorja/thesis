@@ -27,7 +27,7 @@ def add_norm_values(data_dir, episodes_file="episodes_split.json"):
     '''
     json_filepath = os.path.join(data_dir, episodes_file)
     data = read_json(json_filepath)
-    logger.log("Openning file %s" % json_filepath)
+    logger.info("Openning file %s" % json_filepath)
 
     cams = ["static"]
     split = "training"
