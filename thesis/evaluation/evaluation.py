@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class Evaluation:
     def __init__(self, args, checkpoint) -> None:
         if args.aff_lmp:
-            self.policy_manager = AffLMPManager(debug=True)
+            self.policy_manager = AffLMPManager(debug=args.debug)
         else:
             self.policy_manager = LMPManager()
         
