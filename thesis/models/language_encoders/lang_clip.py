@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 from thesis.models.core.clip import build_model, load_clip, tokenize
+from thesis.models.language_encoders.lang_enc import LangEncoder
 
-class CLIPLang(nn.Module):
+
+class CLIPLang(LangEncoder):
     def __init__(self, device, fixed=True) -> None:
         super(CLIPLang, self).__init__()
         self.fixed = fixed
@@ -15,12 +17,12 @@ class CLIPLang(nn.Module):
         del model
         for param in _clip_rn50.parameters():
             param.requires_grad = False
-        self.clip_rn50 = _clip_rn50
+        self.model = _clip_rn50
 
     def forward(self, x):
         with torch.no_grad():
             tokens = tokenize(x).to(self.device)
-            text_feat, text_emb = self.clip_rn50.encode_text_with_embeddings(tokens)
+            text_feat, text_emb = self.model.encode_text_with_embeddings(tokens)
 
         text_mask = torch.where(tokens==0, tokens, 1)
         return text_feat, text_emb, text_mask

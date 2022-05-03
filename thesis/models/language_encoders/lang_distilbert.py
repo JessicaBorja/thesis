@@ -2,9 +2,10 @@ import torch
 from transformers import DistilBertTokenizer, DistilBertModel
 import torch
 import torch.nn as nn
+from thesis.models.language_encoders.lang_enc import LangEncoder
 
 
-class BERTLang(nn.Module):
+class BERTLang(LangEncoder):
     def __init__(self, device, fixed=True) -> None:
         super(BERTLang, self).__init__()
         self._load_model()
