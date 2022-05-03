@@ -60,7 +60,6 @@ def main():
     training_dir = Path(args.train_folder).resolve()
     log_dir = "%s/evaluation" % training_dir.as_posix()
     os.makedirs(log_dir, exist_ok=True)
-    log_dir = args.train_folder
     args.script = Path(args.script).resolve()
     args.eval_file = Path(args.eval_file).resolve()
     
