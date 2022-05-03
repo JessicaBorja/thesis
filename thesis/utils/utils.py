@@ -15,6 +15,7 @@ from scipy.ndimage import filters
 import re
 from scipy.spatial.transform.rotation import Rotation as R
 import numpy as np
+from os.path import expanduser
 
 logger = logging.getLogger(__name__)
 
@@ -203,6 +204,7 @@ def overlay_flow(flow, img, mask):
 
 
 def get_abspath(path_str):
+    path_str = os.path.expanduser(path_str)
     if not os.path.isabs(path_str):
         hydra_cfg = hydra.utils.HydraConfig().cfg
         if hydra_cfg is not None:

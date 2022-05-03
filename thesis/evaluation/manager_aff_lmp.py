@@ -95,7 +95,11 @@ class PolicyManager:
         cfg = hydra.compose(config_name="cfg_calvin")
         cfg.agent.checkpoint.train_folder = train_folder
         cfg.agent.checkpoint.model_name = checkpoint.name
-        model = hydra.utils.instantiate(cfg.agent, viz_obs=self.debug, env=env, aff_cfg=cfg.aff_detection)
+        model = hydra.utils.instantiate(cfg.agent,
+                                        viz_obs=self.debug,
+                                        env=env,
+                                        aff_cfg=cfg.aff_detection,
+                                        depth_cfg=cfg.depth_pred)
         print("Successfully loaded model.")
 
         return model, env, data_module, lang_embeddings

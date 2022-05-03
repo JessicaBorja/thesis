@@ -15,10 +15,10 @@ if default_log_dir == "/tmp":
     print("CAUTION: logging to /tmp")
 parser = argparse.ArgumentParser(description="Parse slurm parameters and hydra config overrides")
 
-parser.add_argument("--script", type=str, default="./sbatch_lfp.sh")
-parser.add_argument("--train_file", type=str, default="../lfp/training.py")
+parser.add_argument("--script", type=str, default="./sbatch_train.sh")
+parser.add_argument("--train_file", type=str, default="../train_affordance.py")
 parser.add_argument("-l", "--log_dir", type=str, default=default_log_dir)
-parser.add_argument("-j", "--job_name", type=str, default="aff_rl")
+parser.add_argument("-j", "--job_name", type=str, default="aff_model")
 parser.add_argument("-g", "--gpus", type=int, default=1)
 parser.add_argument("--mem", type=int, default=0)  # 0 means no memory limit
 parser.add_argument("--cpus", type=int, default=8)
@@ -34,10 +34,10 @@ assert np.all(["hydra.run.dir" not in arg for arg in unknownargs])
 assert np.all(["log_dir" not in arg for arg in unknownargs])
 assert np.all(["hydra.sweep.dir" not in arg for arg in unknownargs])
 
-log_dir = Path(args.log_dir).absolute() / f'{datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")}_{args.job_name}'
+log_dir = Path(args.log_dir).resolve() / args.job_name + "/" + 'f'{datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")}_{args.job_name}'
 os.makedirs(log_dir)
-args.script = Path(args.script).absolute()
-args.train_file = Path(args.train_file).absolute()
+args.script = Path(args.script).resolve()
+args.train_file = Path(args.train_file).resolve()
 
 
 def create_git_copy(repo_src_dir, repo_target_dir):

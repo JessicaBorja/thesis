@@ -67,16 +67,20 @@ class NormalizeVector(object):
 
 
 class ColorTransform(object):
+    '''
+        Applies color jitter transform to image
+    '''
     def __init__(self, contrast=0.3, brightness=0.3, hue=0.3, prob=0.3):
         super().__init__()
         self.prob = prob
         self.jitter = T.ColorJitter(contrast=contrast, brightness=brightness, hue=hue)
 
-    # Change image color
     def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+        '''
+            Assumes input tensor is between 0-1
+        '''
         assert isinstance(tensor, torch.Tensor)
         apply = np.random.rand() < self.prob
-        tensor = self.jitter(tensor)
         if apply:
             tensor = self.jitter(tensor)
         return tensor
