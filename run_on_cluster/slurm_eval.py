@@ -1,22 +1,9 @@
-from pathlib import Path
-import subprocess
-import sys
-
-import numpy as np
-
-from lfp.utils.utils import get_all_checkpoints
-
 import argparse
-import datetime
 import os
 from pathlib import Path
-import stat
 import subprocess
-
-import git
-from git import Repo
 import numpy as np
-from setuptools import sandbox
+from lfp.utils.utils import get_all_checkpoints
 
 default_log_dir = os.getcwd()
 
@@ -32,7 +19,7 @@ def parse_args():
     parser.add_argument("--days", type=int, default=1)
     parser.add_argument("-v", "--venv", type=str)
     parser.add_argument("-p", "--partition", type=str, default="alldlc_gpu-rtx2080")
-    parser.add_argument("--train_folder", type=str, default="~")
+    parser.add_argument("--train_folder", type=str, default="./")
     args, unknownargs = parser.parse_known_args()
 
     assert np.all(["gpu" not in arg for arg in unknownargs])
@@ -55,16 +42,15 @@ def submit_job(job_info, script):
     print("Generated slurm batch command: '%s'" % slurm_cmd)
 
     # Run sbatch command as subprocess.
+    sbatch_output = None
     try:
         sbatch_output = subprocess.check_output(slurm_cmd)
+        print(sbatch_output.decode("utf-8"))
     except subprocess.CalledProcessError as e:
         # Print error message from sbatch for easier debugging, then pass on exception
         if sbatch_output is not None:
             print("ERROR: Subprocess call output: %s" % sbatch_output)
         raise e
-
-    print(sbatch_output.decode("utf-8"))
-
 
 def main():
     """
@@ -73,12 +59,12 @@ def main():
     args, unknownargs = parse_args()
     training_dir = Path(args.train_folder).resolve()
     log_dir = "%s/evaluation" % training_dir.as_posix()
-    os.makedirs(log_dir)
+    os.makedirs(log_dir, exist_ok=True)
     log_dir = args.train_folder
     args.script = Path(args.script).resolve()
     args.eval_file = Path(args.eval_file).resolve()
     
-    aff_str = "" if "--aff_lmp" in unknownargs else "aff"
+    log_name = "%x.%N.%j_aff_eval" if "--aff_lmp" in unknownargs else "%x.%N.%j_eval"
 
     job_opts = {
         "partition": args.partition,
@@ -86,8 +72,8 @@ def main():
         "ntasks-per-node": args.gpus,
         "cpus_per_task": args.cpus,
         "gres": f"gpu:{args.gpus}",
-        "output": os.path.join(log_dir, "%x.%N.%j_%sEval.out" % aff_str),
-        "error": os.path.join(log_dir, "%x.%N.%j_%sEval.err" % aff_str),
+        "output": os.path.join(log_dir, "%s.out" % log_name),
+        "error": os.path.join(log_dir, "%s.err" % log_name),
         "job_name": args.job_name,
         "mail-type": "FAIL",
         "time": f"{args.days}-00:00",
@@ -108,7 +94,6 @@ def main():
     else:
         submit_job(job_opts, script)
         
-
 
 if __name__ == "__main__":
     main()

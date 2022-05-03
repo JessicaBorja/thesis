@@ -34,8 +34,8 @@ assert np.all(["hydra.run.dir" not in arg for arg in unknownargs])
 assert np.all(["log_dir" not in arg for arg in unknownargs])
 assert np.all(["hydra.sweep.dir" not in arg for arg in unknownargs])
 
-log_dir = Path(args.log_dir).resolve() / args.job_name + "/" + 'f'{datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")}_{args.job_name}'
-os.makedirs(log_dir)
+log_dir = Path(args.log_dir).resolve() /f'{args.job_name }'/f'{datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")}_{args.job_name}'
+# os.makedirs(log_dir)
 args.script = Path(args.script).resolve()
 args.train_file = Path(args.train_file).resolve()
 
@@ -48,17 +48,6 @@ def create_git_copy(repo_src_dir, repo_target_dir):
     sandbox.run_setup("setup_local.py", ["develop", "--install-dir", "."])
     os.chdir(orig_cwd)
 
-
-if not args.no_clone:
-    repo_src_dir = Path(__file__).absolute().parents[1]
-    repo_target_dir = log_dir / "affordance_rl"
-    create_git_copy(repo_src_dir, repo_target_dir)
-
-    args.script = repo_target_dir / os.path.relpath(args.script, repo_src_dir)
-    args.train_file = repo_target_dir / os.path.relpath(args.train_file, repo_src_dir)
-
-# if not args.cpus:
-# args.cpus = args.gpus * 8
 
 job_opts = {
     "script": f"{args.script.as_posix()} {args.venv} {args.train_file.as_posix()} {log_dir.as_posix()} {args.gpus} {' '.join(unknownargs)}",
