@@ -65,12 +65,12 @@ def main():
 
     assert "train_folder" in args
 
-    checkpoints = [Path(args.checkpoint)]
+    checkpoints = [Path(args.checkpoint + ".ckpt")]
 
     results = {}
     plans = {}
     for checkpoint in checkpoints:
-        eval = Evaluation(args, checkpoint+".ckpt")
+        eval = Evaluation(args, checkpoint)
         results[checkpoint], plans[checkpoint] = eval.evaluate_policy(args)
     eval.print_and_save(results, plans, args)
 

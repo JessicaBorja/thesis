@@ -12,7 +12,7 @@ def parse_args():
     parser.add_argument("--script", type=str, default="sbatch_eval.sh")
     parser.add_argument("--eval_file", type=str, default="../thesis/evaluation/evaluate_policy.py")
     parser.add_argument("-l", "--log_dir", type=str, default=default_log_dir)
-    parser.add_argument("-j", "--job_name", type=str, default="eval")
+    parser.add_argument("-j", "--job_name", type=str, default="lfp_eval")
     parser.add_argument("-g", "--gpus", type=int, default=1)
     parser.add_argument("--mem", type=int, default=0)  # 0 means no memory limit
     parser.add_argument("--cpus", type=int, default=8)
