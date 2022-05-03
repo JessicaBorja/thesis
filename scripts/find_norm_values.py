@@ -27,7 +27,7 @@ def add_norm_values(run_dir, data_dir, episodes_file="episodes_split.json"):
     '''
     logfile = os.path.join(run_dir, "std.log")
     logging.basicConfig(filename=logfile, 
-                        format='%(asctime)s %(message)s', 
+                        format='[%(asctime)s %(message)s]', 
                         filemode='w',
                         ) 
     logger = logging.getLogger(__name__)

@@ -77,14 +77,17 @@ def main():
     log_dir = args.train_folder
     args.script = Path(args.script).resolve()
     args.eval_file = Path(args.eval_file).resolve()
+    
+    aff_str = "" if "--aff_lmp" in unknownargs else "aff"
+
     job_opts = {
         "partition": args.partition,
         "mem": args.mem,
         "ntasks-per-node": args.gpus,
         "cpus_per_task": args.cpus,
         "gres": f"gpu:{args.gpus}",
-        "output": os.path.join(log_dir, "%x.%N.%j_eval.out"),
-        "error": os.path.join(log_dir, "%x.%N.%j_eval.err"),
+        "output": os.path.join(log_dir, "%x.%N.%j_%sEval.out" % aff_str),
+        "error": os.path.join(log_dir, "%x.%N.%j_%sEval.err" % aff_str),
         "job_name": args.job_name,
         "mail-type": "FAIL",
         "time": f"{args.days}-00:00",
