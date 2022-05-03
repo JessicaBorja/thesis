@@ -1,6 +1,7 @@
 import os
 import json
 import cv2
+from cv2 import mean
 import hydra
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,7 +9,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 import logging
 from thesis.utils.utils import add_img_text, resize_pixel, get_abspath, get_transforms
-from thesis.datasets.transforms import NormalizeInverse
+from thesis.datasets.transforms import NormalizeInverse, NormalizeVector
 
 class PixeLabelDataLang(Dataset):
     def __init__(
@@ -41,6 +42,11 @@ class PixeLabelDataLang(Dataset):
         else:
             self.norm_inverse = None
         self.out_shape = self.get_shape(img_resize[cam])
+
+        # Depth
+        depth_norm_values = _data_info["norm_values"]["depth"]
+        self.depth_norm = NormalizeVector([depth_norm_values["mean"]], [depth_norm_values["std"]])
+        self.depth_norm_inversse = NormalizeInverse(depth_norm_values["mean"], depth_norm_values["std"])
 
         # Excludes background
         self.n_classes = _data_info["n_classes"] if cam == "static" else 1
@@ -123,11 +129,13 @@ class PixeLabelDataLang(Dataset):
         # Cam point in -z direction, but depth should be positive
         tcp_cam = data['tcp_pos_cam_frame']
         depth = tcp_cam[-1] * -1  
+        norm_depth = self.depth_norm(torch.tensor(depth)).detach().cpu().item()
 
         # CE Loss requires mask in form (B, H, W)
         labels = {"task": task,
                   "p0": center,
                   "depth": depth,
+                  "normalized_depth": norm_depth,
                   "tetha0": []}
         return inp, labels
 

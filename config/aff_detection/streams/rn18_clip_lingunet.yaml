@@ -1,4 +1,4 @@
 name: 'rn18_clip_lingunet'
 
 defaults:
-  - /transforms: clip
+  - /transforms: clip_color

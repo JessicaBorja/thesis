@@ -40,7 +40,8 @@ class DepthModule(LightningModule):
         return sample
 
     def criterion(self, pred, label, compute_err):
-        gt_depth = label["depth"].unsqueeze(-1).float()
+        depth_label = "normalized_depth"
+        gt_depth = label[depth_label].unsqueeze(-1).float()
         depth_loss = self.depth_est.loss(pred, gt_depth)
 
         # Pixel and Rotation error (not used anywhere).
@@ -48,7 +49,7 @@ class DepthModule(LightningModule):
         if compute_err:
             sample = self.depth_est.sample(pred["depth_dist"])
             sample = sample.squeeze().detach().cpu().numpy()
-            gt_depth = label["depth"].detach().cpu().numpy()
+            gt_depth = label[depth_label].detach().cpu().numpy()
             depth_error = np.sum(np.abs(sample - gt_depth))
             err = {"depth": depth_error}
 

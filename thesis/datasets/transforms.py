@@ -53,9 +53,9 @@ class ThresholdMasks(object):
 class NormalizeVector(object):
     """Normalize a tensor vector with mean and standard deviation."""
 
-    def __init__(self, mean=0.0, std=1.0):
+    def __init__(self, mean=[0.0], std=[1.0]):
         self.std = torch.Tensor(std)
-        self.std[self.std == 0.0] = 1.0
+        # self.std[self.std == 0.0] = 1.0
         self.mean = torch.Tensor(mean)
 
     def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
@@ -183,6 +183,7 @@ class RandomShiftsAug(nn.Module):
 class NormalizeInverse(torchvision.transforms.Normalize):
     """
     Undoes the normalization and returns the reconstructed images in the input domain.
+    from mean and std
     """
 
     def __init__(self, mean, std):

@@ -3,7 +3,7 @@ import os
 import logging
 import json
 import argparse
-logger = logging.getLogger(__name__)
+
 
 def update_json(output_path, new_data):
     with open(output_path, "r+") as outfile:
@@ -19,12 +19,20 @@ def read_json(json_file):
     return data
 
 
-def add_norm_values(data_dir, episodes_file="episodes_split.json"):
+def add_norm_values(run_dir, data_dir, episodes_file="episodes_split.json"):
     '''
         For the trianing split only:
         Get mean and std of gripper img, static img, depth aff. value (static cam)
         and append them to json.
     '''
+    logfile = os.path.join(run_dir, "std.log")
+    logging.basicConfig(filename=logfile, 
+                        format='%(asctime)s %(message)s', 
+                        filemode='w',
+                        ) 
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG) 
+
     json_filepath = os.path.join(data_dir, episodes_file)
     data = read_json(json_filepath)
     logger.info("Openning file %s" % json_filepath)
@@ -43,10 +51,10 @@ def add_norm_values(data_dir, episodes_file="episodes_split.json"):
                 if cam in file:
                     # Load file
                     cam_folder, filename = os.path.split(file.replace("\\", "/"))
-                    data = np.load(data_dir + "%s/data/%s/%s.npz" % 
+                    step_data = np.load(data_dir + "%s/data/%s/%s.npz" % 
                                     (ep, cam_folder, filename))
                     # new_data["%s_cam" % cam].append(data)
-                    tcp_cam = data['tcp_pos_cam_frame']
+                    tcp_cam = step_data['tcp_pos_cam_frame']
                     depth = tcp_cam[-1] * -1
                     new_data['depth'].append(depth)
         print("%s images: %d" % (split, len(split_data)))
@@ -61,8 +69,10 @@ def add_norm_values(data_dir, episodes_file="episodes_split.json"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("hydra.run.dir", type=str, default="", help="rundir")
     parser.add_argument("--data_dir", type=str, default="", help="Specify a filepath!")
     parser.add_argument("--episodes_file", type=str, default="episodes_split")
     args = parser.parse_args()
 
-    add_norm_values(args.data_dir, args.episodes_file + ".json")
+    run_dir = args.__dict__["hydra.run.dir"].split('=')[-1]
+    add_norm_values(run_dir, args.data_dir, args.episodes_file + ".json")
