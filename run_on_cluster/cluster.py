@@ -35,7 +35,7 @@ assert np.all(["log_dir" not in arg for arg in unknownargs])
 assert np.all(["hydra.sweep.dir" not in arg for arg in unknownargs])
 
 log_dir = Path(args.log_dir).resolve() /f'{args.job_name }'/f'{datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")}_{args.job_name}'
-# os.makedirs(log_dir)
+os.makedirs(log_dir)
 args.script = Path(args.script).resolve()
 args.train_file = Path(args.train_file).resolve()
 
