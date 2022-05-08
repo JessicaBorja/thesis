@@ -9,7 +9,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 import logging
 from thesis.utils.utils import add_img_text, resize_pixel, get_abspath, get_transforms
-from thesis.datasets.transforms import NormalizeInverse, NormalizeVector
+from thesis.datasets.transforms import NormalizeInverse, NormalizeVector, NormalizeVectorInverse
 
 class PixeLabelDataLang(Dataset):
     def __init__(
@@ -45,8 +45,9 @@ class PixeLabelDataLang(Dataset):
 
         # Depth
         depth_norm_values = _data_info["norm_values"]["depth"]
+        self.depth_norm_values = depth_norm_values
         self.depth_norm = NormalizeVector([depth_norm_values["mean"]], [depth_norm_values["std"]])
-        self.depth_norm_inversse = NormalizeInverse(depth_norm_values["mean"], depth_norm_values["std"])
+        self.depth_norm_inversse = NormalizeVectorInverse(depth_norm_values["mean"], depth_norm_values["std"])
 
         # Excludes background
         self.n_classes = _data_info["n_classes"] if cam == "static" else 1

@@ -26,8 +26,8 @@ class DepthEstimationLogistics(nn.Module):
         self.up_factor = 2 if self.bilinear else 1
 
         # Distribution parameters / bounds
-        self.n_dist = 10 # cfg.depth_resolution
-        self.num_classes = 128
+        self.n_dist = 10 
+        self.num_classes = 128 # cfg.depth_resolution
         self.one_hot_embedding_eye = torch.eye(self.n_dist).to(self.device)
         self.action_max_bound = torch.tensor([4.5]).to(self.device)
         self.action_min_bound = torch.tensor([1.5]).to(self.device)
@@ -77,16 +77,16 @@ class DepthEstimationLogistics(nn.Module):
         shape = self.encode_image(_test_tensor).shape
 
         linear_in = np.prod(shape)
-        hidden_size = 256
-        self.fc1 = nn.Linear(linear_in, self.proj_input_dim)
-        self.fc2 = nn.Linear(self.proj_input_dim, hidden_size)
+        hidden_dim = 256
+        self.fc1 = nn.Linear(linear_in + self.proj_input_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
 
-        self.prob_fc = nn.Linear(hidden_size, self.n_dist)
-        self.mean_fc = nn.Linear(hidden_size, self.n_dist)
-        self.log_scale_fc = nn.Linear(hidden_size, self.n_dist)
+        self.prob_fc = nn.Linear(hidden_dim, self.n_dist)
+        self.mean_fc = nn.Linear(hidden_dim, self.n_dist)
+        self.log_scale_fc = nn.Linear(hidden_dim, self.n_dist)
 
     def loss(self, pred, gt_depth):
-        logit_probs, log_scales, means = pred
+        logit_probs, log_scales, means = pred['depth_dist']
 
         # Appropriate scale
         log_scales = torch.clamp(log_scales, min=-7.0)
@@ -155,10 +155,11 @@ class DepthEstimationLogistics(nn.Module):
                  "l_input": l_input,
                  "fusion_type": self.lang_fusion_type}
         # Decoder
+        
         B, C, H, W = x.shape
         x = x.reshape((B, -1))
+        x = torch.cat([x, l_input], -1)
         x = F.relu(self.fc1(x))
-        x = x * l_input
         x = F.relu(self.fc2(x))
 
         probs = self.prob_fc(x)

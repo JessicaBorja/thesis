@@ -65,6 +65,21 @@ class NormalizeVector(object):
     def __repr__(self):
         return self.__class__.__name__ + "(mean={0}, std={1})".format(self.mean, self.std)
 
+class NormalizeVectorInverse(NormalizeVector):
+    """Undo normalization Normalize a tensor vector with mean and standard deviation."""
+
+    def __init__(self, mean, std):
+        mean = torch.as_tensor(mean)
+        std = torch.as_tensor(std)
+        std_inv = 1 / (std + 1e-10)
+        mean_inv = -mean * std_inv
+        super().__init__(mean=mean_inv, std=std_inv)
+
+    def __call__(self, tensor):
+        return super().__call__(tensor.clone())
+
+    def __repr__(self):
+        return self.__class__.__name__ + "(mean={0}, std={1})".format(self.mean, self.std)
 
 class ColorTransform(object):
     '''

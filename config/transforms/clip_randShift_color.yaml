@@ -7,7 +7,7 @@ training:
   - _target_: thesis.datasets.transforms.ColorTransform
     contrast: 0.05
     brightness: 0.05
-    hue: 0.02
+    hue: 0.01
     prob: 1
   - _target_: torchvision.transforms.Normalize
     mean: [0.48145466, 0.4578275, 0.40821073]
