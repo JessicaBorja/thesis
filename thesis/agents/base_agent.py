@@ -5,6 +5,7 @@ from thesis.affordance.base_detector import BaseDetector
 from thesis.utils.utils import add_img_text, resize_pixel
 from thesis.utils.utils import get_abspath, load_aff_model, resize_pixel
 from thesis.models.depth.depth_module import DepthModule
+from lfp.evaluation.utils import join_vis_lang
 
 from omegaconf import OmegaConf
 import os
@@ -12,6 +13,9 @@ logger = logging.getLogger(__name__)
 
 class BaseAgent:
     def __init__(self, env, offset, aff_cfg, depth_cfg=None, viz_obs=False, *args, **kwargs):
+        # For debugging
+        self.curr_caption = ""
+        #
         self._env = env
         self.viz_obs = viz_obs
         _info = self.env.robot.get_observation()[-1]
@@ -67,7 +71,6 @@ class BaseAgent:
             point_detector = BaseDetector()
         return point_detector
 
-
     def load_model_free(self, train_folder, model_name, **kwargs):
         self.logger.info("Base Agent has no policy implemented. Step will be a waiting period...")
 
@@ -121,7 +124,8 @@ class BaseAgent:
         '''
         curr_info = self.env.robot.get_observation()[-1]
         if(target_orn is None):
-            target_orn = np.array(curr_info["tcp_orn"])
+            # target_orn = np.array(curr_info["tcp_orn"])
+            target_orn = self.target_orn
         if(gripper_action is None):
             gripper_action = curr_info["gripper_action"]
 
@@ -155,7 +159,9 @@ class BaseAgent:
             curr_pos = np.array(info["robot_info"]["tcp_pos"])
 
             if self.viz_obs:
-                img = cv2.resize(ns['rgb_obs']['rgb_static'][:, :, ::-1], (300,300))
-                cv2.imshow("static_cam", img)
+                _caption = "MB: %s" % self.curr_caption
+                join_vis_lang(ns['rgb_obs']['rgb_static'], _caption)
+                # img = cv2.resize([:, :, ::-1], (300,300))
+                # cv2.imshow("static_cam", img)
                 cv2.waitKey(1)
         return curr_pos, (ns, r, d, info)

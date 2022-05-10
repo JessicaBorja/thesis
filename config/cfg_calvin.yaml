@@ -23,7 +23,7 @@ agent:
 
 depth_pred:
   checkpoint:
-    train_folder: ~/logs/thesis/depth_pred/2022-04-30/18-11-11_aff_rl
+    train_folder: ~/logs/thesis/depth_pred/2022-04-30/13-14-14_depth_pred/
     model_name: val_err.ckpt
     img_resize: 224
 
