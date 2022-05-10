@@ -48,20 +48,24 @@ class DepthModule(LightningModule):
     def criterion(self, pred, label, compute_err):
         if self.normalize_depth:
             depth_label = "normalized_depth"
+        else:
+            depth_label = "depth"
+
         gt_depth = label[depth_label].unsqueeze(-1).float()
         depth_loss = self.depth_est.loss(pred, gt_depth)
 
         # Pixel and Rotation error (not used anywhere).
         err = {}
         if compute_err:
+            # Always compute error w.r.t true depth (not normalized)
             sample = self.depth_est.sample(pred["depth_dist"])
             # Unnormalize to match real depth
             if self.normalize_depth:
                 sample = self.depth_norm_inverse(sample)
-
             sample = sample.squeeze().detach().cpu().numpy()
-            gt_depth = label[depth_label].detach().cpu().numpy()
-            depth_error = np.sum(np.abs(sample - gt_depth))
+            unormalized_depth = label["depth"].unsqueeze(-1).float()
+            unormalized_depth = label["depth"].detach().cpu().numpy()
+            depth_error = np.sum(np.abs(sample - unormalized_depth))
             err = {"depth": depth_error}
 
         loss = depth_loss
