@@ -175,8 +175,9 @@ def load_dataset_statistics(train_dataset_dir, val_dataset_dir, transforms):
     """
     paths = {"train": train_dataset_dir, "val": val_dataset_dir}
     for dataset_type in ["train", "val"]:
+        statistics_filepath = Path(paths[dataset_type]) / "statistics.yaml"
         try:
-            statistics = OmegaConf.load(Path(paths[dataset_type]) / "statistics.yaml")
+            statistics = OmegaConf.load(statistics_filepath.as_posix())
             # Hack for maintaining two repositories with transforms
             statistics = OmegaConf.create(OmegaConf.to_yaml(statistics).replace("calvin_agent", "lfp"))
             # this ugly piece of code only exists because OmegaConf actually can't merge ListConfigs.
@@ -197,6 +198,6 @@ def load_dataset_statistics(train_dataset_dir, val_dataset_dir, transforms):
                         if not exists:
                             transforms[dataset_type][modality] = ListConfig([*conf_transforms, dataset_trans])
         except FileNotFoundError:
-            logger.warning("Could not load statistics.yaml")
+            logger.warning("Could not load statistics.yaml: %s"% statistics_filepath.as_posix())
             pass
     return transforms
