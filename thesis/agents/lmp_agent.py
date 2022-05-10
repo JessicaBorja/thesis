@@ -172,6 +172,7 @@ class PlayLMPAgent(BaseAgent):
         # import pybullet as p
         p.addUserDebugText("t", target_pos, [1,0,0])
 
+        self.curr_caption = caption
         obs, _, _, info = self.move_to(target_pos, gripper_action=1)
 
         # Update target pos and orn
