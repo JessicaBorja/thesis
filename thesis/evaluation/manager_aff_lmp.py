@@ -95,6 +95,7 @@ class PolicyManager:
         cfg = hydra.compose(config_name="cfg_calvin")
         cfg.agent.checkpoint.train_folder = train_folder
         cfg.agent.checkpoint.model_name = checkpoint.name
+        cfg.agent.dataset_path = dataset_path
         model = hydra.utils.instantiate(cfg.agent,
                                         viz_obs=self.debug,
                                         env=env,

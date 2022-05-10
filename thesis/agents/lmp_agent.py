@@ -29,6 +29,7 @@ class PlayLMPAgent(BaseAgent):
         super().__init__(env, *args, **kwargs)
         self.move_outside = move_outside
         self.dataset_path = Path(get_abspath(dataset_path))  # Dataset on which agent was trained
+        logger.info("PlayLMPAgent dataset_path: %s" % self.dataset_path)
         self.lang_enc = SBert('paraphrase-MiniLM-L3-v2')
         if checkpoint:
             self.model_free, self.transforms = self.load_model_free(**checkpoint)

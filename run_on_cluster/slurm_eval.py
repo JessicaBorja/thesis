@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import os
 from pathlib import Path
 import subprocess
@@ -58,7 +59,8 @@ def main():
     """
     args, unknownargs = parse_args()
     training_dir = Path(args.train_folder).resolve()
-    log_dir = "%s/evaluation" % training_dir.as_posix()
+    timestr = datetime.now().strftime("%H-%M-%S")
+    log_dir = "%s/evaluation/%s" % (training_dir.as_posix(), timestr)
     os.makedirs(log_dir, exist_ok=True)
     args.script = Path(args.script).resolve()
     args.eval_file = Path(args.eval_file).resolve()
