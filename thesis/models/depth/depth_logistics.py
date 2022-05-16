@@ -29,8 +29,11 @@ class DepthEstimationLogistics(nn.Module):
         self.n_dist = 10 
         self.num_classes = 128 # cfg.depth_resolution
         self.one_hot_embedding_eye = torch.eye(self.n_dist).to(self.device)
-        self.action_max_bound = torch.tensor([4.5]).to(self.device)
-        self.action_min_bound = torch.tensor([1.5]).to(self.device)
+        _max_bound = 2.0 if cfg.normalize_depth else 4.5
+        _min_bound = -2.0 if cfg.normalize_depth else 1.3
+
+        self.action_max_bound = torch.tensor([_max_bound]).to(self.device)
+        self.action_min_bound = torch.tensor([_min_bound]).to(self.device)
         self.img_encoder = self._load_img_encoder()
         self._build_decoder()
     
