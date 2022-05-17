@@ -169,7 +169,7 @@ def get_transforms(transforms_cfg, img_size=None):
 
     for cfg in transforms_config:
         if ("size" in cfg) and img_size is not None:
-            cfg.size = img_size
+            cfg.size = [img_size, img_size]
         if("interpolation" in cfg):
             cfg.interpolation = InterpolationMode(cfg.interpolation)
         if("Normalize" in cfg._target_):
@@ -177,7 +177,7 @@ def get_transforms(transforms_cfg, img_size=None):
         if("RandomShift" in cfg._target_):
             rand_shift = hydra.utils.instantiate(cfg)
         else:
-            transforms_lst.append(hydra.utils.instantiate(cfg))
+            transforms_lst.append(hydra.utils.instantiate(cfg, _convert_="partial"))
 
     return  {
         "transforms": transforms.Compose(transforms_lst),
