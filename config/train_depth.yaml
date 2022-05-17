@@ -24,7 +24,7 @@ trainer:
 
 dataset_name: calvin_lang_MoCEndPt
 model:
-  lr: 1e-04
+  lr: 1e-05
   depth_dist: logistic  # logistic / gaussian
   lang_fusion_type: mult
   normalize_depth: False

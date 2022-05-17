@@ -30,7 +30,6 @@ aff_detection:
       loss_weights:
         aff: 1.0
         depth: 1.0
-
   dataset:
     _recursive_: False
     data_dir: ${paths.datasets}/${dataset_name}
