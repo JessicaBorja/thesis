@@ -1,6 +1,6 @@
 defaults:
   - paths: general_paths
-  - transforms: clip_color
+  - transforms: clip_real_world
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
 
