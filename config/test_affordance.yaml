@@ -1,5 +1,4 @@
 defaults:
-  - aff_detection: cliport_pixel_lang
   - paths: general_paths
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
@@ -9,12 +8,8 @@ save_viz: True
 
 # folders
 checkpoint:
-  # path: ./hydra_outputs/affordance_model/2022-01-18/16-20-15_aff_rl
-  # model_name: cliport_bs32_notrasforms_epoch=00_val_err.ckpt # cliport_bs32_epoch=00.ckpt
-  # path: ./hydra_outputs/affordance_model/2022-01-27/17-06-54_aff_rl
-  # model_name: vapo_endpt_randShift_epoch=00_val_loss.ckpt #last.ckpt
-  train_folder: ./hydra_outputs/affordance_model/2022-02-15/13-08-08_aff_rl
-  model_name: val_miou.ckpt
+  train_folder: ./hydra_outputs/affordance_model/2022-05-17/11-30-49_aff_model
+  model_name: val_err.ckpt
 
 dataset_name: calvin_lang_contactEndPt
 aff_detection:

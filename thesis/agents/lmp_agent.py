@@ -135,7 +135,9 @@ class PlayLMPAgent(BaseAgent):
 
         pred = self.point_detector.predict(inp)
         if self.viz_obs:
-            self.point_detector.viz_preds(inp, pred, waitkey=1)
+            out_img = self.point_detector.get_preds_viz(inp, pred)
+            cv2.imshow("img", out_img[:, :, ::-1])
+            cv2.waitKey(1)
 
         pixel = resize_pixel(pred["pixel"], pred['softmax'].shape[:2], im_shape)
 

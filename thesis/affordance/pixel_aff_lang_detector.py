@@ -228,7 +228,7 @@ class PixelAffLangDetector(LightningModule):
                 # "depth": depth,
                 "error": err}
 
-    def viz_preds(self, inp, pred, out_size=(300, 300), waitkey=0):
+    def get_preds_viz(self, inp, pred, out_shape=(300, 300), waitkey=0):
         '''
             Arguments:
                 inp(dict):
@@ -265,13 +265,12 @@ class PixelAffLangDetector(LightningModule):
                 line_type=cv2.LINE_AA,
             )
 
-        pred_img = cv2.resize(pred_img, out_size, interpolation=cv2.INTER_CUBIC)
-        heatmap = cv2.resize(heatmap, out_size, interpolation=cv2.INTER_CUBIC)
+        pred_img = cv2.resize(pred_img, out_shape, interpolation=cv2.INTER_CUBIC)
+        heatmap = cv2.resize(heatmap, out_shape, interpolation=cv2.INTER_CUBIC)
         pred_img = pred_img.astype(float) / 255
         out_img = np.concatenate([pred_img, heatmap], axis=1)
 
 
         # Prints the text.
         out_img = add_img_text(out_img, inp["lang_goal"])
-        cv2.imshow("img", out_img[:, :, ::-1])
-        cv2.waitKey(waitkey)
+        return out_img

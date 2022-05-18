@@ -1,3 +1,4 @@
+from black import out
 import numpy as np
 import torch.nn as nn
 import matplotlib.pyplot as plt
@@ -320,7 +321,7 @@ class MaskAffLangDetector(pl.LightningModule):
                 "pixel": p0_pix,
                 "error": err}
 
-    def viz_preds(self, inp, pred, out_shape=(300, 300), waitkey=0):
+    def get_preds_viz(self, inp, pred, out_shape=(300, 300), waitkey=0):
         '''
             Arguments:
                 inp(dict):
@@ -389,5 +390,4 @@ class MaskAffLangDetector(pl.LightningModule):
 
         # Prints the text.
         out_img = add_img_text(out_img, inp["lang_goal"])
-        cv2.imshow("img", out_img[:, :, ::-1])
-        cv2.waitKey(waitkey)
+        return out_img

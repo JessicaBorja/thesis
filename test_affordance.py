@@ -11,6 +11,7 @@ from thesis.utils.utils import add_img_text, blend_imgs, get_abspath, overlay_ma
 from torch.utils.data import DataLoader
 import logging
 
+
 @hydra.main(config_path="./config", config_name='test_affordance')
 def main(cfg):
     # Checkpoint loader
@@ -22,7 +23,7 @@ def main(cfg):
         run_cfg.aff_detection.dataset.data_dir = cfg.aff_detection.dataset.data_dir
     else:
         print("path does not exist %s" % hydra_cfg_path)
-        run_cfg = cfg
+        return
 
     # Load model
     model = load_aff_model(hydra_run_dir,
@@ -34,12 +35,13 @@ def main(cfg):
 
     # Dataloaders
     logger = logging.getLogger(__name__)
-    val = hydra.utils.instantiate(cfg.aff_detection.dataset, split="validation", log=logger)
+    val = hydra.utils.instantiate(run_cfg.aff_detection.dataset, split="validation", log=logger)
     val_loader = DataLoader(val, num_workers=1, batch_size=1, pin_memory=True)
     print("val minibatches {}".format(len(val_loader)))
 
     cm = plt.get_cmap("jet")
-    colors = cm(np.linspace(0, 1, val.n_classes))
+    n_classes = 2
+    colors = cm(np.linspace(0, 1, 2))
     for b_idx, b in enumerate(val_loader):
         # RGB
         inp, labels = b
@@ -54,7 +56,7 @@ def main(cfg):
             "lang_goal": inp["lang_goal"][0]
         }
         out_img = frame.copy()
-        for label in range(0, val.n_classes):
+        for label in range(0, n_classes):
             color = colors[label]
             color[-1] = 0.3
             color = tuple((color * 255).astype("int32"))
@@ -73,9 +75,13 @@ def main(cfg):
             )
         info = None  # labels
         pred = model.predict(obs, info=info)
-        obs['img_label'] = out_img
-        model.viz_preds(obs, pred, waitkey=0)
+        out_shape = (400, 400)
+        pred_img = model.get_preds_viz(obs, pred, out_shape=out_shape)
+        label_img = cv2.resize(out_img, out_shape) / 255
 
+        out_img = np.concatenate([pred_img, label_img], axis=1)
+        cv2.imshow("img", out_img[:, :, ::-1])
+        cv2.waitKey(1)
 
 if __name__ == '__main__':
     main()
