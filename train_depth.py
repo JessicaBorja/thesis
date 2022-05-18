@@ -27,7 +27,10 @@ def main(cfg):
     logger.info("Running configuration: %s", OmegaConf.to_yaml(print_cfg(cfg)))
 
     # Logger
-    cfg.wandb.logger.name = "%s_%s" % (cfg.run_name, cfg.model.depth_dist)
+    _name = "%s_%s" % (cfg.run_name, cfg.model.depth_dist)
+    if cfg.model.normalize_depth:
+        _name += "_normed"
+    cfg.wandb.logger.name = _name
     wandb_logger = WandbLogger(**cfg.wandb.logger)
 
     # Checkpoint saver
@@ -65,7 +68,7 @@ def main(cfg):
 
     # Initialize agent
     in_shape = train.out_shape[::-1]  # H, W, C
-    model = DepthModule(cfg.model, in_shape=in_shape)
+    model = DepthModule(cfg.model, in_shape=in_shape, depth_transforms=val.depth_norm_values)
 
     # Resume epoch and global_steps
     if last_checkpoint:

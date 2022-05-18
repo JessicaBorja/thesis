@@ -1,4 +1,4 @@
 name: 'rn50_clip_lingunet'
 
 defaults:
-  - /transforms: clip_color
+  - /transforms: clip_randShift_color

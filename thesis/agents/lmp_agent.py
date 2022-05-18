@@ -29,6 +29,7 @@ class PlayLMPAgent(BaseAgent):
         super().__init__(env, *args, **kwargs)
         self.move_outside = move_outside
         self.dataset_path = Path(get_abspath(dataset_path))  # Dataset on which agent was trained
+        logger.info("PlayLMPAgent dataset_path: %s" % self.dataset_path)
         self.lang_enc = SBert('paraphrase-MiniLM-L3-v2')
         if checkpoint:
             self.model_free, self.transforms = self.load_model_free(**checkpoint)
@@ -134,7 +135,9 @@ class PlayLMPAgent(BaseAgent):
 
         pred = self.point_detector.predict(inp)
         if self.viz_obs:
-            self.point_detector.viz_preds(inp, pred, waitkey=1)
+            out_img = self.point_detector.get_preds_viz(inp, pred)
+            cv2.imshow("img", out_img[:, :, ::-1])
+            cv2.waitKey(1)
 
         pixel = resize_pixel(pred["pixel"], pred['softmax'].shape[:2], im_shape)
 
@@ -172,6 +175,7 @@ class PlayLMPAgent(BaseAgent):
         # import pybullet as p
         p.addUserDebugText("t", target_pos, [1,0,0])
 
+        self.curr_caption = caption
         obs, _, _, info = self.move_to(target_pos, gripper_action=1)
 
         # Update target pos and orn

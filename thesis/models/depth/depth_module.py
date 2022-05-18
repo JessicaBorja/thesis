@@ -4,18 +4,24 @@ import torch
 from pytorch_lightning import LightningModule
 import thesis.models as models
 from thesis.models.language_encoders.lang_clip import CLIPLang
+from thesis.datasets.transforms import NormalizeVectorInverse
 
 
 class DepthModule(LightningModule):
-    def __init__(self, cfg, in_shape=(200, 200, 3)):
+    def __init__(self, cfg, in_shape=(200, 200, 3), depth_transforms=None):
         super().__init__()
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
         self.in_shape = in_shape
+        self.normalize_depth = cfg.normalize_depth
+        self.init_depth_transforms(depth_transforms)
         self._build_model()
         self.save_hyperparameters()
         self.text_enc = CLIPLang(self.device_type)
-    
+
+    def init_depth_transforms(self, depth_norm_values):
+        self.depth_norm_inverse = NormalizeVectorInverse(depth_norm_values["mean"], depth_norm_values["std"])
+
     def _build_model(self):
         _depth_est = models.deth_est_nets[self.cfg.depth_dist]
         self.depth_est = _depth_est(self.in_shape, 1, self.cfg, self.device_type)
@@ -40,17 +46,26 @@ class DepthModule(LightningModule):
         return sample
 
     def criterion(self, pred, label, compute_err):
-        depth_label = "normalized_depth"
+        if self.normalize_depth:
+            depth_label = "normalized_depth"
+        else:
+            depth_label = "depth"
+
         gt_depth = label[depth_label].unsqueeze(-1).float()
         depth_loss = self.depth_est.loss(pred, gt_depth)
 
         # Pixel and Rotation error (not used anywhere).
         err = {}
         if compute_err:
+            # Always compute error w.r.t true depth (not normalized)
             sample = self.depth_est.sample(pred["depth_dist"])
+            # Unnormalize to match real depth
+            if self.normalize_depth:
+                sample = self.depth_norm_inverse(sample)
             sample = sample.squeeze().detach().cpu().numpy()
-            gt_depth = label[depth_label].detach().cpu().numpy()
-            depth_error = np.sum(np.abs(sample - gt_depth))
+            unormalized_depth = label["depth"].unsqueeze(-1).float()
+            unormalized_depth = label["depth"].detach().cpu().numpy()
+            depth_error = np.sum(np.abs(sample - unormalized_depth))
             err = {"depth": depth_error}
 
         loss = depth_loss

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class Evaluation:
     def __init__(self, args, checkpoint) -> None:
         if args.aff_lmp:
-            self.policy_manager = AffLMPManager(debug=True)
+            self.policy_manager = AffLMPManager(debug=args.debug)
         else:
             self.policy_manager = LMPManager()
         
@@ -111,10 +111,17 @@ class Evaluation:
                 previous_data = json.load(file)
         except FileNotFoundError:
             pass
+
         json_data = {**previous_data, **current_data}
+        best_model = max(ranking, key=ranking.get)
+        best_model_data = {
+            "epoch": best_model,
+            **json_data[best_model]
+        }
+        json_data["best"] = best_model_data
         with open(log_dir / "results.json", "w") as file:
             json.dump(json_data, file)
-        print(f"Best model: epoch {max(ranking, key=ranking.get)} with average sequences length of {max(ranking.values())}")
+        print(f"Best model: epoch {best_model} with average sequences length of {max(ranking.values())}")
 
         for checkpoint, plan_dict in plan_dicts.items():
             epoch = checkpoint.stem.split("=")[1]

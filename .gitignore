@@ -6,3 +6,4 @@ images/
 trained_agents/
 build/
 dist/
+lmp_train_command.txt

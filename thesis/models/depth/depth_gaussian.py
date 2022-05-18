@@ -7,7 +7,7 @@ import torchvision.models as models
 
 import numpy as np
 from thesis.models.language_encoders.lang_clip import CLIPLang
-
+from thesis.datasets.transforms import NormalizeInverse
 
 class DepthEstimationGaussian(nn.Module):
     def __init__(self, input_shape, output_dim, cfg, device):
@@ -21,6 +21,7 @@ class DepthEstimationGaussian(nn.Module):
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
 
+        # self.undo_norm = NormalizeInverse(mean=cfg.mean, std=cfg.std)
         # Use clip preprocessing
         self.text_enc = CLIPLang(self.device)
         self.loss_fcn = nn.GaussianNLLLoss()

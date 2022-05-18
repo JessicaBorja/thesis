@@ -23,13 +23,13 @@ agent:
 
 depth_pred:
   checkpoint:
-    train_folder: ./hydra_outputs/depth_pred/2022-04-30/18-11-11_aff_rl
+    train_folder: ~/logs/thesis/depth_pred/2022-04-30/13-14-14_depth_pred/
     model_name: val_err.ckpt
     img_resize: 224
 
 aff_detection:
   checkpoint:
-    train_folder: ./hydra_outputs/affordance_model/2022-04-29/14-02-55_aff_rl
+    train_folder: ~/logs/thesis/aff_model/2022-04-29/14-02-55_aff_rl
     # train_folder: ./hydra_outputs/affordance_model/2022-03-09/01-38-55_aff_rl
     model_name: val_err.ckpt
     img_resize: 224

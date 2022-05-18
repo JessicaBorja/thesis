@@ -15,6 +15,7 @@ from scipy.ndimage import filters
 import re
 from scipy.spatial.transform.rotation import Rotation as R
 import numpy as np
+from os.path import expanduser
 
 logger = logging.getLogger(__name__)
 
@@ -168,7 +169,7 @@ def get_transforms(transforms_cfg, img_size=None):
 
     for cfg in transforms_config:
         if ("size" in cfg) and img_size is not None:
-            cfg.size = img_size
+            cfg.size = [img_size, img_size]
         if("interpolation" in cfg):
             cfg.interpolation = InterpolationMode(cfg.interpolation)
         if("Normalize" in cfg._target_):
@@ -176,7 +177,7 @@ def get_transforms(transforms_cfg, img_size=None):
         if("RandomShift" in cfg._target_):
             rand_shift = hydra.utils.instantiate(cfg)
         else:
-            transforms_lst.append(hydra.utils.instantiate(cfg))
+            transforms_lst.append(hydra.utils.instantiate(cfg, _convert_="partial"))
 
     return  {
         "transforms": transforms.Compose(transforms_lst),
@@ -203,6 +204,7 @@ def overlay_flow(flow, img, mask):
 
 
 def get_abspath(path_str):
+    path_str = os.path.expanduser(path_str)
     if not os.path.isabs(path_str):
         hydra_cfg = hydra.utils.HydraConfig().cfg
         if hydra_cfg is not None:

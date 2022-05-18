@@ -65,7 +65,7 @@ def main():
 
     assert "train_folder" in args
 
-    checkpoints = [Path(args.checkpoint)]
+    checkpoints = [Path(args.checkpoint + ".ckpt")]
 
     results = {}
     plans = {}

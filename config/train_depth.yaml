@@ -1,6 +1,6 @@
 defaults:
   - paths: general_paths
-  - transforms: clip_color
+  - transforms: clip_real_world
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
 
@@ -24,9 +24,10 @@ trainer:
 
 dataset_name: calvin_lang_MoCEndPt
 model:
-  lr: 1e-04
+  lr: 1e-05
   depth_dist: logistic  # logistic / gaussian
   lang_fusion_type: mult
+  normalize_depth: False
 
 aff_detection:
   img_size: 224
