@@ -68,7 +68,7 @@ def process_rgb(
 
     seq_rgb_obs_dict = {}
     for _, rgb_obs_key in enumerate(rgb_obs_keys):
-        rgb_obs = episode[rgb_obs_key]
+        rgb_obs = episode[rgb_obs_key]  # H, W, C
         # expand dims for single environment obs
         if len(rgb_obs.shape) != 4:
             rgb_obs = np.expand_dims(rgb_obs, axis=0)
