@@ -41,7 +41,7 @@ class DataReader:
         pass
 
     def get_robot_state(self, data):
-        if self.mode == "simulation" or "processed" not in self.mode:
+        if self.mode != "simulation" and "processed" not in self.mode:
             proprio = data["robot_state"].item()
             # orn = p.getEulerFromQuaternion(proprio["tcp_orn"])
             orn = proprio["tcp_orn"]

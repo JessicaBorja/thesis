@@ -295,7 +295,7 @@ class DataLabelerLang(DataLabeler):
         return out_img
 
 
-@hydra.main(config_path="../../config", config_name="cfg_datacollection")
+@hydra.main(config_path="../../../config", config_name="cfg_datacollection")
 def main(cfg):
     labeler = DataLabelerLang(cfg)
     labeler.iterate()
