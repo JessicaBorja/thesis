@@ -9,24 +9,6 @@ import affordance.utils.flowlib as flowlib
 from thesis.utils.utils import get_transforms, torch_to_numpy
 
 
-def normalize_depth(img):
-    img_mask = img == 0
-    # we do not take the max because of outliers (wrong measurements)
-    istats = (np.min(img[img > 0]), np.percentile(img, 95))
-
-    imrange = (np.clip(img.astype("float32"), istats[0], istats[1]) - istats[0]) / (istats[1] - istats[0])
-    imrange[img_mask] = 0
-
-    imrange = 255.0 * imrange
-    imsz = imrange.shape
-    nchan = 1
-    if len(imsz) == 3:
-        nchan = imsz[2]
-    imgcanvas = np.zeros((imsz[0], imsz[1], nchan), dtype="uint8")
-    imgcanvas[0 : imsz[0], 0 : imsz[1]] = imrange.reshape((imsz[0], imsz[1], nchan))
-    return imgcanvas
-
-
 def add_img_text(img, text_label):
     font_scale = 0.6
     thickness = 2

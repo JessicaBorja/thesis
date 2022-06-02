@@ -7,7 +7,7 @@ import pybullet as p
 
 from thesis.affordance.dataset_creation.core.utils import create_data_ep_split, create_json_file
 from thesis.affordance.dataset_creation.data_labeler import DataLabeler
-from thesis.affordance.utils.img_utils import add_img_text, normalize_depth, resize_center
+from thesis.affordance.utils.img_utils import add_img_text, resize_center
 
 log = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@ class DepthModule(LightningModule):
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
         self.in_shape = in_shape
-        self.normalize_depth = cfg.normalize_depth
+        self.normalized = cfg.normalize_depth
         self.init_depth_transforms(depth_transforms)
         self._build_model()
         self.save_hyperparameters()
@@ -37,16 +37,19 @@ class DepthModule(LightningModule):
         return out
 
     def predict(self, inp, transforms):
-        inp['img'] = torch.tensor(inp['img']).permute((2, 0, 1)).unsqueeze(0).to(self.device)
-        inp['img'] = transforms(inp['img'])
+        inp_img = torch.tensor(inp['img']).permute((2, 0, 1)).unsqueeze(0).to(self.device)
+        inp_img = transforms(inp_img)
         # dist, _info = self.depth_est(inp['img'], inp['lang_goal'])
-        dist = self.forward(inp)
+        net_inp = {"img": inp_img, "lang_goal": inp["lang_goal"]}
+        dist = self.forward(net_inp)
         sample = self.depth_est.sample(dist["depth_dist"])
+        if self.normalized:
+            sample = self.depth_norm_inverse(sample)
         sample = sample.squeeze().detach().cpu().numpy()
         return sample
 
     def criterion(self, pred, label, compute_err):
-        if self.normalize_depth:
+        if self.normalized:
             depth_label = "normalized_depth"
         else:
             depth_label = "depth"
@@ -60,7 +63,7 @@ class DepthModule(LightningModule):
             # Always compute error w.r.t true depth (not normalized)
             sample = self.depth_est.sample(pred["depth_dist"])
             # Unnormalize to match real depth
-            if self.normalize_depth:
+            if self.normalized:
                 sample = self.depth_norm_inverse(sample)
             sample = sample.squeeze().detach().cpu().numpy()
             unormalized_depth = label["depth"].unsqueeze(-1).float()

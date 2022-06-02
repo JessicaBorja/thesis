@@ -183,6 +183,7 @@ class PlayLMPAgent(BaseAgent):
         self.env.robot.target_orn = obs["robot_obs"][3:6]
 
     def reset(self, caption):
+        self.env.robot.reset()
         if self.move_outside:
             self.reset_position()
         self.model_free.reset()
