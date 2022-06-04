@@ -6,25 +6,22 @@ import cv2
 import hydra
 import numpy as np
 import pybullet as p
+import shutil
 
-from affordance.dataset_creation.core.data_classifier import BaseDetector
-from affordance.dataset_creation.core.data_reader import DataReader
-from affordance.dataset_creation.core.utils import (
+from thesis.affordance.dataset_creation.core.data_classifier import BaseDetector
+from thesis.affordance.dataset_creation.core.data_reader import DataReader
+from thesis.affordance.dataset_creation.core.utils import (
     create_data_ep_split,
     create_json_file,
     instantiate_env,
     save_dict_data,
 )
-import affordance.utils.flowlib as flowlib
-from affordance.utils.img_utils import (
-    create_circle_mask,
+import thesis.affordance.utils.flowlib as flowlib
+from thesis.affordance.utils.img_utils import (
     get_px_after_crop_resize,
-    overlay_flow,
-    overlay_mask,
-    resize_mask_and_center,
-    tresh_np,
+    resize_center,
 )
-from affordance.utils.utils import get_abs_path
+from thesis.affordance.utils.utils import get_abs_path
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +29,8 @@ log = logging.getLogger(__name__)
 class DataLabeler(DataReader):
     def __init__(self, cfg, classifier=None, discovery_episodes=[], new_cfg=True, *args, **kwargs):
         super(DataLabeler, self).__init__(cfg, *args, **kwargs)
+        self.output_dir = get_abs_path(cfg.output_dir)
+        self.create_output_dir(cfg)
         self.remove_blank_mask_instances = cfg.labeling.remove_blank_mask_instances
         self.save_viz = cfg.save_viz
         self.viz = cfg.viz
@@ -57,7 +56,6 @@ class DataLabeler(DataReader):
         self.static_cam = _static
         self.gripper_cam = _gripper
         self.save_dict = {"gripper": {}, "static": {}, "grasps": []}
-        self.output_dir = get_abs_path(cfg.output_dir)
         self._fixed_points = []
         self.labeling = cfg.labeling
         self.single_split = cfg.output_cfg.single_split
@@ -67,6 +65,22 @@ class DataLabeler(DataReader):
         self.gripper_width_tresh = 0.015
         self.task_discovery_folders = discovery_episodes
         log.info("Writing to %s" % self.output_dir)
+
+    def create_output_dir(self, cfg):
+        play_data_dir = get_abs_path(cfg.play_data_dir)
+        output_dir = get_abs_path(cfg.output_dir)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        # copy stard_end_ids.npy
+        start_end_ids_file = "ep_start_end_ids.npy"
+        # copy statistics.yaml
+        statistics_file = "statistics.yaml"
+
+        for filename in [start_end_ids_file, statistics_file]:
+            src = os.path.join(play_data_dir, filename)
+            dest = os.path.join(output_dir, filename)
+            if os.path.isfile(src):
+                shutil.copy(src, dest)
 
     @property
     def fixed_points(self):
@@ -120,20 +134,19 @@ class DataLabeler(DataReader):
     def closed_gripper(self, dct):
         """
         dct = {"robot_obs": robot_obs,
-                "last_pt": last_pt,
+                "last_obs": last_obs,
                 "data": data}
         """
         curr_robot_obs = dct["robot_obs"]
-        last_pt = dct["last_pt"]
+        last_obs = dct["last_obs"]
         if self.mask_on_close:
-            curr_pt = curr_robot_obs[:3]
-            self.label_gripper(self.img_hist["gripper"], curr_pt, last_pt)
+            self.label_gripper(self.img_hist["gripper"], curr_robot_obs, last_obs)
         super().closed_gripper(dct)
 
     def closed_to_open(self, dct):
         """
         dct = {"robot_obs": robot_obs,
-                "last_pt": last_pt,
+                "last_obs": last_obs,
                 "frame_idx": frame_idx}
         """
         new_pt = (dct["frame_idx"], dct["robot_obs"])
@@ -142,16 +155,15 @@ class DataLabeler(DataReader):
     def open_to_closed(self, dct):
         """
         dct =  {"robot_obs": robot_obs,
-                "last_pt": last_pt,
+                "last_obs": last_obs,
                 "frame_idx": frame_idx,
                 "data": data}
         """
         curr_robot_obs = dct["robot_obs"]
-        last_pt = dct["last_pt"]
+        last_obs = dct["last_obs"]
         frame_idx = dct["frame_idx"]
 
-        curr_pt = curr_robot_obs[:3]
-        self.label_gripper(self.img_hist["gripper"], curr_pt, last_pt)
+        self.label_gripper(self.img_hist["gripper"], curr_robot_obs, last_obs)
         self.label_static(self.img_hist["static"], curr_robot_obs)
         self.fixed_points = self.update_fixed_points(curr_robot_obs, frame_idx)
         super().open_to_closed(dct)
@@ -162,74 +174,51 @@ class DataLabeler(DataReader):
             save_dict_data(self.save_dict[cam_str], save_dir, sub_dir="%s_cam" % cam_str, save_viz=self.save_viz)
         self.save_dict = {"gripper": {}, "static": {}, "grasps": []}
 
-    def label_gripper(self, img_hist, curr_pt, last_pt):
+    def label_gripper(self, img_hist, curr_obs, last_obs):
         out_img_size = self.output_size["gripper"]
         save_dict = {}
-        for idx, (fr_idx, ep_id, im_id, robot_obs, img) in enumerate(img_hist):
+        curr_pt, last_pt = curr_obs[:3], last_obs[:3]
+        for idx, (fr_idx, ep_id, im_id, robot_obs, img, depth) in enumerate(img_hist):
             # Shape: [H x W x 2]
             H, W = out_img_size  # img.shape[:2]
-            directions = np.stack([np.ones((H, W)), np.zeros((H, W))], axis=-1).astype(np.float32)
-            mask = np.zeros(out_img_size)
             centers = []
             # Gripper width
             if robot_obs[-1] > self.gripper_width_tresh:
                 for point in [curr_pt, last_pt]:
                     if point is not None:
                         # Center and directions in matrix convention (row, column)
-                        new_mask, center_px = self.get_gripper_mask(img, robot_obs[:-1], point)
-                        new_mask, center_px = resize_mask_and_center(new_mask, center_px, out_img_size)
-                        if np.any(center_px < 0) or np.any(center_px >= H):
-                            new_mask = np.zeros(out_img_size)
-                        else:
-                            # Only one class, label as one
+                        center_px = self.get_gripper_label(robot_obs[:-1], point)
+                        center_px = resize_center(center_px, img.shape[:2],out_img_size)
+                        if np.all(center_px >= 0) and np.all(center_px < H):
                             centers.append([0, *center_px])
-                        directions = self.label_directions(center_px, new_mask, directions, "gripper")
-                        mask = overlay_mask(new_mask, mask, (255, 255, 255))
             else:
-                mask = np.zeros(out_img_size)
                 centers = []
 
             # Visualize results
             img = cv2.resize(img, out_img_size[::-1])
-            mask = np.expand_dims(mask, 0)
-            out_img, flow_over_img = self.viz_imgs(img, mask, directions, centers, cam_str="gripper")
+            out_img = self.viz_imgs(img, centers, cam_str="gripper")
             centers = np.zeros((0, 3)) if len(centers) < 1 else np.stack(centers)
             save_dict[im_id] = {
                 "frame": img,
-                "mask": mask,
                 "centers": centers,
-                "directions": directions,
                 "viz_out": out_img,
-                "viz_dir": flow_over_img,
                 "gripper_width": robot_obs[-1],
             }
         self.save_dict["gripper"].update(save_dict)
 
-    def viz_imgs(self, rgb_img, aff_mask, directions, centers, separate_masks=None, cam_str=""):
+    def viz_imgs(self, rgb_img, centers,cam_str=""):
         """
         :param rgb_img(np.ndarray): H, W, C
-        :param aff_mask(np.ndarray): n_classes, H, W, Each channel has a binary (0-255) mask for the given class. Class 0 is background
-        :param directions(np.ndarray): H, W, 2 labeled directions for foreground mask
         :param centers(np.ndarray): shape=(n_centers, 3). label, u, v = centers[i]
         """
         # Visualize results
         out_img = rgb_img
-        for label in range(aff_mask.shape[0]):
-            color = self.classifier.colors[label]
-            color = tuple((color * 255).astype("int32"))
-            out_img = overlay_mask(aff_mask[label], out_img, color)
-
-        flow_img = flowlib.flow_to_image(directions)
-
-        fg_mask = aff_mask.any(axis=0).astype("uint8") * 255  # Binary
-        flow_over_img = overlay_flow(flow_img, rgb_img, fg_mask)
-
         for c in centers:
             label, v, u = c
             color = self.classifier.colors[label][:3]
             color = [int(c_item * 255) for c_item in color]
-            flow_over_img = cv2.drawMarker(
-                np.array(flow_over_img),
+            out_img = cv2.drawMarker(
+                np.array(out_img),
                 (u, v),
                 color,
                 markerType=cv2.MARKER_CROSS,
@@ -240,34 +229,20 @@ class DataLabeler(DataReader):
         if self.viz:
             viz_size = (200, 200)
             viz_img = cv2.resize(out_img, viz_size[::-1])
-
-            viz_flow_over_img = cv2.resize(flow_over_img, viz_size[::-1])
             cv2.imshow("%s" % cam_str, viz_img[:, :, ::-1])
-            cv2.imshow("%s flow_img" % cam_str, viz_flow_over_img[:, :, ::-1])
-            # cv2.imshow('Gripper real flow', viz_flow)
-            if separate_masks is not None:
-                fp_mask, np_mask = separate_masks
-                out_separate = overlay_mask(fp_mask, rgb_img, (255, 0, 0))
-                out_separate = overlay_mask(np_mask, out_separate, (0, 0, 255))
-                out_separate = cv2.resize(out_separate, viz_size[::-1])
-                cv2.imshow("Separate", out_separate[:, :, ::-1])
             cv2.waitKey(1)
-        return out_img, flow_over_img
+        return out_img
 
     def label_static(self, static_hist, curr_robot_obs):
         cam = "static"
         back_min, back_max = self.back_frames
         out_img_size = self.output_size[cam]
         save_dict = {}
-        for idx, (fr_idx, ep_id, im_id, _, img) in enumerate(static_hist):
+        for idx, (fr_idx, ep_id, im_id, robot_obs, img, depth) in enumerate(static_hist):
             # For static mask assume oclusion
             # until back_frames_min before
             centers = []
-            H, W = self.output_size[cam]  # img.shape[:2]  # img_shape = (H, W, C)
-            directions = np.stack([np.ones((H, W)), np.zeros((H, W))], axis=-1).astype(np.float32)
-            full_mask, centers_px, fp_directions = self.update_mask(
-                np.zeros((self.classifier.n_classes, H, W), dtype=np.uint8), directions, (fr_idx, img)
-            )
+            centers_px = self.update_labels(fr_idx, img)
 
             # first create fp masks and place current(newest)
             # mask and optical flow on top
@@ -275,76 +250,40 @@ class DataLabeler(DataReader):
             if idx <= len(static_hist) - back_min and idx > len(static_hist) - back_max:
                 # Get new grip
                 pt = curr_robot_obs[:3]
-                mask, center_px = self.get_static_mask(img, pt)
-                mask, center_px = resize_mask_and_center(mask, center_px, out_img_size)
-                directions = self.label_directions(center_px, mask, fp_directions, "static")
+                center_px = self.get_static_label(pt)
+                center_px = resize_center(center_px, img.shape[:2], out_img_size)
                 centers.append([label, *center_px])
-            else:
-                # No segmentation in current image due to occlusion
-                mask = np.zeros((H, W))
-
-            # Join new mask to fixed points
-            # label_mask = np.stack((full_mask[label], mask)).any(axis=0).astype("uint8")
-            # full_mask[label] = label_mask * 255.0
 
             img = cv2.resize(img, out_img_size[::-1])
-            full_mask[label] = overlay_mask(mask, full_mask[label], (255, 255, 255))
-
             centers += centers_px  # Concat to list
             if len(centers) > 0:
                 centers = np.stack(centers)
             else:
                 centers = np.zeros((0, 2))
-            out_img, flow_over_img = self.viz_imgs(
-                img,
-                full_mask,
-                directions,
-                centers,
-                # separate_masks=(fp_mask, mask),
-                cam_str="static",
-            )
+            out_img = self.viz_imgs(img, centers, cam_str="static")
 
             save_dict[im_id] = {
                 "frame": img,
-                "mask": full_mask,  # 0-255
                 "centers": centers,
-                "directions": directions,
                 "viz_out": out_img,
-                "viz_dir": flow_over_img,
             }
         self.save_dict["static"].update(save_dict)
 
-    def label_directions(self, center, object_mask, direction_labels, camtype):
-        # Shape: [H x W x 2]
-        indices = self.pixel_indices[camtype]
-        object_mask = tresh_np(object_mask, 100)
-        object_center_directions = (center - indices).astype(np.float32)
-        object_center_directions = object_center_directions / np.maximum(
-            np.linalg.norm(object_center_directions, axis=2, keepdims=True), 1e-10
-        )
-
-        # Add it to the labels
-        direction_labels[object_mask == 1] = object_center_directions[object_mask == 1]
-        return direction_labels
-
-    def update_mask(self, mask, directions, frame_img_tuple):
+    def update_labels(self, frame_timestep, img):
         """
         :param mask(np.ndarray): N_classes, H, W
         """
         # Update masks with fixed_points
         centers = []
-        (frame_timestep, img) = frame_img_tuple
         for point_timestep, pt in self.fixed_points:
             # Only add point if it was fixed before seing img
             if frame_timestep >= point_timestep:
                 label = self.classifier.predict(pt)
 
-                new_mask, center_px = self.get_static_mask(img, pt[:3])
-                new_mask, center_px = resize_mask_and_center(new_mask, center_px, self.output_size["static"])
+                center_px = self.get_static_label(pt[:3])
+                center_px = resize_center(center_px, img.shape[:2], self.output_size["static"])
                 centers.append([label, *center_px])
-                directions = self.label_directions(center_px, new_mask, directions, "static")
-                mask[label] = overlay_mask(new_mask, mask[label], (255, 255, 255))
-        return mask, centers, directions
+        return centers
 
     def update_fixed_points(self, new_point, current_frame_idx):
         x = []
@@ -357,7 +296,7 @@ class DataLabeler(DataReader):
         # # and current_frame_idx - frame_idx < 100 )
         return x
 
-    def get_static_mask(self, static_im, point):
+    def get_static_label(self, point):
         # Img history containes previus frames where gripper action was open
         # Point is the point in which the gripper closed for the 1st time
         # TCP in homogeneus coord.
@@ -372,10 +311,9 @@ class DataLabeler(DataReader):
                 self.static_cam.crop_coords,
                 self.static_cam.resize_resolution,
             )
-        static_mask = create_circle_mask(static_im, (tcp_x, tcp_y), r=self.label_size["static"])
-        return static_mask, (tcp_y, tcp_x)  # matrix coord
+        return (tcp_y, tcp_x)  # matrix coord
 
-    def get_gripper_mask(self, img, robot_obs, point):
+    def get_gripper_label(self, robot_obs, point):
         pt, orn = robot_obs[:3], robot_obs[3:]
         if "real_world" in self.mode:
             orn = p.getQuaternionFromEuler(orn)
@@ -414,17 +352,12 @@ class DataLabeler(DataReader):
             # Transform pt to homogeneus cords and project
             point = np.append(point, 1)
             tcp_x, tcp_y = self.gripper_cam.project(point)
-
-        if tcp_x > 0 and tcp_y > 0:
-            mask = create_circle_mask(img, (tcp_x, tcp_y), r=self.label_size["gripper"])
-        else:
-            mask = np.zeros((img.shape[0], img.shape[1], 1))
-        return mask, (tcp_y, tcp_x)
+        return (tcp_y, tcp_x)
 
 
-@hydra.main(config_path="../../config", config_name="cfg_datacollection")
+@hydra.main(config_path="../../../config", config_name="cfg_datacollection")
 def main(cfg):
-    labeler = DataLabeler(cfg, new_cfg=False)
+    labeler = DataLabeler(cfg, new_cfg=True)
     labeler.iterate()
     # labeler.after_loop()
 

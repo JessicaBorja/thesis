@@ -44,30 +44,29 @@ class DataLabelerLang(DataLabeler):
     def open_to_closed(self, dct):
         """
         dct =  {"robot_obs": robot_obs,
-                "last_pt": 3d pose where interaction ocurred,
+                "last_obs": 3d pose where interaction ocurred,
                 "frame_idx": frame of orig dataset,
                 "data": data}
         """
         curr_robot_obs = dct["robot_obs"]
-        last_pt = dct["last_pt"]
+        last_obs = dct["last_obs"]
         frame_idx = dct["frame_idx"]
         contact = self.get_contact_info(dct["data"])
 
-        curr_pt = curr_robot_obs[:3]
         if contact:
             self.save_dict["grasps"].append(frame_idx)
-            self.label_gripper(self.img_hist["gripper"], curr_pt, last_pt, contact)
+            self.label_gripper(self.img_hist["gripper"], curr_robot_obs, last_obs, contact)
             self.label_static(self.img_hist["static"], curr_robot_obs)
             self.img_hist = {"static": [], "gripper": []}
 
     def closed_gripper(self, dct):
         """
         dct = {"robot_obs": robot_obs,
-                "last_pt": last_pt,
+                "last_obs": last_obs,
                 "data": data} # np file of current robot obs
         """
         curr_robot_obs = dct["robot_obs"]
-        last_pt = dct["last_pt"]
+        last_obs = dct["last_obs"]
 
         curr_pt = curr_robot_obs[:3]
         contact = self.get_contact_info(dct["data"])
@@ -79,16 +78,16 @@ class DataLabelerLang(DataLabeler):
             if len(self.img_hist["static"]) > 1:
                 frame_idx = self.img_hist["static"][-1][0]
                 self.save_dict["grasps"].append(frame_idx)
-            self.label_gripper(self.img_hist["gripper"], curr_pt, last_pt, contact)
+            self.label_gripper(self.img_hist["gripper"], curr_pt, last_obs, contact)
             self.img_hist = {"static": [], "gripper": []}
 
     def closed_to_open(self, dct):
         """
         dct = {"robot_obs": robot_obs,
-                "last_pt": last_pt,
+                "last_obs": last_obs,
                 "frame_idx": frame_idx}
         """
-        # self._project_pt = dct["last_pt"]
+        # self._project_pt = dct["last_obs"]
         # self.label_static(self.img_hist["static"], dct["robot_obs"])
         return
 
@@ -114,12 +113,12 @@ class DataLabelerLang(DataLabeler):
         # log.info("Saved frames")
         return False
 
-    def label_gripper(self, img_hist, curr_pt, last_pt, contact):
+    def label_gripper(self, img_hist, curr_obs, last_obs, contact):
         cam = "gripper"
         out_img_size = self.output_size[cam]
         save_dict = {}
         self._last_task_centers = None
-
+        curr_pt = curr_obs[:3]
         for idx, (fr_idx, ep_id, im_id, robot_obs, img, depth) in enumerate(img_hist):
             # Shape: [H x W x 2]
             H, W = out_img_size  # img.shape[:2]
@@ -141,8 +140,8 @@ class DataLabelerLang(DataLabeler):
             if robot_obs[-1] > self.gripper_width_tresh or contact:
                 if curr_pt is not None:
                     # Center in matrix convention (row, column)
-                    mask, center_px = self.get_gripper_mask(img, robot_obs[:-1], curr_pt)
-                    center_px = resize_center(center_px, mask.shape[:2], out_img_size)
+                    center_px = self.get_gripper_label(robot_obs[:-1], curr_pt)
+                    center_px = resize_center(center_px, img.shape[:2], out_img_size)
                     if np.all(center_px > 0) and np.all(center_px < H):
                         # Only one class, label as one
                         centers.append([0, *center_px])
@@ -163,6 +162,7 @@ class DataLabelerLang(DataLabeler):
                 "viz_out": out_img,
                 "gripper_width": robot_obs[-1],
                 "tcp_pos_world_frame": curr_pt,
+                "robot_obs": curr_obs,
             }
         self.save_dict[cam].update(save_dict)
 
@@ -202,8 +202,8 @@ class DataLabelerLang(DataLabeler):
             # Get centers
             if idx <= len(static_hist) - back_min and idx > len(static_hist) - back_max:
                 # Get new grip
-                mask, center_px = self.get_static_mask(img, self._project_pt)
-                center_px = resize_center(center_px, mask.shape[:2], out_img_size)
+                center_px = self.get_static_label(self._project_pt)
+                center_px = resize_center(center_px, img.shape[:2], out_img_size)
                 if np.all(center_px > 0) and np.all(center_px < H):
                     # Only one class, label as one
                     centers.append([label, *center_px])
@@ -225,7 +225,7 @@ class DataLabelerLang(DataLabeler):
                 "viz_out": out_img,
                 "tcp_pos_world_frame": self._project_pt,
                 "tcp_pos_cam_frame": pt_cam,
-                "full_obs": self._curr_robot_obs,
+                "robot_obs": self._curr_robot_obs,
             }
             self.saved_static_frames.add(im_id)
         self.save_dict[cam].update(save_dict)
@@ -299,6 +299,7 @@ class DataLabelerLang(DataLabeler):
 def main(cfg):
     labeler = DataLabelerLang(cfg)
     labeler.iterate()
+    # labeler.after_loop()
 
 
 if __name__ == "__main__":
