@@ -48,9 +48,7 @@ class BaseAgent:
                 run_cfg = os.path.join(hydra_run_dir, ".hydra/config.yaml")
                 if os.path.isfile(run_cfg):
                     train_cfg = OmegaConf.load(run_cfg)
-                    model_cfg = train_cfg.model
-                    model = DepthModule(model_cfg)
-                    model = model.load_from_checkpoint(checkpoint_path).cuda()
+                    model = DepthModule.load_from_checkpoint(checkpoint_path).cuda()
                     logger.info("Depth pred model successfully loaded: %s" % checkpoint_path)
             else:
                 logger.info("No checkpoint file found %s" % checkpoint_path)

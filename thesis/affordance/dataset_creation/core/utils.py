@@ -170,8 +170,10 @@ def create_json_file(
         selected_static_files = select_files(
             static_cam_files, remove_blank_mask_instances, min_labels=min_labels, only_language=only_language
         )
-        data[split].update({ep_str: selected_gripper_files})
-        data[split][ep_str].extend(selected_static_files)
+
+        ep_data = {"gripper_cam": [f.split(os.sep)[-1] for f in selected_gripper_files],
+                   "static_cam": [f.split(os.sep)[-1] for f in selected_static_files]}
+        data[split].update({ep_str: ep_data})
     data["n_classes"] = n_classes
     with open(root_dir + "/episodes_split.json", "w") as outfile:
         json.dump(data, outfile, indent=2)

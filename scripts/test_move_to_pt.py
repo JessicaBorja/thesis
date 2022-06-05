@@ -22,7 +22,7 @@ def main(cfg):
     for caption in captions:  # n instructions
         # caption = "use the switch to turn on the light bulb" # input("Type an instruction \n")
         # caption = "open the drawer"
-
+        # obs = env.reset()
         agent.reset(caption)
         goal = agent.encode(caption)
         for j in range(cfg.max_timesteps):

@@ -28,7 +28,10 @@ def main(cfg):
 
     # Logger
     if(cfg.aff_detection.name != cfg.run_name):
-        cfg.wandb.logger.name = "%s_%s" % (cfg.aff_detection.name, cfg.run_name)
+        data_percent_str = str(cfg.aff_detection.dataset.data_percent * 100)
+        cfg.wandb.logger.name = "%s_%s_%s" % (cfg.aff_detection.name,
+                                              cfg.run_name,
+                                              data_percent_str)
     wandb_logger = WandbLogger(**cfg.wandb.logger)
 
     # Checkpoint saver

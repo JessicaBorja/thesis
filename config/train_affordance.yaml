@@ -34,6 +34,7 @@ aff_detection:
     _recursive_: False
     data_dir: ${paths.datasets}/${dataset_name}
     cam: static
+    data_percent: 1.0
     img_resize:
       static: 224  # clip img size
       gripper: 96

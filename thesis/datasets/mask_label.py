@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 import logging
+from thesis.affordance.utils.utils import split_by_percentage
 from thesis.utils.utils import add_img_text, resize_pixel, get_abspath, get_transforms, overlay_mask, overlay_flow
 from thesis.datasets.transforms import NormalizeInverse
 import thesis.utils.flowlib as flowlib
@@ -19,7 +20,7 @@ class MaskLabelLabelDataLang(Dataset):
         data_dir,
         transforms,
         radius,
-        n_train_ep=-1,
+        data_percent=1.0,
         split="training",
         cam="static",
         log=None,
@@ -33,7 +34,7 @@ class MaskLabelLabelDataLang(Dataset):
         self.log = log
         self.data_dir = get_abspath(data_dir)
         _data_info = self.read_json(os.path.join(self.data_dir, episodes_file))
-        self.data = self._get_split_data(_data_info, split, cam, n_train_ep)
+        self.data = self._get_split_data(_data_info, split, cam, data_percent)
         self.img_resize = img_resize
         _transforms_dct = get_transforms(transforms[split], img_resize[cam])
         self.transforms = _transforms_dct["transforms"]
@@ -69,21 +70,16 @@ class MaskLabelLabelDataLang(Dataset):
         test_tensor = self.transforms(test_tensor)
         return test_tensor.shape  # C, H, W
 
-    def _get_split_data(self, data, split, cam, n_train_ep):
+    def _get_split_data(self, data, split, cam, data_percent):
         split_data = []
         split_episodes = list(data[split].keys())
 
-        # Select amount of data to train on
-        if n_train_ep > 0 and split == "training":
-            assert len(split_episodes) >= n_train_ep, "n_train_ep must <= %d" % len(split_episodes)
-            split_episodes = np.random.choice(split_episodes, n_train_ep, replace=False)
+        new_data = split_by_percentage(self.data_dir, data, data_percent)
 
         print("%s episodes: %s" % (split, str(split_episodes)))
         for ep in split_episodes:
-            data[split][ep].sort()
-            for file in data[split][ep]:
-                if cam in file or cam == "all":
-                    split_data.append("%s/%s" % (ep, file))
+            split_files = ["%s/%s" % (ep, file) for file in new_data[split][ep]["%s_cam" % cam]]
+            split_data.extend(split_files)
         print("%s images: %d" % (split, len(split_data)))
         return split_data
 
@@ -92,10 +88,8 @@ class MaskLabelLabelDataLang(Dataset):
 
     def __getitem__(self, idx):
         # directions: optical flow image in middlebury color
-
-        head, filename = os.path.split(self.data[idx].replace("\\", "/"))
-        episode, cam_folder = os.path.split(head)
-        data = np.load(self.data_dir + "/%s/data/%s/%s.npz" % (episode, cam_folder, filename))
+        episode, filename = os.path.split(self.data[idx].replace("\\", "/"))
+        data = np.load(self.data_dir + "/%s/data/%s_cam/%s.npz" % (episode, self.cam, filename))
 
         # Images are stored in BGR
         old_shape = data["frame"].shape[:2]

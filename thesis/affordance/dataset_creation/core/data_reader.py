@@ -41,7 +41,7 @@ class DataReader:
         pass
 
     def get_robot_state(self, data):
-        if self.mode == "simulation" or "processed" not in self.mode:
+        if self.mode != "simulation" and "processed" not in self.mode:
             proprio = data["robot_state"].item()
             # orn = p.getEulerFromQuaternion(proprio["tcp_orn"])
             orn = proprio["tcp_orn"]
@@ -71,7 +71,7 @@ class DataReader:
         past_action = 1
         frame_idx = 0
         episode = 0
-        last_pt = None
+        last_obs = None
 
         # Iterate rendered_data
         files = self.files
@@ -111,7 +111,6 @@ class DataReader:
                     (frame_idx, ep_id, "%s_%s" % (c, img_id), robot_obs, data["rgb_%s" % c], data["depth_%s" % c])
                 )
             frame_idx += 1
-            curr_point = robot_obs[:3]
             # Start of interaction
             if self.mode == "simulation" or "processed" in self.mode:
                 ep_id = int(tail[:-4].split("_")[-1])
@@ -127,19 +126,19 @@ class DataReader:
                 # Get mask for static images
                 # open -> closed
                 if past_action == 1:
-                    dct = {"robot_obs": robot_obs, "last_pt": last_pt, "frame_idx": frame_idx - 1, "data": data}
+                    dct = {"robot_obs": robot_obs, "last_obs": last_obs, "frame_idx": frame_idx - 1, "data": data}
                     self.open_to_closed(dct)
                 else:
                     # On gripper closed
                     # Was closed and remained closed
-                    dct = {"robot_obs": robot_obs, "last_pt": last_pt, "data": data}
+                    dct = {"robot_obs": robot_obs, "last_obs": last_obs, "data": data}
                     self.closed_gripper(dct)
             else:
                 # closed -> open
                 if past_action <= 0:
-                    dct = {"robot_obs": robot_obs, "last_pt": last_pt, "frame_idx": frame_idx - 1}
+                    dct = {"robot_obs": robot_obs, "last_obs": last_obs, "frame_idx": frame_idx - 1}
                     self.closed_to_open(dct)
-                    last_pt = curr_point
+                    last_obs = robot_obs
 
             # Reset everything
             if end_of_ep:
