@@ -8,9 +8,8 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import logging
-from omegaconf import OmegaConf
 from thesis.utils.utils import get_abspath
-
+from omegaconf import OmegaConf
 
 def print_cfg(cfg):
     print_cfg = OmegaConf.to_container(cfg)
@@ -28,10 +27,9 @@ def main(cfg):
 
     # Logger
     if(cfg.aff_detection.name != cfg.run_name):
-        data_percent_str = str(cfg.aff_detection.dataset.data_percent * 100)
-        cfg.wandb.logger.name = "%s_%s_%s" % (cfg.aff_detection.name,
-                                              cfg.run_name,
-                                              data_percent_str)
+        # data_percent_str = str(cfg.aff_detection.dataset.data_percent * 100)
+        cfg.wandb.logger.name = "%s_%s" % (cfg.aff_detection.name,
+                                              cfg.run_name)
     wandb_logger = WandbLogger(**cfg.wandb.logger)
 
     # Checkpoint saver
@@ -69,7 +67,9 @@ def main(cfg):
 
     # Initialize agent
     in_shape = train.out_shape[::-1]  # H, W, C
-    model = hydra.utils.instantiate(cfg.aff_detection.model, in_shape=in_shape)
+    model = hydra.utils.instantiate(cfg.aff_detection.model,
+                                    in_shape=in_shape,
+                                    depth_norm_values=val.depth_norm_values)
 
     # Resume epoch and global_steps
     if last_checkpoint:

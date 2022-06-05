@@ -75,7 +75,11 @@ class PixeLabelDataLang(Dataset):
         split_data = []
         split_episodes = list(data[split].keys())
 
-        new_data = split_by_percentage(self.data_dir, data, data_percent)
+        ## Hack to test overfit dataset
+        if data_percent < 1.0:
+            new_data = split_by_percentage(self.data_dir, data, data_percent)
+        else:
+            new_data = data
 
         print("%s episodes: %s" % (split, str(split_episodes)))
         for ep in split_episodes:

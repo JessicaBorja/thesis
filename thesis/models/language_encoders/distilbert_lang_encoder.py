@@ -1,23 +1,24 @@
 import torch
-from transformers import DistilBertTokenizer, DistilBertModel
+from transformers import DistilBertTokenizer, DistilBertModel, DistilBertConfig
 import torch
 import torch.nn as nn
-from thesis.models.language_encoders.lang_enc import LangEncoder
+from thesis.models.language_encoders.base_lang_encoder import LangEncoder
 
 
 class BERTLang(LangEncoder):
-    def __init__(self, device, fixed=True) -> None:
-        super(BERTLang, self).__init__()
-        self._load_model()
-        self.device = device
-        self.fixed = fixed
+    def __init__(self, device, fixed=True, pretrained=True) -> None:
+        super(BERTLang, self).__init__(device, fixed, pretrained)
 
     def _load_model(self):
         self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-        self.text_encoder = DistilBertModel.from_pretrained('distilbert-base-uncased')
+        if self.pretrained:
+            self.text_encoder = DistilBertModel.from_pretrained('distilbert-base-uncased')
+        else:
+            distilbert_config = DistilBertConfig()
+            self.text_encoder = DistilBertModel(distilbert_config)
         self.text_fc = nn.Linear(768, 1024)
 
-    def forward(self, x):
+    def encode_text(self, x):
         with torch.no_grad():
             inputs = self.tokenizer(x, return_tensors='pt')
             input_ids, attention_mask = inputs['input_ids'].to(self.device), inputs['attention_mask'].to(self.device)

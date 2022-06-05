@@ -5,21 +5,17 @@ import torch.nn as nn
 
 
 class LangEncoder(nn.Module):
-    def __init__(self, device, fixed=True) -> None:
+    def __init__(self, device, fixed=True, pretrained=True) -> None:
         super(LangEncoder, self).__init__()
-        self._load_model()
         self.device = device
         self.fixed = fixed
+        self.pretrained = pretrained
+        self._load_model()
 
-    def encode(self, x):
-        ''' Get sentence encodings for a given annotation'''
-        text_enc, text_embeddings, text_mask = self.forward(x)
-        return text_enc
-    
     def _load_model(self):
         raise NotImplementedError()
 
-    def forward(self, x):
+    def encode_text(self, x):
         '''
             Returns:
                 - text_encodings

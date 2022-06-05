@@ -8,29 +8,26 @@ from thesis.models.core.resnet import IdentityBlock, ConvBlock
 
 from thesis.models.core.unet import Up
 from thesis.models.core import fusion
+from thesis.models.visual_lang_encoders.base_lingunet import BaseLingunet
 
 
-class RN50BertLingUNet():
+class RN50LingUNet(BaseLingunet):
     """ ImageNet RN50 & Bert with U-Net skip connections """
 
     def __init__(self, input_shape, output_dim, cfg, device):
-        super(RN50BertLingUNet, self).__init__()
-        self.input_shape = input_shape
+        super(RN50LingUNet, self).__init__()
         self.output_dim = output_dim
         self.input_dim = 2048
-        self.cfg = cfg
         self.batchnorm = self.cfg['batchnorm']
-        self.lang_fusion_type = self.cfg['lang_fusion_type']
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
-        self.device = device
 
         self._load_vision_fcn()
         self._load_lang_enc()
         self._build_decoder()
 
     def _load_vision_fcn(self):
-        resnet50 = models.resnet50(pretrained=True)
+        resnet50 = models.resnet50(pretrained=self.pretrained)
         modules = list(resnet50.children())[:-2]
 
         self.stem = nn.Sequential(*modules[:4])
@@ -40,10 +37,6 @@ class RN50BertLingUNet():
         self.layer4 = modules[7]
 
     def _load_lang_enc(self):
-        self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-        self.text_encoder = DistilBertModel.from_pretrained('distilbert-base-uncased')
-        self.text_fc = nn.Linear(768, 1024)
-
         self.lang_fuser1 = fusion.names[self.lang_fusion_type](input_dim=self.input_dim // 2)
         self.lang_fuser2 = fusion.names[self.lang_fusion_type](input_dim=self.input_dim // 4)
         self.lang_fuser3 = fusion.names[self.lang_fusion_type](input_dim=self.input_dim // 8)
@@ -95,16 +88,6 @@ class RN50BertLingUNet():
         with torch.no_grad():
             img_encoding, img_im = self.resnet50(img)
         return img_encoding, img_im
-
-    def encode_text(self, x):
-        with torch.no_grad():
-            inputs = self.tokenizer(x, return_tensors='pt')
-            input_ids, attention_mask = inputs['input_ids'].to(self.device), inputs['attention_mask'].to(self.device)
-            text_embeddings = self.text_encoder(input_ids, attention_mask)
-            text_encodings = text_embeddings.last_hidden_state.mean(1)
-        text_feat = self.text_fc(text_encodings)
-        text_mask = torch.ones_like(input_ids) # [1, max_token_len]
-        return text_feat, text_embeddings.last_hidden_state, text_mask
 
     def forward(self, x, l):
         in_type = x.dtype

@@ -1,4 +1,4 @@
-name: 'rn18_clip_lingunet'
-
+vision_net: rn18
+lang_enc: clip
 defaults:
   - /transforms: clip_randShift_color

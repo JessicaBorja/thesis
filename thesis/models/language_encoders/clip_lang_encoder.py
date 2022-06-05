@@ -1,15 +1,12 @@
 import torch
 import torch.nn as nn
 from thesis.models.core.clip import build_model, load_clip, tokenize
-from thesis.models.language_encoders.lang_enc import LangEncoder
+from thesis.models.language_encoders.base_lang_encoder import LangEncoder
 
 
 class CLIPLang(LangEncoder):
-    def __init__(self, device, fixed=True) -> None:
-        super(CLIPLang, self).__init__()
-        self.fixed = fixed
-        self.device = device
-        self._load_model()
+    def __init__(self, device, fixed=True, pretrained=True) -> None:
+        super(CLIPLang, self).__init__(device, fixed, pretrained)
 
     def _load_model(self):
         model, _ = load_clip("RN50", device=self.device)
@@ -19,7 +16,12 @@ class CLIPLang(LangEncoder):
             param.requires_grad = False
         self.model = _clip_rn50
 
-    def forward(self, x):
+    def encode_image(self, img):
+        with torch.no_grad():
+            img_encoding, img_im = self.clip_rn50.visual.prepool_im(img)
+        return img_encoding, img_im
+
+    def encode_text(self, x):
         with torch.no_grad():
             tokens = tokenize(x).to(self.device)
             text_feat, text_emb = self.model.encode_text_with_embeddings(tokens)

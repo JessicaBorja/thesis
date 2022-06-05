@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from pytorch_lightning import LightningModule
 import thesis.models as models
-from thesis.models.language_encoders.lang_clip import CLIPLang
+from thesis.models.language_encoders.clip_lang_encoder import CLIPLang
 from thesis.datasets.transforms import NormalizeVectorInverse
 
 

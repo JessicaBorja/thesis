@@ -25,8 +25,9 @@ trainer:
 dataset_name: calvin_lang_MoCEndPt
 aff_detection:
   model:
-    depth_dist: null  # logistic / gaussian
+    depth_dist: gaussian # logistic / gaussian
     cfg:
+      normalize_depth: False
       loss_weights:
         aff: 1.0
         depth: 1.0
@@ -51,6 +52,7 @@ wandb:
     entity: jessibd
     project: aff_lang
     offline: False
+    group: ${aff_detection.dataset.data_percent}p
   saver: ${aff_detection.wandb_saver}
 
 #-- Hydra config --#

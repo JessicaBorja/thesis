@@ -1,8 +1,3 @@
-###########################################
-#### Authors: Mohit Shridhar, Lucas Manuelli, Dieter Fox
-#### Credit: https://github.com/cliport/cliport
-#### Apache License 2.0
-
 import numpy as np
 import torch
 import torch.nn.functional as F

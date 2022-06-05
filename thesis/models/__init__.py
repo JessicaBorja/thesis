@@ -1,19 +1,24 @@
-from .visual_lang_encoders.rn50_bert_lingunet import RN50BertLingUNet
-from .visual_lang_encoders.untrained_rn50_bert_lingunet import UntrainedRN50BertLingUNet
+# Vision networks
+from .visual_lang_encoders.rn50_unet import RN50LingUNet
+from .visual_lang_encoders.rn18_unet import RN18Lingunet
+from .visual_lang_encoders.rn50_clip_lingunet import CLIPLingUNet
 
-from .visual_lang_encoders.clip_lingunet import CLIPLingUNet
+# Language encoders
+from .language_encoders.clip_lang_encoder import CLIPLang
+from .language_encoders.distilbert_lang_encoder import BERTLang
+from .language_encoders.sbert_lang_encoder import SBertLang
 
-# VAPO enc-dec arch
-from .visual_lang_encoders.rn18_clip_lingunet import RN18CLIPLingunet
-from .visual_lang_encoders.rn18_bert_lingunet import RN18BertLingunet
+lang_encoders = {
+    "clip": CLIPLang,
+    "bert": BERTLang,
+    "sbert": SBertLang
+}
 
-lang_img_nets = {
+vision_encoders = {
     # Lang Nets
-    'untrained_rn50_bert_lingunet': UntrainedRN50BertLingUNet,
-    'rn50_bert_lingunet': RN50BertLingUNet,
-    'rn50_clip_lingunet': CLIPLingUNet,
-    'rn18_clip_lingunet': RN18CLIPLingunet,
-    'rn18_bert_lingunet': RN18BertLingunet,
+    'clip': CLIPLingUNet,
+    'rn50': RN50LingUNet,
+    'rn18': RN18Lingunet,
 }
 
 # Depth estimatiom models

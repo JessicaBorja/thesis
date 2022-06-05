@@ -1,24 +1,29 @@
 import cv2
-import hydra
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 import logging
+from omegaconf import open_dict
 
-import thesis.models as models
-from thesis.models.lang_fusion.one_stream_attention_lang_fusion_pixel import AttentionLangFusionPixel
+from thesis.models.lang_fusion.aff_lang_depth_pixel import AffDepthLangFusionPixel
 from thesis.utils.utils import add_img_text, tt, blend_imgs,get_transforms, resize_pixel, unravel_idx
 from thesis.utils.losses import cross_entropy_with_logits
 
 class PixelAffLangDetector(LightningModule):
-    def __init__(self, cfg, in_shape=(200, 200, 3), transforms=None,
-                 depth_dist=None, *args, **kwargs):
+    def __init__(self, cfg,
+                 in_shape=(200, 200, 3),
+                 transforms=None,
+                 depth_dist=None,
+                 depth_norm_values=None,
+                 *args, **kwargs):
         super().__init__()
         self.loss_weights = cfg.loss_weights
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # append depth transforms to cfg
+        with open_dict(cfg):
+            cfg.depth_norm_values=depth_norm_values
         self.cfg = cfg
         self.total_steps = 0
         self.in_shape = in_shape
@@ -35,13 +40,13 @@ class PixelAffLangDetector(LightningModule):
         self.save_hyperparameters()
 
     def training_step(self, batch, batch_idx):
-        self.attention.train()
+        self.model.train()
 
         frame, label = batch
 
         # Get training losses.
         step = self.total_steps + 1
-        total_loss, err, info = self.attn_step(frame, label, compute_err=True)
+        total_loss, err, info = self.step(frame, label, compute_err=True)
         bs = frame["img"].shape[0]
 
         self.log('Training/total_loss', total_loss,
@@ -60,10 +65,10 @@ class PixelAffLangDetector(LightningModule):
         return total_loss
 
     def validation_step(self, batch, batch_idx):
-        self.attention.eval()
+        self.model.eval()
 
         frame, label = batch
-        val_total_loss, err, info = self.attn_step(frame, label, compute_err=True)
+        val_total_loss, err, info = self.step(frame, label, compute_err=True)
         bs = frame["img"].shape[0]
         self.log('Validation/total_loss', val_total_loss,
                  on_step=False, on_epoch=True,
@@ -71,12 +76,6 @@ class PixelAffLangDetector(LightningModule):
         for loss_fnc, value in info.items():
             self.log('Validation/%s' % loss_fnc, value,
                      on_step=False, on_epoch=True,)
-
-        # self.log('Validation/dist_err', err['px_dist'])
-        # if self.pred_depth:
-        #     self.log('Validation/depth_err', err['depth'],
-        #             on_step=False, on_epoch=True,
-        #             batch_size=bs)
         return dict(
             val_loss=val_total_loss,
             val_attn_dist_err=err['px_dist'],
@@ -101,31 +100,28 @@ class PixelAffLangDetector(LightningModule):
         print("\nAttn Err - Dist: {:.2f}".format(total_dist_err))
 
     def configure_optimizers(self):
-        optim = torch.optim.Adam(self.attention.parameters(), lr=self.cfg.lr)
+        optim = torch.optim.Adam(self.model.parameters(), lr=self.cfg.lr)
         return optim
 
     def _build_model(self):
-        self.attention = AttentionLangFusionPixel(
-            stream_fcn=self.cfg.streams.name,
+        self.model = AffDepthLangFusionPixel(
+            modules_cfg=[self.cfg.streams.vision_net,
+                         self.cfg.streams.lang_enc,
+                         self.depth_est_dist],
             in_shape=self.in_shape,
             cfg=self.cfg,
             device=self.device_type,
         )
-        if self.pred_depth:
-            _depth_est = models.deth_est_nets[self.depth_est_dist]
-            self.depth_est = _depth_est(self.in_shape, 1, self.cfg, self.device_type)
 
-    def attn_forward(self, inp, softmax=True):
+    def forward(self, inp, softmax=True):
         inp_img = inp['inp_img']
         lang_goal = inp['lang_goal']
-        out_aff, _info = self.attention(inp_img, lang_goal, softmax=softmax)
-        out = {"aff": out_aff}
-        if self.pred_depth:
-            dist, _info = self.depth_est(inp_img, _info['text_enc'])
-            out.update({"depth_dist": dist})
-        return out  # B, H, W
+        output, _info = self.model(inp_img, lang_goal, softmax=softmax)
+        return output
 
-    def attn_criterion(self, compute_err, inp, pred, label, reparametrize=False):
+    def criterion(self, compute_err, inp, pred, label, reparametrize=False):
+
+        # AFFORDANCE CRITERION #
         inp_img = inp['inp_img']
         B = inp_img.shape[0]
 
@@ -144,7 +140,7 @@ class PixelAffLangDetector(LightningModule):
         aff_loss = cross_entropy_with_logits(pred["aff"], aff_label)
         if self.pred_depth:
             gt_depth = label["depth"].unsqueeze(-1).float()
-            depth_loss = self.depth_est.loss(pred['depth_dist'], gt_depth)
+            depth_loss = self.model.depth_stream.loss(pred['depth_dist'], gt_depth)
         else: 
             depth_loss = 0
 
@@ -152,18 +148,12 @@ class PixelAffLangDetector(LightningModule):
         err = {}
         if compute_err:
             # Pixel distance error
-            pick_conf = self.attn_forward(inp)['aff'][:, :, :, 0]  # B, H, W 
-            pick_conf = pick_conf.detach().cpu().numpy()
-            indices = np.argmax(pick_conf.reshape((B,-1)), -1)
-            p0_pix = unravel_idx(indices, shape=pick_conf.shape[1:])
-
+            p0_pix, depth_sample, _ = self.model.predict(**inp)  # B, H, W 
             # Depth error
             depth_error = 0
             if self.pred_depth:
-                sample = self.depth_est.sample(pred["depth_dist"], reparametrize)
-                sample = sample.squeeze().detach().cpu().numpy()
                 gt_depth = label["depth"].detach().cpu().numpy()
-                depth_error = np.sum(np.abs(sample - gt_depth))
+                depth_error = np.sum(np.abs(depth_sample - gt_depth))
             err = {"px_dist": np.sum(np.linalg.norm(p0 - p0_pix, axis=1)),
                     "depth": depth_error}
 
@@ -173,12 +163,12 @@ class PixelAffLangDetector(LightningModule):
                 "depth_loss": depth_loss}
         return loss, err, info
 
-    def attn_step(self, frame, label, compute_err=False, reparametrize=False):
+    def step(self, frame, label, compute_err=False, reparametrize=False):
         inp_img = frame['img']
         lang_goal = frame['lang_goal']
         inp = {'inp_img': inp_img, 'lang_goal': lang_goal}
-        out = self.attn_forward(inp, softmax=False)
-        return self.attn_criterion(compute_err, inp, out, label, reparametrize)
+        out = self.forward(inp, softmax=False)
+        return self.criterion(compute_err, inp, out, label, reparametrize)
 
     def predict(self, obs, goal=None, info=None):
         """ Run inference and return best pixel given visual observations.
@@ -202,30 +192,23 @@ class PixelAffLangDetector(LightningModule):
         # Attention model forward pass.
         pick_inp = {'inp_img': img,
                     'lang_goal': lang_goal}
-        out = self.attn_forward(pick_inp)
-        pick_conf = out["aff"]
+        p0_pix, depth, logits = self.model.predict(pick_inp)
+        p0_pix = p0_pix.squeeze()
+        depth = depth.squeeze()
         pick_inp["img"] = img
 
         err = None
         if info is not None:
-            _, err = self.attn_step(pick_inp, info, compute_err=True)
+            _, err = self.step(pick_inp, info, compute_err=True)
 
-        # Get Aff point
-        logits = pick_conf.detach().cpu().numpy().squeeze()
-        argmax = np.argmax(logits)
-        argmax = np.unravel_index(argmax, shape=logits.shape)
-        p0_pix = argmax[:2]
-        
+        # Get Aff mask
         affordance_heatmap_scale = 30
         pick_logits_disp = (logits * 255 * affordance_heatmap_scale).astype('uint8')
         pick_logits_disp_masked = np.ma.masked_where(pick_logits_disp < 0, pick_logits_disp)
 
-        # Get depth
-        # depth = self.depth_est.sample(out["depth_dist"])
-
         return {"softmax": pick_logits_disp,
                 "pixel": (p0_pix[1], p0_pix[0]),
-                # "depth": depth,
+                "depth": depth,
                 "error": err}
 
     def get_preds_viz(self, inp, pred, out_shape=(300, 300), waitkey=0):

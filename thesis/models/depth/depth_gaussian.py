@@ -6,8 +6,8 @@ from torch.distributions import Normal, Independent
 import torchvision.models as models
 
 import numpy as np
-from thesis.models.language_encoders.lang_clip import CLIPLang
-from thesis.datasets.transforms import NormalizeInverse
+from thesis.models.language_encoders.clip_lang_encoder import CLIPLang
+from thesis.datasets.transforms import NormalizeVectorInverse
 
 class DepthEstimationGaussian(nn.Module):
     def __init__(self, input_shape, output_dim, cfg, device):
@@ -26,8 +26,14 @@ class DepthEstimationGaussian(nn.Module):
         self.text_enc = CLIPLang(self.device)
         self.loss_fcn = nn.GaussianNLLLoss()
         self.img_encoder = self._load_img_encoder()
+
+        self.normalized = cfg.normalize_depth
+        self.init_depth_transforms(cfg.depth_norm_values)
         self._build_decoder()
-    
+
+    def init_depth_transforms(self, depth_norm_values):
+        self.depth_norm_inverse = NormalizeVectorInverse(depth_norm_values["mean"], depth_norm_values["std"])
+ 
     def calc_img_enc_size(self):
         test_tensor = torch.zeros(self.input_shape).permute(2, 0, 1)
         test_tensor = test_tensor.to(self.device).unsqueeze(0)
@@ -40,11 +46,22 @@ class DepthEstimationGaussian(nn.Module):
         return model
 
     def sample(self, depth_dist, reparametrize=True):
+        '''
+            Sample from distribution and undo normalization.Used for inference
+            output:
+                depth(torch.tensor): estimated depth in world/camera frame
+            input:
+                depth_dist: output of forward pass
+        '''
         dist, _, _ = depth_dist
         if reparametrize:
             sample = dist.rsample()
         else:
             sample = dist.sample()
+        
+        if self.normalized:
+            sample = self.depth_norm_inverse(sample)
+            sample = sample.squeeze().detach().cpu().numpy()
         return sample
 
     def encode_image(self, img):
@@ -64,7 +81,34 @@ class DepthEstimationGaussian(nn.Module):
         self.depth_mu = nn.Linear(hidden_dim, 1)
         self.depth_sigma = nn.Linear(hidden_dim, 1)
 
-    def depth_forward(self, x, l_input):
+    def loss(self, pred, gt_depth):
+        dist, mu, sigma = pred
+        depth_loss = self.loss_fcn(mu, gt_depth, sigma)
+        # depth_loss = -pred["depth_dist"].log_prob(gt_depth).mean()
+        # neg_samples = pred["depth_dist"].sample()
+        # depth_loss += pred["depth_dist"].log_prob(neg_samples).mean()
+        # pred_depth = out["depth_dist"].rsample()
+        # depth_loss = F.mse_loss(pred_depth, gt_depth)
+        return depth_loss
+
+    def forward(self, x, text_enc):
+        in_type = x.dtype
+        x = x[:,:3]  # select RGB
+        x = self.encode_image(x)
+        x = x.to(in_type)
+
+        # encode text
+        l_enc, l_emb, l_mask  = text_enc
+        l_input = l_enc.to(dtype=x.dtype)
+    
+        _info = {"hidden_layers": [x],
+                 "l_input": l_input,
+                 "fusion_type": self.lang_fusion_type}
+        # Decoder
+        B, C, H, W = x.shape
+        x = x.reshape((B, -1))
+
+        # Predict distribution
         x = torch.cat([x, l_input], -1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -75,40 +119,4 @@ class DepthEstimationGaussian(nn.Module):
 
         # Sample
         dist = Independent(Normal(mu, sigma), 1)
-        return dist, mu, sigma
-
-    def predict(self, x, l_ann):
-        l_enc = self.text_enc(l_ann)[0]
-        x = self.depth_forward(x, l_enc)
-        sample = self.sample(x)
-        sample = sample.squeeze().detach().cpu().numpy()
-        return sample
-
-    def loss(self, pred, gt_depth):
-        dist, mu, sigma = pred['depth_dist']
-        depth_loss = self.loss_fcn(mu, gt_depth, sigma)
-        # depth_loss = -pred["depth_dist"].log_prob(gt_depth).mean()
-        # neg_samples = pred["depth_dist"].sample()
-        # depth_loss += pred["depth_dist"].log_prob(neg_samples).mean()
-        # pred_depth = out["depth_dist"].rsample()
-        # depth_loss = F.mse_loss(pred_depth, gt_depth)
-        return depth_loss
-
-    def forward(self, x, l_enc):
-        in_type = x.dtype
-        x = x[:,:3]  # select RGB
-        x = self.encode_image(x)
-        x = x.to(in_type)
-
-        # encode text
-        l_input = l_enc.to(dtype=x.dtype)
-    
-        _info = {"hidden_layers": [x],
-                 "l_input": l_input,
-                 "fusion_type": self.lang_fusion_type}
-        # Decoder
-        B, C, H, W = x.shape
-        x = x.reshape((B, -1))
-        dist = self.depth_forward(x, l_input)
-
-        return dist, _info
+        return (dist, mu, sigma), _info

@@ -5,8 +5,8 @@ import torch.nn.functional as F
 
 from thesis.models.core.resnet import IdentityBlock, ConvBlock
 from thesis.models.core.unet import Up
-from thesis.models.core.clip import build_model, load_clip, tokenize
 from thesis.models.core import fusion
+from thesis.models.visual_lang_encoders.base_lingunet import BaseLingunet
 
 from thesis.utils.utils import calc_cnn_out_size
 
@@ -27,23 +27,17 @@ class LangFusionBlock(nn.Module):
         x = self.up_conv(x, skip_conn)
         return x
 
-class CLIPLingUNet(nn.Module):
+class CLIPLingUNet(BaseLingunet):
     """ CLIP RN50 with U-Net skip connections """
 
-    def __init__(self, input_shape, output_dim, cfg, device):
-        super(CLIPLingUNet, self).__init__()
-        self.input_shape = input_shape
+    def __init__(self, input_shape, output_dim, cfg, device, clip_rn50):
+        super(CLIPLingUNet, self).__init__(input_shape, output_dim, cfg, device)
         self.output_dim = output_dim
         self.input_dim = 2048  # penultimate layer channel-size of CLIP-RN50
-        self.cfg = cfg
-        self.device = device
         self.batchnorm = self.cfg['batchnorm']
-        self.lang_fusion_type = self.cfg['lang_fusion_type']
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
-
-        # Use clip preprocessing
-        self.clip_rn50 = self._load_clip()
+        self.clip_rn50 = clip_rn50
         self._build_decoder()
     
     def calc_img_enc_size(self):
@@ -51,15 +45,6 @@ class CLIPLingUNet(nn.Module):
         test_tensor = test_tensor.to(self.device).unsqueeze(0)
         shape = self.encode_image(test_tensor)[0].shape[1:]
         return shape
-
-    def _load_clip(self):
-        model, _ = load_clip("RN50", device=self.device)
-        _clip_rn50 = build_model(model.state_dict()).to(self.device)
-        del model
-        # Fix encoder weights. Only train decoder
-        for param in _clip_rn50.parameters():
-            param.requires_grad = False
-        return _clip_rn50
 
     def _build_decoder(self):
         # language
@@ -132,23 +117,14 @@ class CLIPLingUNet(nn.Module):
             img_encoding, img_im = self.clip_rn50.visual.prepool_im(img)
         return img_encoding, img_im
 
-    def encode_text(self, x):
-        with torch.no_grad():
-            tokens = tokenize(x).to(self.device)
-            text_feat, text_emb = self.clip_rn50.encode_text_with_embeddings(tokens)
-
-        text_mask = torch.where(tokens==0, tokens, 1)  # [1, max_token_len]
-        return text_feat, text_emb, text_mask
-
-    def forward(self, x, l):
+    def forward(self, x, text_enc):
         in_type = x.dtype
         in_shape = x.shape
         x = x[:,:3]  # select RGB
         x, im = self.encode_image(x)
         x = x.to(in_type)
 
-        # encode text
-        text_enc = self.encode_text(l)
+        # encoded text
         l_enc, l_emb, l_mask  = text_enc
         l_input = l_enc.to(dtype=x.dtype)
     

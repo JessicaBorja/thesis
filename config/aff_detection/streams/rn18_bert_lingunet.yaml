@@ -1,4 +1,4 @@
-name: 'rn18_bert_lingunet'
-
+vision_net: rn18
+lang_enc: bert
 defaults:
   - /transforms: rgb
