@@ -120,6 +120,10 @@ class PixelAffLangDetector(LightningModule):
         return output
 
     def criterion(self, compute_err, inp, pred, label, reparametrize=False):
+        if self.model.depth_stream.normalized:
+            depth_label = "normalized_depth"
+        else:
+            depth_label = "depth"
 
         # AFFORDANCE CRITERION #
         inp_img = inp['inp_img']
@@ -139,7 +143,7 @@ class PixelAffLangDetector(LightningModule):
         # Get loss.
         aff_loss = cross_entropy_with_logits(pred["aff"], aff_label)
         if self.pred_depth:
-            gt_depth = label["depth"].unsqueeze(-1).float()
+            gt_depth = label[depth_label].unsqueeze(-1).float()
             depth_loss = self.model.depth_stream.loss(pred['depth_dist'], gt_depth)
         else: 
             depth_loss = 0
@@ -152,8 +156,9 @@ class PixelAffLangDetector(LightningModule):
             # Depth error
             depth_error = 0
             if self.pred_depth:
-                gt_depth = label["depth"].detach().cpu().numpy()
-                depth_error = np.sum(np.abs(depth_sample - gt_depth))
+                # Depth sample is unormalized in predict
+                unormalized_depth = label["depth"].detach().cpu().numpy()
+                depth_error = np.sum(np.abs(depth_sample - unormalized_depth))
             err = {"px_dist": np.sum(np.linalg.norm(p0 - p0_pix, axis=1)),
                     "depth": depth_error}
 

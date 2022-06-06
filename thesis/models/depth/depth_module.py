@@ -66,7 +66,6 @@ class DepthModule(LightningModule):
             if self.normalized:
                 sample = self.depth_norm_inverse(sample)
             sample = sample.squeeze().detach().cpu().numpy()
-            unormalized_depth = label["depth"].unsqueeze(-1).float()
             unormalized_depth = label["depth"].detach().cpu().numpy()
             depth_error = np.sum(np.abs(sample - unormalized_depth))
             err = {"depth": depth_error}
