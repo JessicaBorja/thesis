@@ -90,7 +90,10 @@ class AffDepthLangFusionPixel(nn.Module):
         return p0_pix, depth_pred, logits.squeeze()
 
     def forward(self, inp_img, lang_goal, softmax=True):
-        """Forward pass."""
+        """
+            Forward pass.
+            input img has transforms already applied
+        """
         in_data = F.pad(inp_img, self.padding, mode='constant')
         in_tens = in_data.to(dtype=torch.float, device=self.device) # [B 3 H W]
 

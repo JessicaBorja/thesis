@@ -26,10 +26,14 @@ def main(cfg):
     logger.info("Running configuration: %s", OmegaConf.to_yaml(print_cfg(cfg)))
 
     # Logger
+    _name = cfg.wandb.logger.name
     if(cfg.aff_detection.name != cfg.run_name):
         # data_percent_str = str(cfg.aff_detection.dataset.data_percent * 100)
-        cfg.wandb.logger.name = "%s_%s" % (cfg.aff_detection.name,
+        _name = "%s_%s" % (cfg.aff_detection.name,
                                            cfg.run_name)
+    if cfg.aff_detection.model.cfg.normalize_depth:
+        _name += "_normed"
+    cfg.wandb.logger.name = _name
     wandb_logger = WandbLogger(**cfg.wandb.logger)
 
     # Checkpoint saver

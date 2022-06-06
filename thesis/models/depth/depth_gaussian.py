@@ -61,7 +61,6 @@ class DepthEstimationGaussian(nn.Module):
         
         if self.normalized:
             sample = self.depth_norm_inverse(sample)
-            sample = sample.squeeze().detach().cpu().numpy()
         return sample
 
     def encode_image(self, img):
