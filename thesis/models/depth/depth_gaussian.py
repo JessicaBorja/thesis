@@ -25,9 +25,9 @@ class DepthEstimationGaussian(nn.Module):
         # Use clip preprocessing
         self.text_enc = CLIPLang(self.device)
         self.loss_fcn = nn.GaussianNLLLoss()
-        self.img_encoder = self._load_img_encoder()
+        self.img_encoder = self._load_img_encoder(cfg.freeze_backbone)
 
-        self.normalized = cfg.normalize_depth
+        self.normalized = cfg.normalized
         self.init_depth_transforms(cfg.depth_norm_values)
         self._build_decoder()
 
@@ -40,10 +40,17 @@ class DepthEstimationGaussian(nn.Module):
         shape = self.encode_image(test_tensor)[0].shape[1:]
         return shape
 
-    def _load_img_encoder(self):
-        model = models.resnet18(pretrained=True)
-        model = torch.nn.Sequential(*(list(model.children())[:-1]))
-        return model
+    def _load_img_encoder(self, freeze_backbone):
+        net = models.resnet18(pretrained=True)
+        # Remove the last fc layer, and rebuild
+        if freeze_backbone:
+            for param in net.parameters():
+                param.requires_grad = False
+            for param in net.layer4.parameters():
+                param.requires_grad = True
+
+        modules = list(net.children())[:-1]
+        return nn.Sequential(*modules)
 
     def sample(self, depth_dist, reparametrize=True):
         '''

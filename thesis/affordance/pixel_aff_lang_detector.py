@@ -12,19 +12,24 @@ from thesis.utils.utils import add_img_text, tt, blend_imgs,get_transforms, resi
 from thesis.utils.losses import cross_entropy_with_logits
 
 class PixelAffLangDetector(LightningModule):
-    def __init__(self, cfg,
+    def __init__(self, model_cfg,
+                 optimizer,
+                 loss_weights,
+                 normalize_depth=False,
                  in_shape=(200, 200, 3),
                  transforms=None,
                  depth_dist=None,
                  depth_norm_values=None,
                  *args, **kwargs):
         super().__init__()
-        self.loss_weights = cfg.loss_weights
+        self.loss_weights = loss_weights
         self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # append depth transforms to cfg
-        with open_dict(cfg):
-            cfg.depth_norm_values=depth_norm_values
-        self.cfg = cfg
+        with open_dict(model_cfg):
+            model_cfg.normalized = normalize_depth
+            model_cfg.depth_norm_values = depth_norm_values
+        self.optimizer_cfg = optimizer
+        self.model_cfg = model_cfg
         self.in_shape = in_shape
         self._batch_loss = []
         self.cmd_log = logging.getLogger(__name__)
@@ -89,16 +94,16 @@ class PixelAffLangDetector(LightningModule):
         )
 
     def configure_optimizers(self):
-        optim = torch.optim.Adam(self.model.depth_stream.parameters(), lr=self.cfg.lr)
+        optim = torch.optim.Adam(self.parameters(), lr=self.optimizer_cfg.lr)
         return optim
 
     def _build_model(self):
         self.model = AffDepthLangFusionPixel(
-            modules_cfg=[self.cfg.streams.vision_net,
-                         self.cfg.streams.lang_enc,
+            modules_cfg=[self.model_cfg.streams.vision_net,
+                         self.model_cfg.streams.lang_enc,
                          self.depth_est_dist],
             in_shape=self.in_shape,
-            cfg=self.cfg,
+            cfg=self.model_cfg,
             device=self.device_type,
         )
 
@@ -141,7 +146,7 @@ class PixelAffLangDetector(LightningModule):
         err = {}
         if compute_err:
             # Pixel distance error
-            p0_pix, depth_sample, _ = self.model.predict(**inp)  # B, H, W 
+            p0_pix, depth_sample, _ = self.model.predict(inp["img"], inp["lang_goal"])  # B, H, W 
             # Depth error
             depth_error = 0
             if self.pred_depth:
@@ -151,9 +156,9 @@ class PixelAffLangDetector(LightningModule):
             err = {"px_dist": np.sum(np.linalg.norm(p0 - p0_pix, axis=1)),
                     "depth": depth_error}
 
-        # loss = self.loss_weights.aff * aff_loss
-        # loss += self.loss_weights.depth * depth_loss
-        loss = depth_loss
+        loss = self.loss_weights.aff * aff_loss
+        loss += self.loss_weights.depth * depth_loss
+        # loss = depth_loss
 
         info = {"aff_loss": aff_loss,
                 "depth_loss": depth_loss}

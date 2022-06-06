@@ -5,15 +5,16 @@ from thesis.models.language_encoders.base_lang_encoder import LangEncoder
 
 
 class CLIPLang(LangEncoder):
-    def __init__(self, device, fixed=True, pretrained=True) -> None:
-        super(CLIPLang, self).__init__(device, fixed, pretrained)
+    def __init__(self, device, freeze_backbone=True, pretrained=True) -> None:
+        super(CLIPLang, self).__init__(device, freeze_backbone, pretrained)
 
     def _load_model(self):
         model, _ = load_clip("RN50", device=self.device)
         _clip_rn50 = build_model(model.state_dict()).to(self.device)
         del model
-        for param in _clip_rn50.parameters():
-            param.requires_grad = False
+        if self.freeze_backbone:
+            for param in _clip_rn50.parameters():
+                param.requires_grad = False
         self.model = _clip_rn50
 
     def encode_image(self, img):

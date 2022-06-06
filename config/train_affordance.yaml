@@ -16,7 +16,7 @@ checkpoint:
 trainer:
   # script configs
   gpus: -1
-  max_epochs: 30
+  max_epochs: 50
   check_val_every_n_epoch: 1
   num_sanity_val_steps: 1
   strategy: ddp
@@ -24,13 +24,13 @@ trainer:
 
 dataset_name: calvin_lang_MoCEndPt
 aff_detection:
-  model:
-    depth_dist: gaussian # logistic / gaussian
-    cfg:
-      normalize_depth: False
-      loss_weights:
-        aff: 1.0
-        depth: 1.0
+  depth_dist: gaussian # logistic / gaussian
+  normalize_depth: True
+  optimizer:
+    lr: 1e-5
+  loss_weights:
+    aff: 0.001
+    depth: 1.0
   dataset:
     _recursive_: False
     data_dir: ${paths.datasets}/${dataset_name}

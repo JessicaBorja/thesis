@@ -1,5 +1,11 @@
 # Latest Update : 22 June 2021, 09:55 GMT+7
-
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import clip
+from PIL import Image
+EPOCH = 30
+BATCH_SIZE=32
 # TO ADD :
 # Gradient Checkpointing
 # Filter out bias from weight decay

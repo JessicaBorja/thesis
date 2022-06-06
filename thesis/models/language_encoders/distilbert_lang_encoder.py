@@ -6,8 +6,8 @@ from thesis.models.language_encoders.base_lang_encoder import LangEncoder
 
 
 class BERTLang(LangEncoder):
-    def __init__(self, device, fixed=True, pretrained=True) -> None:
-        super(BERTLang, self).__init__(device, fixed, pretrained)
+    def __init__(self, device, freeze_backbone=True, pretrained=True) -> None:
+        super(BERTLang, self).__init__(device, freeze_backbone, pretrained)
 
     def _load_model(self):
         self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')

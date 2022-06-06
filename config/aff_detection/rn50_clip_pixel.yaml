@@ -1,16 +1,15 @@
+_target_: thesis.affordance.pixel_aff_lang_detector.PixelAffLangDetector
+_recursive_: False
 name: rn50_clip_pixel
-
-model:
-  _target_: thesis.affordance.pixel_aff_lang_detector.PixelAffLangDetector
-  _recursive_: False
-  cfg:
-    batchnorm: False # important: False because batch_size=1
-    lr: 1e-5
-    attn_stream_fusion_type: 'add'
-    lang_fusion_type: 'mult'
-    streams: ${aff_detection.streams}
-
 img_size: 224
+
+model_cfg:
+  batchnorm: False # important: False because batch_size=1
+  attn_stream_fusion_type: 'add'
+  lang_fusion_type: 'mult'
+  streams: ${aff_detection.streams}
+  freeze_backbone: True
+
 defaults:
   - pixel_data
   - streams: clip_lingunet

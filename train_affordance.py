@@ -31,7 +31,7 @@ def main(cfg):
         # data_percent_str = str(cfg.aff_detection.dataset.data_percent * 100)
         _name = "%s_%s" % (cfg.aff_detection.name,
                                            cfg.run_name)
-    if cfg.aff_detection.model.cfg.normalize_depth:
+    if cfg.aff_detection.normalize_depth:
         _name += "_normed"
     cfg.wandb.logger.name = _name
     wandb_logger = WandbLogger(**cfg.wandb.logger)
@@ -71,9 +71,9 @@ def main(cfg):
 
     # Initialize agent
     in_shape = train.out_shape[::-1]  # H, W, C
-    model = hydra.utils.instantiate(cfg.aff_detection.model,
+    model = hydra.utils.instantiate(cfg.aff_detection,
                                     in_shape=in_shape,
-                                    depth_norm_values=val.depth_norm_values)
+                                    depth_norm_values=train.depth_norm_values)
 
     # Resume epoch and global_steps
     if last_checkpoint:

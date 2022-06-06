@@ -7,7 +7,6 @@ model:
   _target_: thesis.affordance.pixel_aff_lang_detector.PixelAffLangDetector
   _recursive_: False
   cfg:
-    lr: 1e-5
     attn_stream_fusion_type: 'add'
     lang_fusion_type: 'mult'
     streams: ${aff_detection.streams}

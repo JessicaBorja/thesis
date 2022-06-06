@@ -42,7 +42,8 @@ class AffDepthLangFusionPixel(nn.Module):
         aff_net_model = models.vision_encoders[aff_net_fcn]
 
         # Clip loads both the language and visual encoder
-        self.lang_encoder = lang_enc_model(self.device)
+        self.lang_encoder = lang_enc_model(self.device,
+                                           freeze_backbone=self.cfg.freeze_backbone)
         if aff_net_fcn == "clip":
             kwargs = {"clip_rn50": self.lang_encoder.model}
         else:

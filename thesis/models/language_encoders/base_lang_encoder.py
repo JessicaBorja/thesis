@@ -5,10 +5,10 @@ import torch.nn as nn
 
 
 class LangEncoder(nn.Module):
-    def __init__(self, device, fixed=True, pretrained=True) -> None:
+    def __init__(self, device, freeze_backbone=True, pretrained=True) -> None:
         super(LangEncoder, self).__init__()
         self.device = device
-        self.fixed = fixed
+        self.freeze_backbone = freeze_backbone
         self.pretrained = pretrained
         self._load_model()
 

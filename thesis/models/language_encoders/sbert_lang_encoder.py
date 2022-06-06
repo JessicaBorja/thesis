@@ -7,8 +7,8 @@ import torch.nn as nn
 from thesis.models.language_encoders.base_lang_encoder import LangEncoder
 
 class SBertLang(LangEncoder):
-    def __init__(self, device, fixed=True, pretrained=True) -> None:
-        super(SBertLang, self).__init__(device, fixed, pretrained)
+    def __init__(self, device, freeze_backbone=True, pretrained=True) -> None:
+        super(SBertLang, self).__init__(device, freeze_backbone, pretrained)
 
     def _load_model(self, cfg):
         self.model = SentenceTransformer(cfg.weights)
