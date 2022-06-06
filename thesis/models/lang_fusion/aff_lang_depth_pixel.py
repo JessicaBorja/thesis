@@ -86,7 +86,7 @@ class AffDepthLangFusionPixel(nn.Module):
 
         if "depth_dist" in output:
             depth_pred = self.depth_stream.sample(output["depth_dist"])
-            depth_pred = depth_pred.detach().cpu().numpy()
+            depth_pred = depth_pred.detach().cpu().numpy().squeeze()
         return p0_pix, depth_pred, logits.squeeze()
 
     def forward(self, inp_img, lang_goal, softmax=True):

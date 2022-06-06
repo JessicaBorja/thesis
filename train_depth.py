@@ -19,7 +19,7 @@ def print_cfg(cfg):
     return OmegaConf.create(print_cfg)
 
 
-@hydra.main(config_path="./config", config_name='train_depth')
+@hydra.main(config_path="./config", config_name='train_affordance')
 def main(cfg):
     # Log main config for debug
     print("Running configuration: ", cfg)
@@ -27,8 +27,8 @@ def main(cfg):
     logger.info("Running configuration: %s", OmegaConf.to_yaml(print_cfg(cfg)))
 
     # Logger
-    _name = "%s_%s" % (cfg.run_name, cfg.model.depth_dist)
-    if cfg.model.normalize_depth:
+    _name = "%s_%s" % (cfg.run_name, cfg.aff_detection.model.depth_dist)
+    if cfg.aff_detection.model.cfg.normalize_depth:
         _name += "_normed"
     cfg.wandb.logger.name = _name
     wandb_logger = WandbLogger(**cfg.wandb.logger)
@@ -56,8 +56,8 @@ def main(cfg):
     )
 
     # Dataloaders
-    train = hydra.utils.instantiate(cfg.dataset, split="training", log=logger)
-    val = hydra.utils.instantiate(cfg.dataset, split="validation", log=logger)
+    train = hydra.utils.instantiate(cfg.aff_detection.dataset, split="training", log=logger)
+    val = hydra.utils.instantiate(cfg.aff_detection.dataset, split="validation", log=logger)
     logger.info("train_data {}".format(train.__len__()))
     logger.info("val_data {}".format(val.__len__()))
 
@@ -68,7 +68,10 @@ def main(cfg):
 
     # Initialize agent
     in_shape = train.out_shape[::-1]  # H, W, C
-    model = DepthModule(cfg.model, in_shape=in_shape, depth_transforms=val.depth_norm_values)
+    model = DepthModule(cfg.aff_detection.model.cfg,
+                        in_shape=in_shape,
+                        depth_dist=cfg.aff_detection.model.depth_dist,
+                        depth_norm_values=val.depth_norm_values)
 
     # Resume epoch and global_steps
     if last_checkpoint:
