@@ -16,6 +16,7 @@ import re
 from scipy.spatial.transform.rotation import Rotation as R
 import numpy as np
 from os.path import expanduser
+import importlib
 
 logger = logging.getLogger(__name__)
 
@@ -86,11 +87,19 @@ def load_aff_model(hydra_run_dir, model_name, model_cfg, **kwargs):
         aff_cfg = os.path.join(hydra_run_dir, ".hydra/config.yaml")
         if os.path.isfile(aff_cfg):
             train_cfg = OmegaConf.load(aff_cfg)
-            model_cfg = train_cfg.aff_detection.model
-        model = hydra.utils.instantiate(model_cfg, **kwargs)
-        model = model.load_from_checkpoint(checkpoint_path, **kwargs).cuda()
+            model_cfg = train_cfg.aff_detection
+
+        # Get class
+        model_class = model_cfg._target_.split('.')
+        model_file = '.'.join(model_cfg._target_.split('.')[:-1])
+        model_file = importlib.import_module(model_file)
+        model_class = getattr(model_file, model_class[-1])
+
+        # Instantiate
+        model = model_class.load_from_checkpoint(checkpoint_path, **kwargs).cuda()
+
         # Override default voting layer parameters
-        if 'hough_voting' in kwargs and 'hough_voting' in model.cfg:
+        if 'hough_voting' in kwargs and 'hough_voting' in model.model_cfg:
             model.init_voting_layer(kwargs['hough_voting'])
         logger.info("Model successfully loaded: %s" % checkpoint_path)
     else:

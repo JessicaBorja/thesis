@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 import logging
 
 
-@hydra.main(config_path="./config", config_name='test_affordance')
+@hydra.main(config_path="../config", config_name='test_affordance')
 def main(cfg):
     # Checkpoint loader
     hydra_run_dir = get_abspath(cfg.checkpoint.train_folder)
@@ -28,7 +28,7 @@ def main(cfg):
     # Load model
     model = load_aff_model(hydra_run_dir,
                            cfg.checkpoint.model_name,
-                           run_cfg.aff_detection.model,
+                           run_cfg.aff_detection,
                            transforms=run_cfg.aff_detection.dataset.transforms['validation'],
                            hough_voting=cfg.aff_detection.hough_voting)
     model.eval()
@@ -76,7 +76,7 @@ def main(cfg):
         info = None  # labels
         pred = model.predict(obs, info=info)
         out_shape = (400, 400)
-        pred_img = model.get_preds_viz(obs, pred, out_shape=out_shape)
+        pred_img = model.get_preds_viz(obs, pred, gt_depth=labels["depth"],out_shape=out_shape)
         label_img = cv2.resize(out_img, out_shape) / 255
 
         out_img = np.concatenate([pred_img, label_img], axis=1)

@@ -93,6 +93,13 @@ class PixelAffLangDetector(LightningModule):
             n_imgs=batch[1]['p0'].shape[0],
         )
 
+    def validation_epoch_end(self, all_outputs):
+        total_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
+        total_imgs = np.sum([v['n_imgs'] for v in all_outputs])
+        mean_img_error = total_dist_err/total_imgs
+        self.log('Validation/mean_dist_error', mean_img_error)
+        print("\n Err - Dist: {:.2f}".format(total_dist_err))
+
     def configure_optimizers(self):
         optim = torch.optim.Adam(self.parameters(), lr=self.optimizer_cfg.lr)
         return optim
@@ -185,8 +192,8 @@ class PixelAffLangDetector(LightningModule):
         lang_goal = goal if goal is not None else obs["lang_goal"]
         # Attention model forward pass.
         net_inp = {'img': img,
-                    'lang_goal': lang_goal}
-        p0_pix, depth, logits = self.model.predict(net_inp)
+                   'lang_goal': lang_goal}
+        p0_pix, depth, logits = self.model.predict(img, lang_goal)
         p0_pix = p0_pix.squeeze()
         depth = depth.squeeze()
 
@@ -206,7 +213,7 @@ class PixelAffLangDetector(LightningModule):
                 "depth": depth,
                 "error": err}
 
-    def get_preds_viz(self, inp, pred, out_shape=(300, 300), waitkey=0):
+    def get_preds_viz(self, inp, pred, gt_depth=0, out_shape=(300, 300), waitkey=0):
         '''
             Arguments:
                 inp(dict):
@@ -250,5 +257,8 @@ class PixelAffLangDetector(LightningModule):
 
 
         # Prints the text.
-        out_img = add_img_text(out_img, inp["lang_goal"])
+        depth_est = float(pred["depth"])
+        gt_depth = float(gt_depth.detach().cpu().numpy())
+        text = "Depth: %.3f - %.3f, Goal: %s" % (depth_est, gt_depth, inp["lang_goal"])
+        out_img = add_img_text(out_img, text)
         return out_img

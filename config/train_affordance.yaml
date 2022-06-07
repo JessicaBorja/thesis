@@ -16,7 +16,7 @@ checkpoint:
 trainer:
   # script configs
   gpus: -1
-  max_epochs: 50
+  max_epochs: 20
   check_val_every_n_epoch: 1
   num_sanity_val_steps: 1
   strategy: ddp

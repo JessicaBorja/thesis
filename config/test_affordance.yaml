@@ -8,15 +8,16 @@ save_viz: True
 
 # folders
 checkpoint:
-  train_folder: ./hydra_outputs/affordance_model/2022-05-17/11-30-49_aff_model
+  train_folder: ~/logs/thesis/aff_model/2022-06-06/23-04-43_aff_model/
   model_name: val_err.ckpt
 
-dataset_name: calvin_lang_contactEndPt
+dataset_name: calvin_lang_MoCEndPt
 aff_detection:
   dataset:
     _recursive_: False
     data_dir: ${paths.datasets}/${dataset_name}
     cam: static
+    data_percent: 1.0
     episodes_file: episodes_split.json
     img_resize:
       static: 224  # clip img size

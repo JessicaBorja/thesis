@@ -148,8 +148,8 @@ class PlayLMPAgent(BaseAgent):
         x_range =[max(pixel[0] - n, 0), min(pixel[0] + n, im_shape[1])]
         y_range =[max(pixel[1] - n, 0), min(pixel[1] + n, im_shape[1])]
 
-        if self.depth_pred is not None:
-            depth_sample = self.depth_pred.predict(inp, self.aff_transforms)
+        if "depth" in pred:
+            depth_sample = pred['depth']
             target_pos = self.env.cameras[0].deproject_single_depth(pixel, depth_sample)
         else:
             target_pos = self.env.cameras[0].deproject(pixel, depth)

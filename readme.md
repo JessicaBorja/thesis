@@ -23,3 +23,13 @@ Install repo
 ```
 pip install -e .
 ```
+
+# Training Affordance Model
+
+
+# Testing / Evaluation
+## Visualizing the predictions on the dataset
+
+## Testing affordance + model-based given language annotation
+
+## Evaluation model-based + model-free with affordance
