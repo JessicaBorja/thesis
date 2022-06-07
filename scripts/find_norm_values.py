@@ -46,17 +46,15 @@ def add_norm_values(run_dir, data_dir, episodes_file="episodes_split.json"):
 
         # Get files corresponding to cam
         for ep in episodes:
-            data[split][ep].sort()
-            for file in data[split][ep]:
-                if cam in file:
-                    # Load file
-                    cam_folder, filename = os.path.split(file.replace("\\", "/"))
-                    step_data = np.load(data_dir + "%s/data/%s/%s.npz" % 
-                                    (ep, cam_folder, filename))
-                    # new_data["%s_cam" % cam].append(data)
-                    tcp_cam = step_data['tcp_pos_cam_frame']
-                    depth = tcp_cam[-1] * -1
-                    new_data['depth'].append(depth)
+            for file in data[split][ep][cam]:
+                # Load file
+                cam_folder, filename = os.path.split(file.replace("\\", "/"))
+                step_data = np.load(data_dir + "%s/data/%s/%s.npz" % 
+                                (ep, cam_folder, filename))
+                # new_data["%s_cam" % cam].append(data)
+                tcp_cam = step_data['tcp_pos_cam_frame']
+                depth = tcp_cam[-1] * -1
+                new_data['depth'].append(depth)
         print("%s images: %d" % (split, len(split_data)))
 
     for k in new_data.keys():
