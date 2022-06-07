@@ -37,7 +37,7 @@ def add_norm_values(run_dir, data_dir, episodes_file="episodes_split.json"):
     data = read_json(json_filepath)
     logger.info("Openning file %s" % json_filepath)
 
-    cams = ["static"]
+    cams = ["static_cam"]
     split = "training"
     new_data = {"depth":[], "gripper_cam":[], "static_cam":[]}
     for cam in cams:
