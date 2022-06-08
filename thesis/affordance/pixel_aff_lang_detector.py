@@ -95,9 +95,14 @@ class PixelAffLangDetector(LightningModule):
 
     def validation_epoch_end(self, all_outputs):
         total_dist_err = np.sum([v['val_attn_dist_err'] for v in all_outputs])
+        total_depth_err = np.sum([v['val_depth_err'] for v in all_outputs])
         total_imgs = np.sum([v['n_imgs'] for v in all_outputs])
         mean_img_error = total_dist_err/total_imgs
+
+        mean_depth_error = total_depth_err/total_imgs
         self.log('Validation/mean_dist_error', mean_img_error)
+        self.log('Validation/mean_depth_error', mean_depth_error)
+
         print("\n Err - Dist: {:.2f}".format(total_dist_err))
 
     def configure_optimizers(self):
@@ -259,6 +264,6 @@ class PixelAffLangDetector(LightningModule):
         # Prints the text.
         depth_est = float(pred["depth"])
         gt_depth = float(gt_depth.detach().cpu().numpy())
-        text = "Depth: %.3f - %.3f, Goal: %s" % (depth_est, gt_depth, inp["lang_goal"])
+        text = "DepthErr: %.3f, Goal: %s" % (depth_est - gt_depth, inp["lang_goal"])
         out_img = add_img_text(out_img, text)
         return out_img
