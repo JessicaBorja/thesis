@@ -55,7 +55,8 @@ class PlayLMPAgent(BaseAgent):
         if os.path.isfile(policy_cfg):
             run_cfg = OmegaConf.load(policy_cfg)
             run_cfg = OmegaConf.create(OmegaConf.to_yaml(run_cfg).replace("calvin_models.", ""))
-            checkpoint = os.path.join(checkpoint_path, model_name)
+            checkpoint = os.path.join(checkpoint_path, "saved_models")
+            checkpoint = os.path.join(checkpoint, model_name)
             model_class = run_cfg.model._target_.split('.')
             model_file = '.'.join(run_cfg.model._target_.split('.')[:-1])
             model_file = importlib.import_module(model_file)

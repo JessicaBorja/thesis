@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from omegaconf import OmegaConf
-from thesis.utils.utils import add_img_text, blend_imgs, get_abspath, overlay_mask, load_aff_model
+from thesis.utils.utils import get_abspath, load_aff_model
 from torch.utils.data import DataLoader
 import logging
 

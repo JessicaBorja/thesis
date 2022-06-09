@@ -12,7 +12,7 @@ import os
 logger = logging.getLogger(__name__)
 
 class BaseAgent:
-    def __init__(self, env, offset, aff_cfg, depth_cfg=None, viz_obs=False, *args, **kwargs):
+    def __init__(self, env, offset, aff_cfg, viz_obs=False, *args, **kwargs):
         # For debugging
         self.curr_caption = ""
         #
@@ -23,7 +23,6 @@ class BaseAgent:
         self.target_orn = np.array(_info["tcp_orn"])
         self.logger = logging.getLogger(__name__)
         self.point_detector = self.get_point_detector(aff_cfg)
-        self.depth_pred = self.get_depth_predictor(depth_cfg)
         self.device = self.env.device
         self.model_free = None
         self.offset = np.array([*offset, 1])
@@ -60,7 +59,7 @@ class BaseAgent:
         if os.path.exists(checkpoint_path):
             point_detector = load_aff_model(checkpoint_path,
                                             aff_cfg.checkpoint.model_name,
-                                            aff_cfg.model,
+                                            aff_cfg.model_cfg,
                                             transforms=aff_cfg.dataset.transforms['validation'])
                                             # hough_voting=cfg.hough_voting)
             point_detector.eval()

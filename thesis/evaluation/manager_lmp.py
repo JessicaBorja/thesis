@@ -79,6 +79,7 @@ class PolicyManager:
             rollout_cfg = OmegaConf.load(Path(__file__).parents[2] / "config/lfp/rollout/default.yaml")
             env = hydra.utils.instantiate(rollout_cfg.env_cfg, dataset, device, show_gui=False,scene=scene)
 
+        checkpoint = Path(train_folder + "saved_models") / checkpoint
         checkpoint = format_sftp_path(checkpoint)
         print(f"Loading model from {checkpoint}")
 
@@ -98,6 +99,6 @@ class PolicyManager:
         if cfg.model.action_decoder.get("load_action_bounds", False):
             model.action_decoder._setup_action_bounds(cfg.datamodule.root_data_dir, None, None, True)
         model = model.cuda(device)
-        print("Successfully loaded model.")
-
+        print(f"Successfully loaded policy model: {train_folder}/{checkpoint}")
+        logger.info(f"Loading policy model from {train_folder}/{checkpoint}")
         return model, env, data_module, lang_embeddings

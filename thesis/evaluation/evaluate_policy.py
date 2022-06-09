@@ -50,8 +50,8 @@ def main():
 
     parser.add_argument("--device", default=0, type=int, help="CUDA device")
     
-    parser.add_argument("--aff_lmp", action="store_true", help="Use model-based model-free combination method.")
-
+    parser.add_argument("--aff_train_folder", default=None, help="Affordance model train folder to use model-based model-free combination method.")
+    parser.add_argument("--aff_checkpoint", default="val_err", help="Affordance model checkpoint name w/extension to use model-based model-free combination method.")
     # Overriding scene
     parser.add_argument(
         "--scene", default=None, type=str, help="Name of scene file inside /config/scene/ without extension"
@@ -65,7 +65,7 @@ def main():
 
     assert "train_folder" in args
 
-    checkpoints = [Path(args.checkpoint + ".ckpt")]
+    checkpoints = [Path("epoch=%s.ckpt" % args.checkpoint)]
 
     results = {}
     plans = {}

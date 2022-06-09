@@ -263,7 +263,10 @@ class PixelAffLangDetector(LightningModule):
 
         # Prints the text.
         depth_est = float(pred["depth"])
-        gt_depth = float(gt_depth.detach().cpu().numpy())
-        text = "DepthErr: %.3f, Goal: %s" % (depth_est - gt_depth, inp["lang_goal"])
+        if torch.is_tensor(gt_depth):
+            gt_depth = float(gt_depth.detach().cpu().numpy())
+            text = "DepthErr: %.3f, Goal: %s" % (depth_est - gt_depth, inp["lang_goal"])
+        else:
+            text = "DepthPred: %.3f, Goal: %s" % (depth_est, inp["lang_goal"])
         out_img = add_img_text(out_img, text)
         return out_img

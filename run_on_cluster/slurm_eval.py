@@ -60,12 +60,17 @@ def main():
     args, unknownargs = parse_args()
     training_dir = Path(args.train_folder).resolve()
     timestr = datetime.now().strftime("%H-%M-%S")
-    log_dir = "%s/evaluation/%s" % (training_dir.as_posix(), timestr)
+
+    use_aff = "--aff_train_folder" in unknownargs
+    eval_folder = "HulcAff" if use_aff else "Hulc"
+    log_dir = "%s/evaluation/%s/%s" % (training_dir.as_posix(), eval_folder, timestr)
+
+
     os.makedirs(log_dir, exist_ok=True)
     args.script = Path(args.script).resolve()
     args.eval_file = Path(args.eval_file).resolve()
     
-    log_name = "%x.%N.%j_aff_eval" if "--aff_lmp" in unknownargs else "%x.%N.%j_eval"
+    log_name = "%x.%N.%j_aff_eval" if use_aff else "%x.%N.%j_eval"
 
     job_opts = {
         "partition": args.partition,

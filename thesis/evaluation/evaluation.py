@@ -23,8 +23,10 @@ logger = logging.getLogger(__name__)
 
 class Evaluation:
     def __init__(self, args, checkpoint) -> None:
-        if args.aff_lmp:
-            self.policy_manager = AffLMPManager(debug=args.debug)
+        if args.aff_train_folder is not None:
+            self.policy_manager = AffLMPManager(train_folder=args.aff_train_folder,
+                                                checkpoint=args.aff_checkpoint,
+                                                debug=args.debug)
         else:
             self.policy_manager = LMPManager()
         

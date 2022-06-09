@@ -29,7 +29,7 @@ depth_pred:
 
 aff_detection:
   checkpoint:
-    train_folder: ~/logs/thesis/aff_model/2022-04-29/14-02-55_aff_rl
+    train_folder: ~/logs/thesis/aff_model/2022-06-07/18-57-25_aff_model/
     # train_folder: ./hydra_outputs/affordance_model/2022-03-09/01-38-55_aff_rl
     model_name: val_err.ckpt
     img_resize: 224

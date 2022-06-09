@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+import os
 
 import hydra
 from termcolor import colored
@@ -7,13 +8,15 @@ from omegaconf import OmegaConf
 import torch
 import time
 from thesis.evaluation.utils import join_vis_lang, format_sftp_path, LangEmbeddings, get_env
-
+from thesis.utils.utils import get_abspath
 logger = logging.getLogger(__name__)
 
 
 class PolicyManager:
-    def __init__(self, debug=False) -> None:
+    def __init__(self, train_folder, checkpoint, debug=False) -> None:
         self.debug = debug
+        self.train_folder = train_folder
+        self.checkpoint = checkpoint + ".ckpt"
 
     def rollout(self, env, model, task_oracle, args, subtask, lang_embeddings, val_annotations, plans):
         if args.debug:
@@ -55,6 +58,7 @@ class PolicyManager:
         return False
 
     def get_default_model_and_env(self, train_folder, dataset_path, checkpoint, env=None, lang_embeddings=None, device_id=0, scene=None):
+        # Load Dataset
         train_cfg_path = Path(train_folder) / ".hydra/config.yaml"
         train_cfg_path = format_sftp_path(train_cfg_path)
         cfg = OmegaConf.load(train_cfg_path)
@@ -88,19 +92,24 @@ class PolicyManager:
             env = hydra.utils.instantiate(rollout_cfg.env_cfg, env=env, device=device)
 
         checkpoint = format_sftp_path(checkpoint)
-        print(f"Loading model from {checkpoint}")
+        print(f"Loading policy model from {train_folder}/{checkpoint}")
+        logger.info(f"Loading policy model from {train_folder}/{checkpoint}")
 
         # Load model model-free + model-based + aff_model from cfg_calvin
         # overwrite model-free from checkpoint
+        # Policy
         cfg = hydra.compose(config_name="cfg_calvin")
         cfg.agent.checkpoint.train_folder = train_folder
-        cfg.agent.checkpoint.model_name = checkpoint.name
+        cfg.agent.checkpoint.model_name = str(checkpoint)
         cfg.agent.dataset_path = dataset_path
+
+        # Affordance
+        cfg.aff_detection.checkpoint.train_folder = self.train_folder
+        cfg.aff_detection.checkpoint.model_name = self.checkpoint
         model = hydra.utils.instantiate(cfg.agent,
                                         viz_obs=self.debug,
                                         env=env,
-                                        aff_cfg=cfg.aff_detection,
-                                        depth_cfg=cfg.depth_pred)
-        print("Successfully loaded model.")
-
+                                        aff_cfg=cfg.aff_detection)
+        print(f"Successfully loaded affordance model: {self.train_folder}/{self.checkpoint}")
+        logger.info(f"Successfully loaded affordance model: {self.train_folder}/{self.checkpoint}")
         return model, env, data_module, lang_embeddings

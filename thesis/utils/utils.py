@@ -87,11 +87,11 @@ def load_aff_model(hydra_run_dir, model_name, model_cfg, **kwargs):
         aff_cfg = os.path.join(hydra_run_dir, ".hydra/config.yaml")
         if os.path.isfile(aff_cfg):
             train_cfg = OmegaConf.load(aff_cfg)
-            model_cfg = train_cfg.aff_detection
+            _model_cfg = train_cfg.aff_detection
 
         # Get class
-        model_class = model_cfg._target_.split('.')
-        model_file = '.'.join(model_cfg._target_.split('.')[:-1])
+        model_class = _model_cfg._target_.split('.')
+        model_file = '.'.join(_model_cfg._target_.split('.')[:-1])
         model_file = importlib.import_module(model_file)
         model_class = getattr(model_file, model_class[-1])
 
