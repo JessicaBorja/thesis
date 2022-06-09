@@ -23,12 +23,18 @@ logger = logging.getLogger(__name__)
 
 class Evaluation:
     def __init__(self, args, checkpoint) -> None:
-        if args.aff_train_folder is not None:
-            self.policy_manager = AffLMPManager(train_folder=args.aff_train_folder,
-                                                checkpoint=args.aff_checkpoint,
-                                                debug=args.debug)
-        else:
-            self.policy_manager = LMPManager()
+        use_affordances = args.aff_train_folder is not None
+        self.policy_manager = AffLMPManager(train_folder=args.aff_train_folder,
+                                            checkpoint=args.aff_checkpoint,
+                                            debug=args.debug,
+                                            use_affordances=use_affordances)
+        # if args.aff_train_folder is not None:
+        #     self.policy_manager = AffLMPManager(train_folder=args.aff_train_folder,
+        #                                         checkpoint=args.aff_checkpoint,
+        #                                         debug=args.debug,
+        #                                         use_affordances=True)
+        # else:
+        #     self.policy_manager = LMPManager()
         
         scene = args.scene
         if args.scene is not None:
@@ -169,7 +175,9 @@ class Evaluation:
 
     def evaluate_sequence(self, task_checker, initial_state, eval_sequence, val_annotations, args, plans):
         robot_obs, scene_obs = get_env_state_for_initial_condition(initial_state)
-        self.env.reset(robot_obs=robot_obs, scene_obs=scene_obs)
+
+        # Always start robot from neutral position ?
+        self.env.reset(robot_obs=None, scene_obs=scene_obs)
 
         success_counter = 0
         if args.debug:

@@ -164,9 +164,9 @@ class PlayLMPAgent(BaseAgent):
         # Add offset
         obs = self.env.get_obs()
         robot_orn = obs['robot_obs'][3:6]
-        # tcp_mat = pos_orn_to_matrix(target_pos, robot_orn)
-        # offset_global_frame = tcp_mat @ self.offset
-        # target_pos = offset_global_frame[:3]
+        tcp_mat = pos_orn_to_matrix(target_pos, robot_orn)
+        offset_global_frame = tcp_mat @ self.offset
+        target_pos = offset_global_frame[:3]
 
         # img = obs["rgb_obs"]["rgb_static"]
         # pixel = self.env.cameras[0].project(np.array([*target_pos, 1]))
@@ -180,7 +180,7 @@ class PlayLMPAgent(BaseAgent):
         obs, _, _, info = self.move_to(target_pos, gripper_action=1)
 
         # Update target pos and orn
-        self.env.robot.target_pos = obs["robot_obs"][:3]
+        self.env.robot.target_pos = target_pos
         self.env.robot.target_orn = obs["robot_obs"][3:6]
 
     def reset(self, caption):

@@ -25,6 +25,7 @@ class PolicyManager:
         obs = env.get_obs()
         # get lang annotation for subtask
         lang_annotation = val_annotations[subtask][0]
+
         # get language goal embedding
         goal = lang_embeddings.get_lang_goal(lang_annotation)
         model.reset()
@@ -79,7 +80,7 @@ class PolicyManager:
             rollout_cfg = OmegaConf.load(Path(__file__).parents[2] / "config/lfp/rollout/default.yaml")
             env = hydra.utils.instantiate(rollout_cfg.env_cfg, dataset, device, show_gui=False,scene=scene)
 
-        checkpoint = Path(train_folder + "saved_models") / checkpoint
+        checkpoint = Path(train_folder + "/saved_models") / checkpoint
         checkpoint = format_sftp_path(checkpoint)
         print(f"Loading model from {checkpoint}")
 
@@ -93,12 +94,14 @@ class PolicyManager:
                 and v['_target_'] == 'lfp.models.perceptual_encoders.vision_network.VisionNetwork':
                     perceptual_encoder[k]['spatial_softmax_temp'] = 1.0
             perceptual_encoder = DictConfig(perceptual_encoder)
-        model = PlayLMP.load_from_checkpoint(checkpoint, perceptual_encoder=perceptual_encoder)
+            model = PlayLMP.load_from_checkpoint(checkpoint, perceptual_encoder=perceptual_encoder)
+        else:
+            model = PlayLMP.load_from_checkpoint(checkpoint)
         model.freeze()
 
         if cfg.model.action_decoder.get("load_action_bounds", False):
             model.action_decoder._setup_action_bounds(cfg.datamodule.root_data_dir, None, None, True)
         model = model.cuda(device)
-        print(f"Successfully loaded policy model: {train_folder}/{checkpoint}")
-        logger.info(f"Loading policy model from {train_folder}/{checkpoint}")
+        print(f"Successfully loaded policy model: {checkpoint}")
+        logger.info(f"Loading policy model from {checkpoint}")
         return model, env, data_module, lang_embeddings

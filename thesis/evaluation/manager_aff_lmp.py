@@ -13,29 +13,32 @@ logger = logging.getLogger(__name__)
 
 
 class PolicyManager:
-    def __init__(self, train_folder, checkpoint, debug=False) -> None:
+    def __init__(self, train_folder, checkpoint, debug=False, use_affordances=True) -> None:
         self.debug = debug
         self.train_folder = train_folder
         self.checkpoint = checkpoint + ".ckpt"
+        self.use_afforances = use_affordances
 
     def rollout(self, env, model, task_oracle, args, subtask, lang_embeddings, val_annotations, plans):
         if args.debug:
             print(f"{subtask} ", end="")
             time.sleep(0.5)
+        obs = env.get_obs()
         # get lang annotation for subtask
         lang_annotation = val_annotations[subtask][0]
 
         # get language goal embedding
         goal = lang_embeddings.get_lang_goal(lang_annotation)
+        model.model_free.reset()
 
         # Do not reset model if holding something
-        width = env.robot.get_observation()[-1]["gripper_opening_width"]
-        if width > 0.055 or width< 0.01:
-            model.reset(lang_annotation)
+        if self.use_afforances:
+            width = env.robot.get_observation()[-1]["gripper_opening_width"]
+            if width > 0.055 or width< 0.01:
+                model.reset(lang_annotation)
         
-        # Reset environment
         start_info = env.get_info()
-        obs = env.get_obs()
+        # Reset environment
         t_obs = model.transform_observation(obs)
         plan, latent_goal = model.model_free.get_pp_plan_lang(t_obs, goal)
         plans[subtask].append((plan.cpu(), latent_goal.cpu()))
