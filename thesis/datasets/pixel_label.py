@@ -32,7 +32,11 @@ class PixeLabelDataLang(Dataset):
         self.log = log
         self.data_dir = get_abspath(data_dir)
         _data_info = self.read_json(os.path.join(self.data_dir, episodes_file))
-        self.data = self._get_split_data(_data_info, split, cam, data_percent)
+
+        # Make all models to evaluate on same data
+        _data_percent = 1.0 if split == "validation" else data_percent
+
+        self.data = self._get_split_data(_data_info, split, cam, _data_percent)
         self.img_resize = img_resize
         _transforms_dct = get_transforms(transforms[split], img_resize[cam])
         self.transforms = _transforms_dct["transforms"]

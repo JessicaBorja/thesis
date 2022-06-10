@@ -7,27 +7,29 @@ from scipy.spatial.transform.rotation import Rotation as R
 
 def split_by_percentage(root_dir, episodes_split, data_percent):
     new_episodes_split = deepcopy(episodes_split)
-    for split in ["training", "validation"]:
-        # Get original data start end ids
-        start_end_ids = os.path.join(root_dir, "%s/ep_start_end_ids.npy" % split)
-        orig_start_end_ids = np.load(start_end_ids)
 
-        # Split the dataset the same as it is split in learning_fom_play_repo
-        new_start_end_ids = get_split_data(orig_start_end_ids, data_percent)
-        for episode_dir, cam_frames in episodes_split[split].items():
-            valid_frames = []
-            for cam, frames in cam_frames.items():
-                cam_frame_ids = np.array([int(f.split("_")[-1]) for f in frames])
+    # Change training split
+    split ="training"
+    # Get original data start end ids
+    start_end_ids = os.path.join(root_dir, "%s/ep_start_end_ids.npy" % split)
+    orig_start_end_ids = np.load(start_end_ids)
 
-                # Check valid frames
-                if len(cam_frame_ids) > 0:
-                    for start, end in new_start_end_ids:
-                        cond = np.logical_and(cam_frame_ids >= start, cam_frame_ids <= end)
-                        inside_ep = np.where(cond)[0]
-                        valid_frames.extend([i for i in inside_ep])
+    # Split the dataset the same as it is split in learning_fom_play_repo
+    new_start_end_ids = get_split_data(orig_start_end_ids, data_percent)
+    for episode_dir, cam_frames in episodes_split[split].items():
+        valid_frames = []
+        for cam, frames in cam_frames.items():
+            cam_frame_ids = np.array([int(f.split("_")[-1]) for f in frames])
 
-                # Replace
-                new_episodes_split[split][episode_dir][cam] = list(np.array(frames)[valid_frames])
+            # Check valid frames
+            if len(cam_frame_ids) > 0:
+                for start, end in new_start_end_ids:
+                    cond = np.logical_and(cam_frame_ids >= start, cam_frame_ids <= end)
+                    inside_ep = np.where(cond)[0]
+                    valid_frames.extend([i for i in inside_ep])
+
+            # Replace
+            new_episodes_split[split][episode_dir][cam] = list(np.array(frames)[valid_frames])
     return new_episodes_split
 
 def get_split_data(play_start_end_ids, data_percent):

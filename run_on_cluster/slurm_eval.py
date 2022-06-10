@@ -59,7 +59,7 @@ def main():
     """
     args, unknownargs = parse_args()
     training_dir = Path(args.train_folder).resolve()
-    timestr = datetime.now().strftime("%H-%M-%S")
+    timestr = datetime.datetime.now().strftime("%Y-%m-%d/%H-%M-%S")
 
     use_aff = "--aff_train_folder" in unknownargs
     eval_folder = "HulcAff" if use_aff else "Hulc"
