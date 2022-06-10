@@ -63,7 +63,7 @@ def main():
 
     use_aff = "--aff_train_folder" in unknownargs
     eval_folder = "HulcAff" if use_aff else "Hulc"
-    log_dir = "%s/evaluation/%s/%s" % (training_dir.as_posix(), eval_folder, timestr)
+    log_dir = "%s/evaluation/%s/%s_%s" % (training_dir.as_posix(), eval_folder, timestr, args.job_name)
 
 
     os.makedirs(log_dir, exist_ok=True)
