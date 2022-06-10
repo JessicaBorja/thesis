@@ -68,7 +68,7 @@ def main():
     if args.checkpoint:
         checkpoints = [Path("epoch=%s.ckpt" % args.checkpoint)]
     else:
-        checkpoints = args.checkpoints
+        checkpoints = [Path("epoch=%s.ckpt" % int(chk)) for chk in args.checkpoints.split(',')]
 
     results = {}
     plans = {}
