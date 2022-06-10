@@ -95,7 +95,7 @@ def main():
         epoch_args = [",".join(arr) for arr in split_epochs if len(arr)]
         for epoch_arg in epoch_args:
             # cmd = [(training_dir / "evaluate.sh").as_posix(), "--checkpoints", epoch_arg]
-            _script = script + f"--checkpoints {epoch_arg}"
+            _script = script + f" --checkpoints {epoch_arg}"
             submit_job(job_opts, _script)
     else:
         submit_job(job_opts, script)
