@@ -65,7 +65,10 @@ def main():
 
     assert "train_folder" in args
 
-    checkpoints = [Path("epoch=%s.ckpt" % args.checkpoint)]
+    if args.checkpoint:
+        checkpoints = [Path("epoch=%s.ckpt" % args.checkpoint)]
+    else:
+        checkpoints = args.checkpoints
 
     results = {}
     plans = {}
