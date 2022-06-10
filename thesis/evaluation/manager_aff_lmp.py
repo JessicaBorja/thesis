@@ -107,8 +107,9 @@ class PolicyManager:
         cfg.agent.dataset_path = dataset_path
 
         # Affordance
-        cfg.aff_detection.checkpoint.train_folder = self.train_folder
-        cfg.aff_detection.checkpoint.model_name = self.checkpoint
+        if self.use_afforances:
+            cfg.aff_detection.checkpoint.train_folder = self.train_folder
+            cfg.aff_detection.checkpoint.model_name = self.checkpoint
         model = hydra.utils.instantiate(cfg.agent,
                                         viz_obs=self.debug,
                                         env=env,

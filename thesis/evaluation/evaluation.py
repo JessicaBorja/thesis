@@ -28,7 +28,7 @@ class Evaluation:
                                             checkpoint=args.aff_checkpoint,
                                             debug=args.debug,
                                             use_affordances=use_affordances)
-        # if args.aff_train_folder is not None:
+        # if use_affordances:
         #     self.policy_manager = AffLMPManager(train_folder=args.aff_train_folder,
         #                                         checkpoint=args.aff_checkpoint,
         #                                         debug=args.debug,
