@@ -72,8 +72,10 @@ def main():
 
     results = {}
     plans = {}
+    env = None
     for checkpoint in checkpoints:
-        eval = Evaluation(args, checkpoint)
+        eval = Evaluation(args, checkpoint, env)
+        env = eval.env
         results[checkpoint], plans[checkpoint] = eval.evaluate_policy(args)
     eval.print_and_save(results, plans, args)
 

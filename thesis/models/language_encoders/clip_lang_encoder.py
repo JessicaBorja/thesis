@@ -15,6 +15,10 @@ class CLIPLang(LangEncoder):
         if self.freeze_backbone:
             for param in _clip_rn50.parameters():
                 param.requires_grad = False
+        #     for param in _clip_rn50.layer4.parameters():
+        #         param.requires_grad = True
+
+        # modules = list(net.children())[:-1]
         self.model = _clip_rn50
 
     def encode_image(self, img):

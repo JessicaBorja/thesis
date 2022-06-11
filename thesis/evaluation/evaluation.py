@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class Evaluation:
-    def __init__(self, args, checkpoint) -> None:
+    def __init__(self, args, checkpoint, env=None) -> None:
         use_affordances = args.aff_train_folder is not None
         self.policy_manager = AffLMPManager(train_folder=args.aff_train_folder,
                                             checkpoint=args.aff_checkpoint,
@@ -47,6 +47,7 @@ class Evaluation:
             checkpoint,
             device_id=args.device,
             scene=scene,
+            env=env
         )
         self.model = model
         self.env = env
