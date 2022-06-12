@@ -22,7 +22,7 @@ parser.add_argument("-j", "--job_name", type=str, default="aff_model")
 parser.add_argument("-g", "--gpus", type=int, default=1)
 parser.add_argument("--mem", type=int, default=0)  # 0 means no memory limit
 parser.add_argument("--cpus", type=int, default=8)
-parser.add_argument("--days", type=int, default=1)
+parser.add_argument("--hours", type=int, default=23)
 parser.add_argument("-v", "--venv", type=str)
 parser.add_argument("-p", "--partition", type=str, default="alldlc_gpu-rtx2080")
 parser.add_argument("--no_clone", action="store_true")
@@ -60,7 +60,7 @@ job_opts = {
     "error": os.path.join(log_dir, "%x.%N.%j.err"),
     "job_name": args.job_name,
     "mail-type": "FAIL",
-    "time": f"{args.days}-00:00",
+    "time": f"{args.hours}:00:00",
 }
 
 
