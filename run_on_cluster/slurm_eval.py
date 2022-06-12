@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument("-g", "--gpus", type=int, default=1)
     parser.add_argument("--mem", type=int, default=0)  # 0 means no memory limit
     parser.add_argument("--cpus", type=int, default=8)
-    parser.add_argument("--days", type=int, default=1)
+    parser.add_argument("--hours", type=int, default=23)
     parser.add_argument("-v", "--venv", type=str)
     parser.add_argument("-p", "--partition", type=str, default="alldlc_gpu-rtx2080")
     parser.add_argument("--train_folder", type=str, default="./")
@@ -82,7 +82,7 @@ def main():
         "error": os.path.join(log_dir, "%s.err" % log_name),
         "job_name": args.job_name,
         "mail-type": "FAIL",
-        "time": f"{args.days}-00:00",
+        "time": f"{args.hours}:00:00",
     }
 
     script = f"{args.script.as_posix()} {args.venv} {args.eval_file.as_posix()} {' '.join(unknownargs)}"
