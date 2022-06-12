@@ -2,11 +2,9 @@ import numpy as np
 import cv2
 import logging
 from thesis.affordance.base_detector import BaseDetector
-from thesis.utils.utils import add_img_text, resize_pixel
-from thesis.utils.utils import get_abspath, load_aff_model, resize_pixel
+from thesis.utils.utils import add_img_text, pos_orn_to_matrix, get_abspath, load_aff_model, resize_pixel
 from thesis.models.depth.depth_module import DepthModule
 from lfp.evaluation.utils import join_vis_lang
-
 from omegaconf import OmegaConf
 import os
 logger = logging.getLogger(__name__)
@@ -129,8 +127,17 @@ class BaseAgent:
 
         
         tcp_pos = np.array(curr_info["tcp_pos"])
-        # Move up
-        reach_target = [*tcp_pos[:2], tcp_pos[-1] + 0.05]
+        # Move in -z gripper
+        # robot_orn = curr_info["tcp_orn"]
+        # tcp_mat = pos_orn_to_matrix(tcp_pos, robot_orn)
+        # offset_global_frame = tcp_mat @ np.array([0.0, 0.0, -0.08, 1.0])
+        # reach_target = offset_global_frame[:3]
+
+        tcp_up = tcp_pos[-1] + 0.07
+        move_z = max(tcp_up, target_pos[-1])
+        move_z = min(move_z, 0.7)
+
+        reach_target = [*tcp_pos[:2], move_z]
         a = [reach_target.copy(), target_orn, gripper_action]
         tcp_pos, _ = self.move_to_pos(tcp_pos, a)
 

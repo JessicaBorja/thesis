@@ -177,7 +177,7 @@ class PlayLMPAgent(BaseAgent):
         # cv2.waitKey(1)
         # import pybullet as p
         # p.addUserDebugText("t", target_pos, [1,0,0])
-        return target_pos
+        return target_pos, pixel
 
     def reset(self, caption):
         if self.move_outside:
@@ -190,13 +190,18 @@ class PlayLMPAgent(BaseAgent):
                 self.env.step([robot_obs["tcp_pos"], robot_obs["tcp_orn"], 1])
 
         # Get Target
-        target_pos = self.get_aff_pred(caption)
+        target_pos, pred_px = self.get_aff_pred(caption)
         offset_pos = self.add_offset(target_pos)
 
-        # If far from target
+        # If far from target 3d
         diff_target = np.linalg.norm(target_pos - robot_obs["tcp_pos"])
         diff_offset = np.linalg.norm(offset_pos - robot_obs["tcp_pos"])
-        if diff_target > 0.08 and diff_offset > 0.08:
+
+        # 2d dist
+        tcp_px = self.env.cameras[0].project(np.array([*robot_obs["tcp_pos"], 1]))
+        px_dist = np.linalg.norm(pred_px - tcp_px)
+
+        if px_dist > 15: # diff_target > 0.08 and diff_offset > 0.08:
             # self.reset_position()
             # self.env.robot.reset()
             obs, _, _, info = self.move_to(offset_pos, gripper_action=1)
