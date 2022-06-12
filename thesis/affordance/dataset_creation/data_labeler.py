@@ -62,7 +62,7 @@ class DataLabeler(DataReader):
         self.frames_before_saving = cfg.frames_before_saving
         self.classifier = classifier if classifier is not None else BaseDetector(cfg.task_detector)
 
-        self.gripper_width_tresh = 0.015
+        self.gripper_width_tresh = 0.02
         self.task_discovery_folders = discovery_episodes
         log.info("Writing to %s" % self.output_dir)
 

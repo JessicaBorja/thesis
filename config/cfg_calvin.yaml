@@ -13,7 +13,7 @@ data_path: ${paths.vr_data}
 model_name: full
 
 max_timesteps: 364
-gripper_offset: [0.0, 0.03, -0.02]
+gripper_offset: [0.02, -0.06, 0.06]
 policy_checkpoint: 
   train_folder: ./trained_agents/lfp
   model_name: epoch=30.ckpt

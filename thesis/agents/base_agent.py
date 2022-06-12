@@ -18,9 +18,10 @@ class BaseAgent:
         #
         self._env = env
         self.viz_obs = viz_obs
+        self.env.reset()
         _info = self.env.robot.get_observation()[-1]
-        self.origin = np.array([-0.25, -0.3, 0.6])  # np.array(_info["tcp_pos"])
-        self.target_orn = np.array(_info["tcp_orn"])
+        self.origin = np.array(_info["tcp_pos"]) # np.array([-0.25, -0.3, 0.6])  # 
+        self.target_orn = np.array([np.pi, 0, np.pi/2]) # np.array(_info["tcp_orn"])
         self.logger = logging.getLogger(__name__)
         self.point_detector = self.get_point_detector(aff_cfg)
         self.device = self.env.device
@@ -122,38 +123,43 @@ class BaseAgent:
         curr_info = self.env.robot.get_observation()[-1]
         if(target_orn is None):
             # target_orn = np.array(curr_info["tcp_orn"])
-            target_orn = self.target_orn
+            target_orn = self.target_orn.copy()
         if(gripper_action is None):
             gripper_action = curr_info["gripper_action"]
 
         
         tcp_pos = np.array(curr_info["tcp_pos"])
         # Move up
-        reach_target = [*tcp_pos[:2], self.origin[-1]]
-        a = [reach_target.copy(), target_orn.copy(), gripper_action]
+        reach_target = [*tcp_pos[:2], tcp_pos[-1] + 0.05]
+        a = [reach_target.copy(), target_orn, gripper_action]
         tcp_pos, _ = self.move_to_pos(tcp_pos, a)
 
         # Move in xy
         reach_target = [*target_pos[:2], tcp_pos[-1]]
-        a = [reach_target.copy(), target_orn.copy(), gripper_action]
+        a = [reach_target.copy(), target_orn, gripper_action]
         tcp_pos, _ = self.move_to_pos(tcp_pos, a)
 
         # Move to target
-        a = [target_pos, target_orn, gripper_action]
+        a = [target_pos.copy(), target_orn, gripper_action]
         _, transition = self.move_to_pos(tcp_pos, a)
         return transition
 
     def move_to_pos(self, tcp_pos, action):
         last_pos = tcp_pos.copy()
         target_pos = action[0]
+        target_orn = action[1]
         # When robot is moving and far from target
         ns, r, d, info = self.env.step(action)
         curr_pos = np.array(info["robot_info"]["tcp_pos"])
+        curr_orn = np.array(info["robot_info"]["tcp_orn"])
+
         while(np.linalg.norm(curr_pos - target_pos) > 0.01
-              and np.linalg.norm(curr_pos - last_pos) > 0.001):
+              and np.linalg.norm(curr_pos - last_pos) > 0.001
+              and np.linalg.norm(curr_orn - target_orn) > 0.01):
             last_pos = curr_pos
             ns, r, d, info = self.env.step(action)             
             curr_pos = np.array(info["robot_info"]["tcp_pos"])
+            curr_orn = np.array(info["robot_info"]["tcp_orn"])
 
             if self.viz_obs:
                 _caption = "MB: %s" % self.curr_caption

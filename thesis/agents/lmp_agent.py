@@ -128,6 +128,16 @@ class PlayLMPAgent(BaseAgent):
         _goal_embd = self.lang_enc(goal).permute(1,0)
         return {'lang': _goal_embd}
 
+    def add_offset(self, pos):
+        # Add offset
+        # obs = self.env.get_obs()
+        # robot_orn = obs['robot_obs'][3:6]
+        # tcp_mat = pos_orn_to_matrix(target_pos, robot_orn)
+        # offset_global_frame = tcp_mat @ self.offset
+        # target_pos = offset_global_frame[:3]
+        offset_pos = pos + self.offset[:3]
+        return offset_pos
+
     def get_aff_pred(self, caption):
         obs = self.env.get_obs()
         inp = {"img": obs["rgb_obs"]["rgb_static"],
@@ -160,35 +170,44 @@ class PlayLMPAgent(BaseAgent):
                     if pos[1] < target_pos[1]:
                         target_pos = pos
 
-
-        # Add offset
-        obs = self.env.get_obs()
-        robot_orn = obs['robot_obs'][3:6]
-        tcp_mat = pos_orn_to_matrix(target_pos, robot_orn)
-        offset_global_frame = tcp_mat @ self.offset
-        target_pos = offset_global_frame[:3]
-
         # img = obs["rgb_obs"]["rgb_static"]
         # pixel = self.env.cameras[0].project(np.array([*target_pos, 1]))
         # img = self.print_px_img(img, pixel)
         # cv2.imshow("move_to", img[:, :, ::-1])
         # cv2.waitKey(1)
         # import pybullet as p
-        p.addUserDebugText("t", target_pos, [1,0,0])
-
-        self.curr_caption = caption
-        obs, _, _, info = self.move_to(target_pos, gripper_action=1)
-
-        # Update target pos and orn
-        self.env.robot.target_pos = target_pos
-        self.env.robot.target_orn = obs["robot_obs"][3:6]
+        # p.addUserDebugText("t", target_pos, [1,0,0])
+        return target_pos
 
     def reset(self, caption):
-        self.env.robot.reset()
         if self.move_outside:
             self.reset_position()
+        # Open gripper
+        robot_obs = self.env.robot.get_observation()[1]
+        width = robot_obs["gripper_opening_width"]
+        if width < 0.03:
+            for i in range(5):
+                self.env.step([robot_obs["tcp_pos"], robot_obs["tcp_orn"], 1])
+
+        # Get Target
+        target_pos = self.get_aff_pred(caption)
+        offset_pos = self.add_offset(target_pos)
+
+        # If far from target
+        diff_target = np.linalg.norm(target_pos - robot_obs["tcp_pos"])
+        diff_offset = np.linalg.norm(offset_pos - robot_obs["tcp_pos"])
+        if diff_target > 0.08 and diff_offset > 0.08:
+            # self.reset_position()
+            # self.env.robot.reset()
+            obs, _, _, info = self.move_to(offset_pos, gripper_action=1)
+            self.env.robot.target_pos = offset_pos.copy()
+            self.env.robot.target_orn = self.target_orn.copy()
+            # obs["robot_obs"][3:6]
+
+        # obs, _, _, info = self.move_to(target_pos, gripper_action=1)
+        # self.env.robot.target_pos = target_pos
+        # self.env.robot.target_orn = obs["robot_obs"][3:6]
         self.model_free.reset()
-        self.get_aff_pred(caption)
 
     def print_px_img(self, img, px):
         out_shape = (300, 300)

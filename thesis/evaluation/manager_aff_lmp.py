@@ -10,34 +10,36 @@ import time
 from thesis.evaluation.utils import join_vis_lang, format_sftp_path, LangEmbeddings, get_env
 from thesis.utils.utils import get_abspath
 logger = logging.getLogger(__name__)
-
+import cv2
 
 class PolicyManager:
     def __init__(self, train_folder, checkpoint, debug=False, use_affordances=True) -> None:
         self.debug = debug
         self.train_folder = train_folder
         self.checkpoint = checkpoint + ".ckpt"
-        self.use_afforances = use_affordances
+        self.use_affordances = use_affordances
 
     def rollout(self, env, model, task_oracle, args, subtask, lang_embeddings, val_annotations, plans):
         if args.debug:
             print(f"{subtask} ", end="")
             time.sleep(0.5)
-        obs = env.get_obs()
         # get lang annotation for subtask
         lang_annotation = val_annotations[subtask][0]
 
         # get language goal embedding
         goal = lang_embeddings.get_lang_goal(lang_annotation)
-        model.model_free.reset()
+        start_info = env.get_info()
 
         # Do not reset model if holding something
-        if self.use_afforances:
-            width = env.robot.get_observation()[-1]["gripper_opening_width"]
-            if width > 0.055 or width< 0.01:
-                model.reset(lang_annotation)
-        
-        start_info = env.get_info()
+        if self.use_affordances:
+            # width = env.robot.get_observation()[-1]["gripper_opening_width"]
+            # if width > 0.055 or width< 0.01:
+            model.reset(lang_annotation)
+        else:
+            # If no caption provided, wont use affordance to move to something
+            model.model_free.reset()
+
+        obs = env.get_obs()
         # Reset environment
         t_obs = model.transform_observation(obs)
         plan, latent_goal = model.model_free.get_pp_plan_lang(t_obs, goal)
@@ -45,10 +47,11 @@ class PolicyManager:
 
         for step in range(args.ep_len):
             action = model.step(obs, goal)
-            obs, _, _, current_info = env.step(action)
+            obs, _, _, current_info = env.step(action.copy())
             if args.debug:
                 img = env.render(mode="rgb_array")
-                join_vis_lang(img, lang_annotation)
+                cv2.imshow("Gripper cam", img["rgb_gripper"][:, :, ::-1])   
+                join_vis_lang(img["rgb_static"], lang_annotation)
                 # time.sleep(0.1)
             # check if current step solves a task
             current_task_info = task_oracle.get_task_info_for_set(start_info, current_info, {subtask})
@@ -107,7 +110,7 @@ class PolicyManager:
         cfg.agent.dataset_path = dataset_path
 
         # Affordance
-        if self.use_afforances:
+        if self.use_affordances:
             cfg.aff_detection.checkpoint.train_folder = self.train_folder
             cfg.aff_detection.checkpoint.model_name = self.checkpoint
         model = hydra.utils.instantiate(cfg.agent,

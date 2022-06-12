@@ -61,7 +61,9 @@ def add_norm_values(run_dir, data_dir, episodes_file="episodes_split.json"):
         if(len(new_data[k]) > 0):
             new_data[k] = {
                 "mean": np.mean(new_data[k]),
-                "std": np.std(new_data[k])
+                "std": np.std(new_data[k]),
+                "min": np.min(new_data[k]),
+                "max": np.max(new_data[k])
             }
     update_json(json_filepath, {"norm_values": new_data})
 
