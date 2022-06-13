@@ -132,9 +132,9 @@ class PlayLMPAgent(BaseAgent):
         # Add offset
         # obs = self.env.get_obs()
         # robot_orn = obs['robot_obs'][3:6]
-        # tcp_mat = pos_orn_to_matrix(target_pos, robot_orn)
+        # tcp_mat = pos_orn_to_matrix(pos, robot_orn)
         # offset_global_frame = tcp_mat @ self.offset
-        # target_pos = offset_global_frame[:3]
+        # offset_pos = offset_global_frame[:3]
         offset_pos = pos + self.offset[:3]
         return offset_pos
 
@@ -194,8 +194,8 @@ class PlayLMPAgent(BaseAgent):
         offset_pos = self.add_offset(target_pos)
 
         # If far from target 3d
-        diff_target = np.linalg.norm(target_pos - robot_obs["tcp_pos"])
-        diff_offset = np.linalg.norm(offset_pos - robot_obs["tcp_pos"])
+        # diff_target = np.linalg.norm(target_pos - robot_obs["tcp_pos"])
+        # diff_offset = np.linalg.norm(offset_pos - robot_obs["tcp_pos"])
 
         # 2d dist
         tcp_px = self.env.cameras[0].project(np.array([*robot_obs["tcp_pos"], 1]))
