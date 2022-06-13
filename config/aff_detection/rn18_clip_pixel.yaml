@@ -1,20 +1,20 @@
 # Unet Resnet 18 with respective decoder channels
 # CLIP as sentence encoder
 # Single pixel prediction
+_target_: thesis.affordance.pixel_aff_lang_detector.PixelAffLangDetector
+_recursive_: False
 name: rn18_clip_pixel
-
-model:
-  _target_: thesis.affordance.pixel_aff_lang_detector.PixelAffLangDetector
-  _recursive_: False
-  cfg:
-    attn_stream_fusion_type: 'add'
-    lang_fusion_type: 'mult'
-    streams: ${aff_detection.streams}
-    batchnorm: False 
-    unet_cfg: # [256, 128, 64, 32, 16]
-      decoder_channels: [128, 64, 32]
-
 img_size: 224
+
+model_cfg:
+  freeze_backbone: True
+  attn_stream_fusion_type: 'add'
+  lang_fusion_type: 'mult'
+  streams: ${aff_detection.streams}
+  batchnorm: False 
+  unet_cfg: # [256, 128, 64, 32, 16]
+    decoder_channels: [128, 64, 32]
+
 defaults:
   - pixel_data
   - streams: rn18_clip_lingunet

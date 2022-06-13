@@ -59,7 +59,8 @@ class BaseAgent:
             point_detector = load_aff_model(checkpoint_path,
                                             aff_cfg.checkpoint.model_name,
                                             aff_cfg.model_cfg,
-                                            transforms=aff_cfg.dataset.transforms['validation'])
+                                            transforms=aff_cfg.dataset.transforms['validation'],
+                                            eval=True)
                                             # hough_voting=cfg.hough_voting)
             point_detector.eval()
         else:

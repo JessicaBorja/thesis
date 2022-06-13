@@ -10,12 +10,13 @@ from thesis.models.visual_lang_encoders.base_lingunet import BaseLingunet
 class RN18Lingunet(BaseLingunet):
     """Resnet 18 with U-Net skip connections and [] language encoder"""
 
-    def __init__(self, input_shape, output_dim, cfg, device, lang_encoder):
+    def __init__(self, input_shape, output_dim, cfg, device):
         super(RN18Lingunet, self).__init__(input_shape, output_dim, cfg, device)
         self.in_channels = input_shape[-1]
         self.n_classes = output_dim
         self.lang_embed_dim = 1024
         self.text_fc = nn.Linear(768, self.lang_embed_dim)
+        self.freeze_backbone = cfg.freeze_backbone
         self.unet = self._build_model(cfg.unet_cfg.decoder_channels, self.in_channels)
 
     def _build_model(self, decoder_channels, in_channels):
@@ -39,8 +40,11 @@ class RN18Lingunet(BaseLingunet):
 
         self.decoder_channels = decoder_channels
         # Fix encoder weights. Only train decoder
-        for param in unet.encoder.parameters():
-            param.requires_grad = False
+        if self.freeze_backbone:
+            for param in unet.encoder.parameters():
+                param.requires_grad = False
+            for param in unet.encoder.layer4.parameters():
+                param.requires_grad = True
         return unet
 
     def forward(self, x, text_enc, softmax=True):

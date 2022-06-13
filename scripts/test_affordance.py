@@ -26,11 +26,13 @@ def main(cfg):
         return
 
     # Load model
+    run_cfg.aff_detection.model_cfg.freeze_backbone=True
     model = load_aff_model(hydra_run_dir,
                            cfg.checkpoint.model_name,
                            run_cfg.aff_detection,
                            transforms=run_cfg.aff_detection.dataset.transforms['validation'],
-                           hough_voting=cfg.aff_detection.hough_voting)
+                           hough_voting=cfg.aff_detection.hough_voting,
+                           eval=True)
     model.eval()
 
     # Dataloaders

@@ -79,7 +79,7 @@ def add_img_text(img, text_label):
     return out_img
 
 
-def load_aff_model(hydra_run_dir, model_name, model_cfg, **kwargs):
+def load_aff_model(hydra_run_dir, model_name, model_cfg, eval=False, **kwargs):
     # Load model
     checkpoint_path = os.path.join(hydra_run_dir, 'checkpoints')
     checkpoint_path = os.path.join(checkpoint_path, model_name)
@@ -88,6 +88,8 @@ def load_aff_model(hydra_run_dir, model_name, model_cfg, **kwargs):
         if os.path.isfile(aff_cfg):
             train_cfg = OmegaConf.load(aff_cfg)
             _model_cfg = train_cfg.aff_detection
+        if eval:
+            _model_cfg.model_cfg.freeze_backbone=True
 
         # Get class
         model_class = _model_cfg._target_.split('.')

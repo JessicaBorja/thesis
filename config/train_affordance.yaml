@@ -22,7 +22,7 @@ trainer:
   strategy: ddp
   precision: 32
 
-dataset_name: calvin_lang_contactEndPt
+dataset_name: calvin_lang_MoCEndPt
 aff_detection:
   depth_dist: gaussian # logistic / gaussian
   normalize_depth: True
