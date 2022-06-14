@@ -16,7 +16,7 @@ class RN18Lingunet(BaseLingunet):
         self.n_classes = output_dim
         self.lang_embed_dim = 1024
         self.text_fc = nn.Linear(768, self.lang_embed_dim)
-        self.freeze_backbone = cfg.freeze_backbone
+        self.freeze_backbone = cfg.freeze_encoder.aff
         self.unet = self._build_model(cfg.unet_cfg.decoder_channels, self.in_channels)
 
     def _build_model(self, decoder_channels, in_channels):

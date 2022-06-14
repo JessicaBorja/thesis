@@ -25,7 +25,7 @@ class DepthEstimationGaussian(nn.Module):
         # Use clip preprocessing
         self.text_enc = CLIPLang(self.device)
         self.loss_fcn = nn.GaussianNLLLoss()
-        self.img_encoder = self._load_img_encoder(cfg.freeze_backbone)
+        self.img_encoder = self._load_img_encoder(cfg.freeze_encoder.depth)
 
         self.normalized = cfg.normalized
         self.init_depth_transforms(cfg.depth_norm_values)

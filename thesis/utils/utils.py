@@ -89,8 +89,9 @@ def load_aff_model(hydra_run_dir, model_name, model_cfg, eval=False, **kwargs):
             train_cfg = OmegaConf.load(aff_cfg)
             _model_cfg = train_cfg.aff_detection
         if eval:
-            _model_cfg.model_cfg.freeze_backbone=True
-
+            _model_cfg.model_cfg.freeze_encoder.lang=True
+            _model_cfg.model_cfg.freeze_encoder.aff=True
+            _model_cfg.model_cfg.freeze_encoder.depth=True
         # Get class
         model_class = _model_cfg._target_.split('.')
         model_file = '.'.join(_model_cfg._target_.split('.')[:-1])

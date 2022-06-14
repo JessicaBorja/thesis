@@ -7,7 +7,10 @@ name: rn18_clip_pixel
 img_size: 224
 
 model_cfg:
-  freeze_backbone: True
+  freeze_encoder: 
+    lang: True
+    aff: True
+    depth: True
   attn_stream_fusion_type: 'add'
   lang_fusion_type: 'mult'
   streams: ${aff_detection.streams}

@@ -30,7 +30,7 @@ def main(cfg):
     if(cfg.aff_detection.name != cfg.run_name):
         # data_percent_str = str(cfg.aff_detection.dataset.data_percent * 100)
         _name = "%s_%s" % (cfg.aff_detection.name,
-                                           cfg.run_name)
+                           cfg.run_name)
     if cfg.aff_detection.normalize_depth:
         _name += "_normed"
     cfg.wandb.logger.name = _name
