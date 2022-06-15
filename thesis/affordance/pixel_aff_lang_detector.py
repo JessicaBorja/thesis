@@ -59,7 +59,7 @@ class PixelAffLangDetector(LightningModule):
                  batch_size=bs)
         for loss_fnc, value in info.items():
             self.log('Training/%s' % loss_fnc, value,
-                     on_step=False, on_epoch=True)
+                     on_step=False, on_epoch=True, batch_size=bs)
 
         for err_type, value in err.items():
             self.log('Training/%s_err' % err_type, value,
