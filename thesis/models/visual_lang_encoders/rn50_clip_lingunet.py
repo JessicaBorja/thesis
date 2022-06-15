@@ -38,6 +38,7 @@ class CLIPLingUNet(BaseLingunet):
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
         self.clip_rn50 = clip_rn50
+        self.freeze_backbone = cfg.freeze_encoder.aff
         self._build_decoder()
     
     def calc_img_enc_size(self):
@@ -113,7 +114,7 @@ class CLIPLingUNet(BaseLingunet):
         self.decoder_layers = layers_info
 
     def encode_image(self, img):
-        with torch.no_grad():
+        with torch.set_grad_enabled(not self.freeze_backbone):
             img_encoding, img_im = self.clip_rn50.visual.prepool_im(img)
         return img_encoding, img_im
 
