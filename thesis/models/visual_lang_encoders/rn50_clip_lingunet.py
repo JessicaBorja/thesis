@@ -38,6 +38,7 @@ class CLIPLingUNet(BaseLingunet):
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
         self.clip_rn50 = clip_rn50
+        self.freeze_backbone = cfg.freeze_encoder.aff
         self._build_decoder()
     
     def calc_img_enc_size(self):
@@ -45,6 +46,11 @@ class CLIPLingUNet(BaseLingunet):
         test_tensor = test_tensor.to(self.device).unsqueeze(0)
         shape = self.encode_image(test_tensor)[0].shape[1:]
         return shape
+
+    def encode_image(self, img):
+        with torch.set_grad_enabled(not self.freeze_backbone):
+            img_encoding, img_im = self.clip_rn50.visual.prepool_im(img)
+        return img_encoding, img_im
 
     def _build_decoder(self):
         # language
@@ -112,11 +118,6 @@ class CLIPLingUNet(BaseLingunet):
                             "shape": (self.output_dim, h, h)})
         self.decoder_layers = layers_info
 
-    def encode_image(self, img):
-        with torch.no_grad():
-            img_encoding, img_im = self.clip_rn50.visual.prepool_im(img)
-        return img_encoding, img_im
-
     def forward(self, x, text_enc):
         in_type = x.dtype
         in_shape = x.shape
@@ -138,11 +139,11 @@ class CLIPLingUNet(BaseLingunet):
 
         for i, lang_block in enumerate(self.lang_blocks, 2):
             x = lang_block(x, im[-i], l_input, x2_mask=l_mask)
-            _info["hidden_layers"].append(x)
+            # _info["hidden_layers"].append(x)
 
         for layer in self.decoder_blocks:
             x = layer(x)
-            _info['hidden_layers'].append(x)
+            # _info['hidden_layers'].append(x)
 
         x = self.conv2(x)
         x = F.interpolate(x, size=(in_shape[-2], in_shape[-1]), mode='bilinear')

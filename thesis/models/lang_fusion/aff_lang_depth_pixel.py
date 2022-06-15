@@ -55,11 +55,11 @@ class AffDepthLangFusionPixel(nn.Module):
                                         self.cfg,
                                         self.device,
                                         **kwargs)
-
         # Optional 
         if depth_est_fcn:
             depth_est_model = models.deth_est_nets[depth_est_fcn]
-            self.depth_stream = depth_est_model(self.in_shape, 1,
+            _in_shape = self.aff_stream.calc_img_enc_size()
+            self.depth_stream = depth_est_model(_in_shape, 1,
                                                 self.cfg,
                                                 self.device)
         else:
@@ -103,7 +103,8 @@ class AffDepthLangFusionPixel(nn.Module):
         # Shared language encoder
         logits, _info = self.aff_stream(in_tens, text_enc)
         if self.depth_stream:
-            depth_out = self.depth_stream(in_tens, text_enc)
+            depth_in = _info["hidden_layers"][-1]  # encouder output
+            depth_out = self.depth_stream(depth_in, text_enc)
         else:
             depth_out = None
 

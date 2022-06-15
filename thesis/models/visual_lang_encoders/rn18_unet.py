@@ -15,9 +15,14 @@ class RN18Lingunet(BaseLingunet):
         self.in_channels = input_shape[-1]
         self.n_classes = output_dim
         self.lang_embed_dim = 1024
-        self.text_fc = nn.Linear(768, self.lang_embed_dim)
         self.freeze_backbone = cfg.freeze_encoder.aff
         self.unet = self._build_model(cfg.unet_cfg.decoder_channels, self.in_channels)
+
+    def calc_img_enc_size(self):
+        test_tensor = torch.zeros(self.input_shape).permute(2, 0, 1)
+        test_tensor = test_tensor.to(self.device).unsqueeze(0)
+        shape = self.unet.encoder(test_tensor)[-1].shape[1:]
+        return shape
 
     def _build_model(self, decoder_channels, in_channels):
         # encoder_depth Should be equal to number of layers in decoder
@@ -29,14 +34,14 @@ class RN18Lingunet(BaseLingunet):
             encoder_depth=len(decoder_channels),
             decoder_channels=tuple(decoder_channels),
             activation=None,
-        )
+        ).to(self.device)
 
         self.decoder = UnetLangFusionDecoder(
             fusion_module = fusion.names[self.lang_fusion_type],
             lang_embed_dim = self.lang_embed_dim,
             encoder_channels=unet.encoder.out_channels,
             decoder_channels=decoder_channels,
-            n_blocks=len(decoder_channels))
+            n_blocks=len(decoder_channels)).to(self.device)
 
         self.decoder_channels = decoder_channels
         # Fix encoder weights. Only train decoder
@@ -51,7 +56,7 @@ class RN18Lingunet(BaseLingunet):
         # in_type = x.dtype
         # in_shape = x.shape
         x = x[:,:3]  # select RGB
-        features = self.unet.encoder(x)
+        encoder_feat = self.unet.encoder(x)  # List of all encoder outputs
 
         # Language encoding
         l_enc, l_emb, l_mask  = text_enc
@@ -59,10 +64,11 @@ class RN18Lingunet(BaseLingunet):
     
         # Decoder
         # encode image
-        decoder_feat = self.decoder(l_input, *features)
+        decoder_feat = self.decoder(l_input, *encoder_feat)
         aff_out = self.unet.segmentation_head(decoder_feat)
 
         info = {"decoder_out": [decoder_feat],
+                "hidden_layers": encoder_feat,
                 "affordance": aff_out,
                 "text_enc": l_input}
         return aff_out, info

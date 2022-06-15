@@ -25,7 +25,6 @@ class DepthEstimationGaussian(nn.Module):
         # Use clip preprocessing
         self.text_enc = CLIPLang(self.device)
         self.loss_fcn = nn.GaussianNLLLoss()
-        self.img_encoder = self._load_img_encoder(cfg.freeze_encoder.depth)
 
         self.normalized = cfg.normalized
         self.init_depth_transforms(cfg.depth_norm_values)
@@ -33,24 +32,6 @@ class DepthEstimationGaussian(nn.Module):
 
     def init_depth_transforms(self, depth_norm_values):
         self.depth_norm_inverse = NormalizeVectorInverse(depth_norm_values["mean"], depth_norm_values["std"])
- 
-    def calc_img_enc_size(self):
-        test_tensor = torch.zeros(self.input_shape).permute(2, 0, 1)
-        test_tensor = test_tensor.to(self.device).unsqueeze(0)
-        shape = self.encode_image(test_tensor)[0].shape[1:]
-        return shape
-
-    def _load_img_encoder(self, freeze_backbone):
-        net = models.resnet18(pretrained=True)
-        # Remove the last fc layer, and rebuild
-        if freeze_backbone:
-            for param in net.parameters():
-                param.requires_grad = False
-            for param in net.layer4.parameters():
-                param.requires_grad = True
-
-        modules = list(net.children())[:-1]
-        return nn.Sequential(*modules)
 
     def sample(self, depth_dist, reparametrize=True):
         '''
@@ -70,20 +51,14 @@ class DepthEstimationGaussian(nn.Module):
             sample = self.depth_norm_inverse(sample)
         return sample
 
-    def encode_image(self, img):
-        return self.img_encoder(img)
-
     def _build_decoder(self):
         # B, C, H, W
         self.proj_input_dim = 1024
-        _test_tensor = torch.zeros(self.input_shape).permute((2, 0, 1)).unsqueeze(0)
-        shape = self.encode_image(_test_tensor).shape
-
-        linear_in = np.prod(shape)
+        linear_in = np.prod(self.input_shape)
         hidden_dim = 256
-        self.fc1 = nn.Linear(linear_in + self.proj_input_dim, hidden_dim)
-        # self.fc1 = nn.Linear(linear_in, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc1 = nn.Linear(linear_in + self.proj_input_dim, hidden_dim * 3)
+        self.fc2 = nn.Linear(hidden_dim * 3 + self.proj_input_dim, hidden_dim * 2)
+        self.fc3 = nn.Linear(hidden_dim * 2, hidden_dim)
         self.depth_mu = nn.Linear(hidden_dim, 1)
         self.depth_sigma = nn.Linear(hidden_dim, 1)
 
@@ -99,8 +74,6 @@ class DepthEstimationGaussian(nn.Module):
 
     def forward(self, x, text_enc):
         in_type = x.dtype
-        x = x[:,:3]  # select RGB
-        x = self.encode_image(x)
         x = x.to(in_type)
 
         # encode text
@@ -117,7 +90,10 @@ class DepthEstimationGaussian(nn.Module):
         # Predict distribution
         x = torch.cat([x, l_input], -1)
         x = F.relu(self.fc1(x))
+        
+        x = torch.cat([x, l_input], -1)
         x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
         mu = self.depth_mu(x)
         log_sigma = self.depth_sigma(x)
         # avoid log_sigma to go to infinity

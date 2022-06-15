@@ -22,11 +22,6 @@ class CLIPLang(LangEncoder):
         # modules = list(net.children())[:-1]
         self.model = _clip_rn50
 
-    def encode_image(self, img):
-        with torch.set_grad_enabled(not self.freeze_backbone):
-            img_encoding, img_im = self.clip_rn50.visual.prepool_im(img)
-        return img_encoding, img_im
-
     def encode_text(self, x):
         with torch.set_grad_enabled(not self.freeze_backbone):
             tokens = tokenize(x).to(self.device)
