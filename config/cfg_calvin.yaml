@@ -21,15 +21,9 @@ policy_checkpoint:
 agent:
   viz_obs: True
 
-depth_pred:
-  checkpoint:
-    train_folder: ~/logs/thesis/depth_pred/2022-05-10/13-14-14_depth_pred
-    model_name: val_err.ckpt
-    img_resize: 224
-
 aff_detection:
   checkpoint:
-    train_folder: ~/logs/thesis/aff_model/2022-06-07/18-57-25_aff_model/
+    train_folder: ~/logs/thesis/aff_ablation/2022-06-15/18-23-49_aff_ablation
     # train_folder: ./hydra_outputs/affordance_model/2022-03-09/01-38-55_aff_rl
     model_name: val_err.ckpt
     img_resize: 224

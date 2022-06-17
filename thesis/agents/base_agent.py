@@ -2,8 +2,7 @@ import numpy as np
 import cv2
 import logging
 from thesis.affordance.base_detector import BaseDetector
-from thesis.utils.utils import add_img_text, pos_orn_to_matrix, get_abspath, load_aff_model, resize_pixel
-from thesis.models.depth.depth_module import DepthModule
+from thesis.utils.utils import add_img_text, get_abspath, load_aff_model, resize_pixel
 from lfp.evaluation.utils import join_vis_lang
 from omegaconf import OmegaConf
 import os
@@ -34,24 +33,6 @@ class BaseAgent:
     @env.setter
     def env(self, value):
         self._env = value
-
-    def get_depth_predictor(self, depth_cfg):
-        depth_checkpoint = depth_cfg.checkpoint
-        hydra_run_dir = get_abspath(depth_checkpoint.train_folder)
-        if os.path.exists(hydra_run_dir):
-            # Load model
-            checkpoint_path = os.path.join(hydra_run_dir, 'checkpoints')
-            checkpoint_path = os.path.join(checkpoint_path, depth_checkpoint.model_name)
-            if(os.path.isfile(checkpoint_path)):
-                run_cfg = os.path.join(hydra_run_dir, ".hydra/config.yaml")
-                if os.path.isfile(run_cfg):
-                    train_cfg = OmegaConf.load(run_cfg)
-                    model = DepthModule.load_from_checkpoint(checkpoint_path).cuda()
-                    logger.info("Depth pred model successfully loaded: %s" % checkpoint_path)
-            else:
-                logger.info("No checkpoint file found %s" % checkpoint_path)
-            return model
-        return None
 
     def get_point_detector(self, aff_cfg):
         checkpoint_path = get_abspath(aff_cfg.checkpoint.train_folder)

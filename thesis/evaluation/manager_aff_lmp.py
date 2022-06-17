@@ -29,7 +29,7 @@ class PolicyManager:
         # goal = lang_embeddings.get_lang_goal(lang_annotation)
 
         # Now HULC model loads the weights of language network
-        goal = lang_annotation
+        goal = {"lang": [lang_annotation]}
         start_info = env.get_info()
 
         # Do not reset model if holding something
@@ -44,7 +44,7 @@ class PolicyManager:
         obs = env.get_obs()
         # Reset environment
         t_obs = model.transform_observation(obs)
-        plan, latent_goal = model.model_free.get_pp_plan_lang(t_obs, lang_annotation)
+        plan, latent_goal = model.model_free.get_pp_plan_lang(t_obs, goal)
         plans[subtask].append((plan.cpu(), latent_goal.cpu()))
 
         for step in range(args.ep_len):

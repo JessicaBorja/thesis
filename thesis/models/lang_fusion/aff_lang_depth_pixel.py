@@ -77,7 +77,7 @@ class AffDepthLangFusionPixel(nn.Module):
                 logits(np.array): B, H, W, 1
         '''
         B = inp_img.shape[0]
-        output, _info = self.forward(inp_img, lang_goal)
+        output, _info = self.forward(inp_img, [lang_goal])
 
         # Get aff predicted pixels
         pick_conf = output["aff"]
