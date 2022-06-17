@@ -8,7 +8,6 @@ from omegaconf import OmegaConf
 import torch
 import time
 from thesis.evaluation.utils import join_vis_lang, format_sftp_path, LangEmbeddings, get_env
-from thesis.utils.utils import get_abspath
 logger = logging.getLogger(__name__)
 import cv2
 
@@ -27,7 +26,10 @@ class PolicyManager:
         lang_annotation = val_annotations[subtask][0]
 
         # get language goal embedding
-        goal = lang_embeddings.get_lang_goal(lang_annotation)
+        # goal = lang_embeddings.get_lang_goal(lang_annotation)
+
+        # Now HULC model loads the weights of language network
+        goal = lang_annotation
         start_info = env.get_info()
 
         # Do not reset model if holding something
@@ -42,7 +44,7 @@ class PolicyManager:
         obs = env.get_obs()
         # Reset environment
         t_obs = model.transform_observation(obs)
-        plan, latent_goal = model.model_free.get_pp_plan_lang(t_obs, goal)
+        plan, latent_goal = model.model_free.get_pp_plan_lang(t_obs, lang_annotation)
         plans[subtask].append((plan.cpu(), latent_goal.cpu()))
 
         for step in range(args.ep_len):
