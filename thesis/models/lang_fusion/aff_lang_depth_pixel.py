@@ -71,13 +71,18 @@ class AffDepthLangFusionPixel(nn.Module):
         '''
             inputs:
                 inp_img(tensor): [B, C, W, H] inp batch of images with transforms already applied
+                lang_goal: str or list of strings
             outputs:
                 p0_px(np.array): B, 2
                 depth_pred(np.array): B
                 logits(np.array): B, H, W, 1
         '''
         B = inp_img.shape[0]
-        output, _info = self.forward(inp_img, [lang_goal])
+
+        if isinstance(lang_goal, str):
+            lang_goal = [lang_goal]
+
+        output, _info = self.forward(inp_img, lang_goal)
 
         # Get aff predicted pixels
         pick_conf = output["aff"]
