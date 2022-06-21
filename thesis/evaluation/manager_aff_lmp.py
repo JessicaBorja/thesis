@@ -29,7 +29,10 @@ class PolicyManager:
         # goal = lang_embeddings.get_lang_goal(lang_annotation)
 
         # Now HULC model loads the weights of language network
-        goal = {"lang": [lang_annotation]}
+        if model.model_free.lang_encoder is not None:
+            goal = {"lang": [lang_annotation]}
+        else:
+            goal = lang_embeddings.get_lang_goal(lang_annotation)
         start_info = env.get_info()
 
         # Do not reset model if holding something
