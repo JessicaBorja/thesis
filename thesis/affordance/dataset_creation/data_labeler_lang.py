@@ -68,7 +68,6 @@ class DataLabelerLang(DataLabeler):
         curr_robot_obs = dct["robot_obs"]
         last_obs = dct["last_obs"]
 
-        curr_pt = curr_robot_obs[:3]
         contact = self.get_contact_info(dct["data"])
         if contact:
             min_len = 1 - self.mask_on_close
@@ -78,7 +77,8 @@ class DataLabelerLang(DataLabeler):
             if len(self.img_hist["static"]) > 1:
                 frame_idx = self.img_hist["static"][-1][0]
                 self.save_dict["grasps"].append(frame_idx)
-            self.label_gripper(self.img_hist["gripper"], curr_pt, last_obs, contact)
+            if len(self.img_hist["gripper"]) > min_len:
+                self.label_gripper(self.img_hist["gripper"], curr_robot_obs, last_obs, contact)
             self.img_hist = {"static": [], "gripper": []}
 
     def closed_to_open(self, dct):
@@ -119,32 +119,33 @@ class DataLabelerLang(DataLabeler):
         save_dict = {}
         self._last_task_centers = None
         curr_pt = curr_obs[:3]
+
+
+        _ep_id = self.img_hist["gripper"][-1][1]
+        # Get lang ann
+        if _ep_id in self.lang_ann:
+            # lang_ann has sets
+            task = list(self.lang_ann[_ep_id].keys())[-1]
+            lang_ann = list(self.lang_ann[_ep_id][task])
+        else:
+            lang_ann = []
+            task = []
+            self.curr_task[cam] = None
+
         for idx, (fr_idx, ep_id, im_id, robot_obs, img, depth) in enumerate(img_hist):
             # Shape: [H x W x 2]
             H, W = out_img_size  # img.shape[:2]
             centers = []
 
-            # Get lang ann
-            if ep_id in self.lang_ann:
-                # lang_ann has sets
-                task = list(self.lang_ann[ep_id].keys())[-1]
-                lang_ann = list(self.lang_ann[ep_id][task])
-                if self.curr_task[cam] is None or self.curr_task[cam] not in task:
-                    self.curr_task[cam] = task
-            else:
-                lang_ann = []
-                task = []
-                self.curr_task[cam] = None
-
             # Gripper width
+            pt_cam = self.get_pt_on_cam_frame(robot_obs, curr_pt, "gripper")
             if robot_obs[-1] > self.gripper_width_tresh or contact:
-                if curr_pt is not None:
-                    # Center in matrix convention (row, column)
-                    center_px = self.get_gripper_label(robot_obs[:-1], curr_pt)
-                    center_px = resize_center(center_px, img.shape[:2], out_img_size)
-                    if np.all(center_px > 0) and np.all(center_px < H):
-                        # Only one class, label as one
-                        centers.append([0, *center_px])
+                # Center in matrix convention (row, column)
+                center_px = self.get_gripper_label(robot_obs[:-1], curr_pt)
+                center_px = resize_center(center_px, img.shape[:2], out_img_size)
+                if np.all(center_px > 0) and np.all(center_px < H):
+                    # Only one class, label as one
+                    centers.append([0, *center_px])
             else:
                 centers = []
 
@@ -162,6 +163,7 @@ class DataLabelerLang(DataLabeler):
                 "viz_out": out_img,
                 "gripper_width": robot_obs[-1],
                 "tcp_pos_world_frame": curr_pt,
+                "tcp_pos_cam_frame": pt_cam,
                 "robot_obs": curr_obs,
             }
         self.save_dict[cam].update(save_dict)
@@ -187,7 +189,7 @@ class DataLabelerLang(DataLabeler):
             task = ""
             self.curr_task[cam] = None
 
-        pt_cam = self.get_pt_on_cam_frame(self._project_pt, "static")
+        pt_cam = self.get_pt_on_cam_frame(curr_robot_obs, self._project_pt, "static")
         for idx, (fr_idx, ep_id, im_id, robot_obs, img, depth) in enumerate(static_hist):
             if im_id in self.saved_static_frames:
                 continue
@@ -244,24 +246,33 @@ class DataLabelerLang(DataLabeler):
                 world_pt = world_pt[:3]
         return world_pt
 
-    def get_pt_on_cam_frame(self, world_pt, cam_name="static"):
+    def get_pt_on_cam_frame(self, robot_obs, world_pt, cam_name="static"):
         """
         Transforms point in world frame to camera frame
         """
         if self.mode == "simulation":
             cam = self.gripper_cam if cam_name == "gripper" else self.static_cam
+            if cam_name == "gripper":
+                # Re compute the view matrix of gripper camera
+                world_pt = self.preprocess_world_pt_gripper(robot_obs, world_pt)
+
             # View matrix maps from world frame to cam frame
             view_m = np.array(cam.viewMatrix).reshape((4, 4)).T
             world_pt = np.append(world_pt, 1)
-            pt_cam = view_m @ world_pt
-            pt_cam = pt_cam[:3]
         else:
             cam = self.gripper_cam if cam_name == "gripper" else self.static_cam
             # world to cam frame
-            view_m = np.array(cam.T_cam_world)
-            world_pt = np.append(world_pt, 1)
-            pt_cam = view_m @ world_pt
-            pt_cam = pt_cam[:3]
+            if cam_name == "gripper":
+                # From the world frame to tcp frame
+                transformed_pt = self.preprocess_world_pt_gripper(robot_obs, world_pt)
+            else:
+                transformed_pt = world_pt
+            # Inverse of extrinsic matrix. In the gripper camera, extrinsic matrix maps
+            # from cam to tcp, so T_cam_world maps from tcp to cam (static transformation)
+            view_m = np.array(cam.T_cam_world) 
+            world_pt = np.append(transformed_pt, 1)
+        pt_cam = view_m @ world_pt
+        pt_cam = pt_cam[:3]
         return pt_cam
 
     def viz_imgs(self, rgb_img, centers, caption="", cam_str=""):

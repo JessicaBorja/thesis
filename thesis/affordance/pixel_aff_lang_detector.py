@@ -215,7 +215,7 @@ class PixelAffLangDetector(LightningModule):
 
         return {"softmax": pick_logits_disp,
                 "pixel": (p0_pix[1], p0_pix[0]),
-                "depth": depth,
+                "depth": -depth, # Net produces positive values
                 "error": err}
 
     def get_preds_viz(self, inp, pred, gt_depth=0, out_shape=(300, 300), waitkey=0):

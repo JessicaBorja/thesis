@@ -313,8 +313,8 @@ class DataLabeler(DataReader):
             )
         return (tcp_y, tcp_x)  # matrix coord
 
-    def get_gripper_label(self, robot_obs, point):
-        pt, orn = robot_obs[:3], robot_obs[3:]
+    def preprocess_world_pt_gripper(self, robot_obs, point):
+        pt, orn = robot_obs[:3], robot_obs[3:6]
         if "real_world" in self.mode:
             orn = p.getQuaternionFromEuler(orn)
             transform_matrix = np.reshape(p.getMatrixFromQuaternion(orn), (3, 3))
@@ -322,18 +322,7 @@ class DataLabeler(DataReader):
             tcp2global = np.hstack([transform_matrix, np.expand_dims(np.array([*pt, 1]), 0).T])
             global2tcp = np.linalg.inv(tcp2global)
             point = global2tcp @ np.array([*point, 1])
-            tcp_pt = point[:3]
-
-            # Transform pt to homogeneus cords and project
-            tcp_x, tcp_y = self.gripper_cam.project(tcp_pt)
-
-            # Get img coords after resize
-            tcp_x, tcp_y = get_px_after_crop_resize(
-                (tcp_x, tcp_y),
-                self.gripper_cam.crop_coords,
-                self.gripper_cam.resize_resolution,
-            )
-
+            point = point[:3]
         else:
             orn = p.getQuaternionFromEuler(orn)
             tcp2cam_pos, tcp2cam_orn = self.gripper_cam.tcp2cam_T
@@ -348,10 +337,25 @@ class DataLabeler(DataReader):
 
             # Extrinsics change as robot moves
             self.gripper_cam.viewMatrix = p.computeViewMatrix(cam_pos, cam_pos + cam_rot_y, -cam_rot_z)
-
+        return point
+       
+    def get_gripper_label(self, robot_obs, point):
+        project_pt = self.preprocess_world_pt_gripper(robot_obs, point)
+        if "real_world" in self.mode:
+            project_pt = self.preprocess_world_pt_gripper(robot_obs, point)
             # Transform pt to homogeneus cords and project
-            point = np.append(point, 1)
-            tcp_x, tcp_y = self.gripper_cam.project(point)
+            tcp_x, tcp_y = self.gripper_cam.project(project_pt)
+
+            # Get img coords after resize
+            tcp_x, tcp_y = get_px_after_crop_resize(
+                (tcp_x, tcp_y),
+                self.gripper_cam.crop_coords,
+                self.gripper_cam.resize_resolution,
+            )
+        else:
+            # Transform pt to homogeneus cords and project
+            project_pt = np.append(project_pt, 1)
+            tcp_x, tcp_y = self.gripper_cam.project(project_pt)
         return (tcp_y, tcp_x)
 
 
