@@ -309,8 +309,8 @@ class DataLabelerLang(DataLabeler):
 @hydra.main(config_path="../../../config", config_name="cfg_datacollection")
 def main(cfg):
     labeler = DataLabelerLang(cfg)
-    labeler.iterate()
-    # labeler.after_loop()
+    # labeler.iterate()
+    labeler.after_loop()
 
 
 if __name__ == "__main__":
