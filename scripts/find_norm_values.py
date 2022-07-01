@@ -39,7 +39,7 @@ def add_norm_values(run_dir, data_dir, episodes_file="episodes_split.json"):
 
     cams = ["static_cam", "gripper_cam"]
     split = "training"
-    new_data = {"depth":{cam:[] for cam in cams}, "gripper_cam":[], "static_cam":[]}
+    new_data = {"depth":{cam:[] for cam in cams}}
     for cam in cams:
         split_data = []
         episodes = list(data[split].keys())
@@ -58,12 +58,12 @@ def add_norm_values(run_dir, data_dir, episodes_file="episodes_split.json"):
         print("%s images: %d" % (split, len(split_data)))
 
     for k in new_data.keys():
-        if(len(new_data[k]) > 0):
-            new_data[k] = {
-                "mean": np.mean(new_data[k]),
-                "std": np.std(new_data[k]),
-                "min": np.min(new_data[k]),
-                "max": np.max(new_data[k])
+        for cam in cams:
+            new_data[k][cam] = {
+                "mean": np.mean(new_data[k][cam]),
+                "std": np.std(new_data[k][cam]),
+                "min": np.min(new_data[k][cam]),
+                "max": np.max(new_data[k][cam])
             }
     update_json(json_filepath, {"norm_values": new_data})
 
