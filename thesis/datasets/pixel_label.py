@@ -49,7 +49,7 @@ class PixeLabelDataLang(Dataset):
         self.out_shape = self.get_shape(img_resize[cam])
 
         # Depth
-        depth_norm_values = _data_info["norm_values"]["depth"]
+        depth_norm_values = _data_info["norm_values"]["depth"]["%s_cam" % self.cam]
         self.depth_norm_values = depth_norm_values
         self.depth_norm = NormalizeVector([depth_norm_values["mean"]], [depth_norm_values["std"]])
         self.depth_norm_inversse = NormalizeVectorInverse(depth_norm_values["mean"], depth_norm_values["std"])
