@@ -52,7 +52,7 @@ wandb:
     entity: jessibd
     project: aff_lang_new
     offline: False
-    group: ${aff_detection.dataset.data_percent}p
+    group: ${aff_detection.dataset.cam}_${aff_detection.dataset.data_percent}p
   saver: ${aff_detection.wandb_saver}
 
 #-- Hydra config --#
