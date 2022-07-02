@@ -74,7 +74,7 @@ def main(cfg):
                 thickness=2,
                 line_type=cv2.LINE_AA,
             )
-        info = None  # labels
+        info = labels  # labels
         pred = model.predict(obs, info=info)
         out_shape = (400, 400)
         pred_img = model.get_preds_viz(obs, pred, gt_depth=labels["depth"],out_shape=out_shape)
@@ -82,7 +82,7 @@ def main(cfg):
 
         out_img = np.concatenate([pred_img, label_img], axis=1)
         cv2.imshow("img", out_img[:, :, ::-1])
-        cv2.waitKey(1)
+        cv2.waitKey(0)
 
 if __name__ == '__main__':
     main()

@@ -197,7 +197,7 @@ class PixelAffLangDetector(LightningModule):
         lang_goal = goal if goal is not None else obs["lang_goal"]
         # Attention model forward pass.
         net_inp = {'img': img,
-                   'lang_goal': lang_goal}
+                   'lang_goal': [lang_goal]}
         p0_pix, depth, logits = self.model.predict(img, lang_goal)
         p0_pix = p0_pix.squeeze()
         depth = depth.squeeze()
@@ -215,7 +215,7 @@ class PixelAffLangDetector(LightningModule):
 
         return {"softmax": pick_logits_disp,
                 "pixel": (p0_pix[1], p0_pix[0]),
-                "depth": -depth, # Net produces positive values
+                "depth": depth, # Net produces positive values
                 "error": err}
 
     def get_preds_viz(self, inp, pred, gt_depth=0, out_shape=(300, 300), waitkey=0):
@@ -265,7 +265,7 @@ class PixelAffLangDetector(LightningModule):
         depth_est = float(pred["depth"])
         if torch.is_tensor(gt_depth):
             gt_depth = float(gt_depth.detach().cpu().numpy())
-            text = "DepthErr: %.3f, Goal: %s" % (depth_est - gt_depth, inp["lang_goal"])
+            text = "DepthErr: %.3f, Goal: %s" % (np.abs(depth_est - gt_depth), inp["lang_goal"])
         else:
             text = "DepthPred: %.3f, Goal: %s" % (depth_est, inp["lang_goal"])
         out_img = add_img_text(out_img, text)

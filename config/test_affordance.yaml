@@ -11,7 +11,7 @@ checkpoint:
   train_folder: ~/logs/thesis/aff_ablation/2022-06-15/18-23-49_aff_ablation
   model_name: val_err.ckpt
 
-dataset_name: calvin_lang_MoCEndPt
+dataset_name: calvin_langDepthEndPt
 aff_detection:
   dataset:
     _recursive_: False

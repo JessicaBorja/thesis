@@ -11,7 +11,7 @@ defaults:
 #Environment
 output_size:
   static: [150, 200]
-  gripper: 200
+  gripper: 84
 mask_on_close: False
 save_viz: False
 euler_obs: True
