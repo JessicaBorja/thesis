@@ -149,7 +149,7 @@ class PixelAffLangDetector(LightningModule):
         # Get loss.
         aff_loss = cross_entropy_with_logits(pred["aff"], aff_label)
         if self.pred_depth:
-            gt_depth = label[depth_label].unsqueeze(-1).float()
+            gt_depth = label[depth_label].to(self.device).unsqueeze(-1).float()
             depth_loss = self.model.depth_stream.loss(pred['depth_dist'], gt_depth)
         else: 
             depth_loss = 0
