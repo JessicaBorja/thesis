@@ -17,8 +17,8 @@ def split_by_percentage(root_dir, episodes_split, data_percent):
     # Split the dataset the same as it is split in learning_fom_play_repo
     new_start_end_ids = get_split_data(orig_start_end_ids, data_percent)
     for episode_dir, cam_frames in episodes_split[split].items():
-        valid_frames = []
         for cam, frames in cam_frames.items():
+            valid_frames = []
             cam_frame_ids = np.array([int(f.split("_")[-1]) for f in frames])
 
             # Check valid frames
