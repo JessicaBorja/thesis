@@ -12,7 +12,6 @@ class AttentionLangFusionPixel(nn.Module):
         self.fusion_type = cfg.attn_stream_fusion_type
         self.stream_fcn = stream_fcn
         self.cfg = cfg
-        self.device = device
         self.batchnorm = self.cfg.batchnorm
 
         self.padding = np.zeros((3, 2), dtype=int) # H, W, C
@@ -39,7 +38,7 @@ class AttentionLangFusionPixel(nn.Module):
         stream_one_fcn = self.stream_fcn
         stream_one_model = models.lang_img_nets[stream_one_fcn]
 
-        self.stream_one = stream_one_model(self.in_shape, self.output_dim, self.cfg, self.device)
+        self.stream_one = stream_one_model(self.in_shape, self.output_dim, self.cfg)
         print(f"Attn FCN: {stream_one_fcn}")
 
     def attend(self, x, l):
@@ -49,7 +48,7 @@ class AttentionLangFusionPixel(nn.Module):
     def forward(self, inp_img, lang_goal, softmax=True):
         """Forward pass."""
         in_data = F.pad(inp_img, self.padding, mode='constant')
-        in_tens = in_data.to(dtype=torch.float, device=self.device) # [B 3 H W]
+        in_tens = in_data.to(dtype=torch.float, device=self.stream_one.device) # [B 3 H W]
 
         # Forward pass.
         logits, _info = self.attend(in_tens, lang_goal)

@@ -3,17 +3,15 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 import thesis.models as models
-from thesis.models.language_encoders.clip_lang_encoder import CLIPLang
 from thesis.utils.utils import unravel_idx
 
 class AffDepthLangFusionPixel(nn.Module):
 
-    def __init__(self, modules_cfg, in_shape, cfg, device, output_dim=1):
+    def __init__(self, modules_cfg, in_shape, cfg, output_dim=1):
         super().__init__()
         self.fusion_type = cfg.attn_stream_fusion_type
         self.modules_cfg = modules_cfg
         self.cfg = cfg
-        self.device = device
         self.batchnorm = self.cfg.batchnorm
 
         self.padding = np.zeros((3, 2), dtype=int) # H, W, C
@@ -42,8 +40,7 @@ class AffDepthLangFusionPixel(nn.Module):
         aff_net_model = models.vision_encoders[aff_net_fcn]
 
         # Clip loads both the language and visual encoder
-        self.lang_encoder = lang_enc_model(self.device,
-                                           freeze_backbone=self.cfg.freeze_encoder.lang)
+        self.lang_encoder = lang_enc_model(freeze_backbone=self.cfg.freeze_encoder.lang)
         if aff_net_fcn == "clip":
             kwargs = {"clip_rn50": self.lang_encoder.model}
         else:
@@ -53,15 +50,13 @@ class AffDepthLangFusionPixel(nn.Module):
         self.aff_stream = aff_net_model(self.in_shape,
                                         self.output_dim,
                                         self.cfg,
-                                        self.device,
                                         **kwargs)
         # Optional 
         if depth_est_fcn:
             depth_est_model = models.deth_est_nets[depth_est_fcn]
             _in_shape = self.aff_stream.calc_img_enc_size()
             self.depth_stream = depth_est_model(_in_shape, 1,
-                                                self.cfg,
-                                                self.device)
+                                                self.cfg)
         else:
             self.depth_stream = None
 
@@ -101,7 +96,7 @@ class AffDepthLangFusionPixel(nn.Module):
             input img has transforms already applied
         """
         in_data = F.pad(inp_img, self.padding, mode='constant')
-        in_tens = in_data.to(dtype=torch.float, device=self.device) # [B 3 H W]
+        in_tens = in_data.to(dtype=torch.float) # [B 3 H W]
 
         # FORWARD PASS TROUGH NETWORKS
         text_enc = self.lang_encoder.encode_text(lang_goal)

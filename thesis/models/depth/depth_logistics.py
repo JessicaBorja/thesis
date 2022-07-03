@@ -14,13 +14,12 @@ from thesis.utils.utils import calc_cnn_out_size
 class DepthEstimationLogistics(nn.Module):
     """ CLIP RN50 with U-Net skip connections """
 
-    def __init__(self, input_shape, output_dim, cfg, device):
+    def __init__(self, input_shape, output_dim, cfg):
         super(DepthEstimationLogistics, self).__init__()
         self.input_shape = input_shape
         self.output_dim = output_dim
         self.input_dim = 2048  # penultimate layer channel-size of CLIP-RN50
         self.cfg = cfg
-        self.device = device
         self.lang_fusion_type = self.cfg['lang_fusion_type']
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
@@ -28,18 +27,18 @@ class DepthEstimationLogistics(nn.Module):
         # Distribution parameters / bounds
         self.n_dist = 10 
         self.num_classes = 128 # cfg.depth_resolution
-        self.one_hot_embedding_eye = torch.eye(self.n_dist).to(self.device)
+        self.one_hot_embedding_eye = torch.eye(self.n_dist)
         _max_bound = 2.0 if cfg.normalize_depth else 4.5
         _min_bound = -2.0 if cfg.normalize_depth else 1.3
 
-        self.action_max_bound = torch.tensor([_max_bound]).to(self.device)
-        self.action_min_bound = torch.tensor([_min_bound]).to(self.device)
+        self.action_max_bound = torch.tensor([_max_bound])
+        self.action_min_bound = torch.tensor([_min_bound])
         self.img_encoder = self._load_img_encoder()
         self._build_decoder()
     
     def calc_img_enc_size(self):
         test_tensor = torch.zeros(self.input_shape).permute(2, 0, 1)
-        test_tensor = test_tensor.to(self.device).unsqueeze(0)
+        test_tensor = test_tensor.unsqueeze(0)
         shape = self.encode_image(test_tensor)[0].shape[1:]
         return shape
 
@@ -96,7 +95,7 @@ class DepthEstimationLogistics(nn.Module):
         
         # Broadcast gt (B, 1, N_DIST)
         B, _ = gt_depth.shape
-        gt_depth = gt_depth.unsqueeze(-1) * torch.ones(B, 1, self.n_dist).to(self.device)
+        gt_depth = gt_depth.unsqueeze(-1) * torch.ones(B, 1, self.n_dist)
 
         # Approximation of CDF derivative (PDF)
         centered_actions = gt_depth - means

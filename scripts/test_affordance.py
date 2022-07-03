@@ -14,6 +14,7 @@ import logging
 @hydra.main(config_path="../config", config_name='test_affordance')
 def main(cfg):
     model, run_cfg = get_aff_model(**cfg.checkpoint)
+    model = model.cuda()
     run_cfg.aff_detection.dataset.data_dir = cfg.aff_detection.dataset.data_dir
     # Dataloaders
     logger = logging.getLogger(__name__)

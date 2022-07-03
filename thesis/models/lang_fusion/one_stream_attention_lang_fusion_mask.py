@@ -20,7 +20,7 @@ class AttentionLangFusionMask(AttentionLangFusionPixel):
     def forward(self, inp_img, lang_goal, softmax=True):
         """Forward pass."""
         in_data = F.pad(inp_img, self.padding, mode='constant')
-        in_tens = in_data.to(dtype=torch.float, device=self.device) # [B 3 H W]
+        in_tens = in_data.to(dtype=torch.float) # [B 3 H W]
 
         # Forward pass.
         aff_out, info = self.attend(in_tens, lang_goal)

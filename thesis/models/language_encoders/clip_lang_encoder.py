@@ -5,12 +5,12 @@ from thesis.models.language_encoders.base_lang_encoder import LangEncoder
 
 
 class CLIPLang(LangEncoder):
-    def __init__(self, device, freeze_backbone=True, pretrained=True) -> None:
-        super(CLIPLang, self).__init__(device, freeze_backbone, pretrained)
+    def __init__(self, freeze_backbone=True, pretrained=True) -> None:
+        super(CLIPLang, self).__init__(freeze_backbone, pretrained)
 
     def _load_model(self):
-        model, _ = load_clip("RN50", device=self.device, jit=False)
-        _clip_rn50 = build_model(model.state_dict()).to(self.device)
+        model, _ = load_clip("RN50", jit=False)
+        _clip_rn50 = build_model(model.state_dict())
         del model
         if self.freeze_backbone:
             for param in _clip_rn50.parameters():
@@ -24,7 +24,7 @@ class CLIPLang(LangEncoder):
 
     def encode_text(self, x):
         with torch.set_grad_enabled(not self.freeze_backbone):
-            tokens = tokenize(x).to(self.device)
+            tokens = tokenize(x)
             text_feat, text_emb = self.model.encode_text_with_embeddings(tokens)
 
         text_mask = torch.where(tokens==0, tokens, 1)

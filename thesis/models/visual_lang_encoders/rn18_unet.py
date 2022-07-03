@@ -10,8 +10,8 @@ from thesis.models.visual_lang_encoders.base_lingunet import BaseLingunet
 class RN18Lingunet(BaseLingunet):
     """Resnet 18 with U-Net skip connections and [] language encoder"""
 
-    def __init__(self, input_shape, output_dim, cfg, device):
-        super(RN18Lingunet, self).__init__(input_shape, output_dim, cfg, device)
+    def __init__(self, input_shape, output_dim, cfg):
+        super(RN18Lingunet, self).__init__(input_shape, output_dim, cfg)
         self.in_channels = input_shape[-1]
         self.n_classes = output_dim
         self.lang_embed_dim = 1024
@@ -20,7 +20,7 @@ class RN18Lingunet(BaseLingunet):
 
     def calc_img_enc_size(self):
         test_tensor = torch.zeros(self.input_shape).permute(2, 0, 1)
-        test_tensor = test_tensor.to(self.device).unsqueeze(0)
+        test_tensor = test_tensor.unsqueeze(0)
         shape = self.unet.encoder(test_tensor)[-1].shape[1:]
         return shape
 
@@ -34,14 +34,14 @@ class RN18Lingunet(BaseLingunet):
             encoder_depth=len(decoder_channels),
             decoder_channels=tuple(decoder_channels),
             activation=None,
-        ).to(self.device)
+        )
 
         self.decoder = UnetLangFusionDecoder(
             fusion_module = fusion.names[self.lang_fusion_type],
             lang_embed_dim = self.lang_embed_dim,
             encoder_channels=unet.encoder.out_channels,
             decoder_channels=decoder_channels,
-            n_blocks=len(decoder_channels)).to(self.device)
+            n_blocks=len(decoder_channels))
 
         self.decoder_channels = decoder_channels
         # Fix encoder weights. Only train decoder

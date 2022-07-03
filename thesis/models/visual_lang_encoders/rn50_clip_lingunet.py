@@ -13,14 +13,14 @@ from thesis.utils.utils import calc_cnn_out_size
 
 class LangFusionBlock(nn.Module):
     def __init__(self, in_channels, out_channels,
-                 fusion_input_dim, proj_input_dim, device,
+                 fusion_input_dim, proj_input_dim,
                  up_factor=2, bilinear=True, lang_fusion_type='mult'):
         super().__init__()
         _fusion_fnc = fusion.names[lang_fusion_type]
 
-        self.lang_fuser = _fusion_fnc(input_dim=fusion_input_dim).to(device)
-        self.lang_proj = nn.Linear(proj_input_dim, out_channels).to(device)
-        self.up_conv = Up(in_channels, out_channels // up_factor, bilinear).to(device)
+        self.lang_fuser = _fusion_fnc(input_dim=fusion_input_dim)
+        self.lang_proj = nn.Linear(proj_input_dim, out_channels)
+        self.up_conv = Up(in_channels, out_channels // up_factor, bilinear)
 
     def forward(self, inp, skip_conn, l_input, x2_mask=None):
         x = self.lang_fuser(inp, l_input, x2_mask=x2_mask, x2_proj=self.lang_proj)
@@ -30,8 +30,8 @@ class LangFusionBlock(nn.Module):
 class CLIPLingUNet(BaseLingunet):
     """ CLIP RN50 with U-Net skip connections """
 
-    def __init__(self, input_shape, output_dim, cfg, device, clip_rn50):
-        super(CLIPLingUNet, self).__init__(input_shape, output_dim, cfg, device)
+    def __init__(self, input_shape, output_dim, cfg, clip_rn50):
+        super(CLIPLingUNet, self).__init__(input_shape, output_dim, cfg)
         self.output_dim = output_dim
         self.input_dim = 2048  # penultimate layer channel-size of CLIP-RN50
         self.batchnorm = self.cfg['batchnorm']
@@ -43,8 +43,9 @@ class CLIPLingUNet(BaseLingunet):
     
     def calc_img_enc_size(self):
         test_tensor = torch.zeros(self.input_shape).permute(2, 0, 1)
-        test_tensor = test_tensor.to(self.device).unsqueeze(0)
-        shape = self.encode_image(test_tensor)[0].shape[1:]
+        test_tensor = test_tensor.unsqueeze(0).cuda()
+        img_encoding, _ = self.clip_rn50.visual.cuda().prepool_im(test_tensor)
+        shape = img_encoding.shape[1:]
         return shape
 
     def encode_image(self, img):
@@ -76,7 +77,6 @@ class CLIPLingUNet(BaseLingunet):
                                          out_channels,
                                          self.input_dim // (2 * i),
                                          self.proj_input_dim,
-                                         self.device,
                                          self.up_factor,
                                          self.bilinear,
                                          self.lang_fusion_type)
@@ -100,7 +100,7 @@ class CLIPLingUNet(BaseLingunet):
             out_c = [out_channels, out_channels, out_channels]
             layer = nn.Sequential(
                 ConvBlock(in_channels, out_c, kernel_size=3, stride=1, batchnorm=self.batchnorm),
-                IdentityBlock(out_channels, out_c, kernel_size=3, stride=1, batchnorm=self.batchnorm),nn.UpsamplingBilinear2d(scale_factor=2)).to(self.device)
+                IdentityBlock(out_channels, out_c, kernel_size=3, stride=1, batchnorm=self.batchnorm),nn.UpsamplingBilinear2d(scale_factor=2))
             _decoder_blocks.append(layer)
             in_channels = out_channels
 

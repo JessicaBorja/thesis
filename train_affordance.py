@@ -74,13 +74,13 @@ def main(cfg):
     model = hydra.utils.instantiate(cfg.aff_detection,
                                     in_shape=in_shape,
                                     depth_norm_values=train.depth_norm_values)
-
     # Resume epoch and global_steps
     if last_checkpoint:
         print(f"Resuming: {last_checkpoint}")
-        model = model.load_from_checkpoint(last_checkpoint).cuda()
+        model = model.load_from_checkpoint(last_checkpoint)
         logger.info("Model successfully loaded: %s" % last_checkpoint)
 
+    model = model.cuda()
     # Main training loop
     trainer.fit(model, train_loader, val_loader, ckpt_path=last_checkpoint)
 

@@ -10,13 +10,12 @@ from thesis.models.language_encoders.clip_lang_encoder import CLIPLang
 from thesis.datasets.transforms import NormalizeVectorInverse
 
 class DepthEstimationGaussian(nn.Module):
-    def __init__(self, input_shape, output_dim, cfg, device):
+    def __init__(self, input_shape, output_dim, cfg):
         super(DepthEstimationGaussian, self).__init__()
         self.input_shape = input_shape
         self.output_dim = output_dim
         self.input_dim = 2048  # penultimate layer channel-size of CLIP-RN50
         self.cfg = cfg
-        self.device = device
         self.lang_fusion_type = self.cfg['lang_fusion_type']
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1

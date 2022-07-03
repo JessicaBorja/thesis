@@ -18,7 +18,6 @@ class DepthModule(LightningModule):
                  depth_norm_values=None,
                  *args, **kwargs):
         super().__init__()
-        self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
         self.in_shape = in_shape
         self.depth_est_fcn = depth_dist
@@ -53,13 +52,13 @@ class DepthModule(LightningModule):
     def _build_model(self):
         # Initialize language encoder
         lang_enc_model = models.lang_encoders[self.cfg.streams.lang_enc]
-        self.lang_encoder = lang_enc_model(self.device_type)
+        self.lang_encoder = lang_enc_model(self.device)
 
         # Init depth net
         depth_est_model = models.deth_est_nets[self.depth_est_fcn]
         self.depth_stream = depth_est_model(self.in_shape, self.output_dim,
                                             self.cfg,
-                                            self.device_type)
+                                            self.device)
 
     def forward(self, inp):
         '''
@@ -69,7 +68,7 @@ class DepthModule(LightningModule):
         inp_img = inp['img']
         lang_goal = inp['lang_goal']
         in_data = F.pad(inp_img, self.padding, mode='constant')
-        in_tens = in_data.to(dtype=torch.float, device=self.device_type)
+        in_tens = in_data.to(dtype=torch.float, device=self.device)
  
         # in_tens = inp["img"]
         text_enc = self.lang_encoder.encode_text(lang_goal)

@@ -25,7 +25,6 @@ from thesis.utils.losses import (
 class MaskAffLangDetector(pl.LightningModule):
     def __init__(self, cfg, transforms=None, in_shape=(200, 200, 3), n_classes=2, *args, **kwargs):
         super().__init__()
-        self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
         self.n_classes = n_classes
         self.in_shape = in_shape
@@ -57,7 +56,7 @@ class MaskAffLangDetector(pl.LightningModule):
             stream_fcn=self.cfg.streams.name,
             in_shape=self.in_shape,
             cfg=self.cfg,
-            device=self.device_type,
+            device=self.device,
             output_dim=self.n_classes
         )
         feature_dim = self.attention.attn_stream.decoder_channels[-1]

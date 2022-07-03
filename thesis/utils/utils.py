@@ -99,7 +99,7 @@ def load_aff_model(hydra_run_dir, model_name, eval=False, **kwargs):
         model_class = getattr(model_file, model_class[-1])
 
         # Instantiate
-        model = model_class.load_from_checkpoint(checkpoint_path, strict=False, **kwargs).cuda()
+        model = model_class.load_from_checkpoint(checkpoint_path, strict=False, **kwargs)
 
         # Override default voting layer parameters
         if 'hough_voting' in kwargs and 'hough_voting' in model.model_cfg:

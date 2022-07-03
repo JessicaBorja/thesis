@@ -3,7 +3,7 @@ import torch
 
 class BaseDetector:
     def __init__(self, *args, **kwargs):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        pass
 
     def cuda(self):
         pass

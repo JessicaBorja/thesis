@@ -23,7 +23,6 @@ class PixelAffLangDetector(LightningModule):
                  *args, **kwargs):
         super().__init__()
         self.loss_weights = loss_weights
-        self.device_type = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # append depth transforms to cfg
         with open_dict(model_cfg):
             model_cfg.normalized = normalize_depth
@@ -116,7 +115,6 @@ class PixelAffLangDetector(LightningModule):
                          self.depth_est_dist],
             in_shape=self.in_shape,
             cfg=self.model_cfg,
-            device=self.device_type,
         )
 
     def forward(self, inp, softmax=True):
@@ -189,7 +187,7 @@ class PixelAffLangDetector(LightningModule):
         """
         # Get inputs
         img = np.expand_dims(obs["img"], 0)  # B, H, W, C
-        img = tt(img, self.device_type)
+        img = tt(img, self.device)
         img = img.permute((0, 3, 1, 2))
 
         img = self.pred_transforms(img)
