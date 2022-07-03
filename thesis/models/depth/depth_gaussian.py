@@ -23,7 +23,7 @@ class DepthEstimationGaussian(nn.Module):
 
         # self.undo_norm = NormalizeInverse(mean=cfg.mean, std=cfg.std)
         # Use clip preprocessing
-        self.text_enc = CLIPLang(self.device)
+        # self.text_enc = CLIPLang(self.device)
         self.loss_fcn = nn.GaussianNLLLoss()
 
         self.normalized = cfg.normalized
