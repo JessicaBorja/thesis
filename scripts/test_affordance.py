@@ -6,34 +6,15 @@ import hydra
 import numpy as np
 import matplotlib.pyplot as plt
 
-from omegaconf import OmegaConf
-from thesis.utils.utils import get_abspath, load_aff_model
+from thesis.utils.utils import get_aff_model
 from torch.utils.data import DataLoader
 import logging
 
 
 @hydra.main(config_path="../config", config_name='test_affordance')
 def main(cfg):
-    # Checkpoint loader
-    hydra_run_dir = get_abspath(cfg.checkpoint.train_folder)
-
-    hydra_cfg_path = os.path.join(hydra_run_dir, ".hydra/config.yaml")
-    if os.path.exists(hydra_cfg_path):
-        run_cfg = OmegaConf.load(hydra_cfg_path)
-        run_cfg.aff_detection.dataset.data_dir = cfg.aff_detection.dataset.data_dir
-    else:
-        print("path does not exist %s" % hydra_cfg_path)
-        return
-
-    # Load model
-    model = load_aff_model(hydra_run_dir,
-                           cfg.checkpoint.model_name,
-                           run_cfg.aff_detection,
-                           transforms=run_cfg.aff_detection.dataset.transforms['validation'],
-                           hough_voting=cfg.aff_detection.hough_voting,
-                           eval=True)
-    model.eval()
-
+    model, run_cfg = get_aff_model(**cfg.checkpoint)
+    run_cfg.aff_detection.dataset.data_dir = cfg.aff_detection.dataset.data_dir
     # Dataloaders
     logger = logging.getLogger(__name__)
     val = hydra.utils.instantiate(run_cfg.aff_detection.dataset, split="validation", log=logger)

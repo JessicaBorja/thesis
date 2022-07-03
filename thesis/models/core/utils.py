@@ -756,7 +756,3 @@ def load_cfg(yaml_path):
     with open(yaml_path, 'r') as f:
         data = yaml.safe_load(f)
     return data
-
-
-def load_hydra_config(config_path):
-    return OmegaConf.load(config_path)

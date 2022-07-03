@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import logging
 from thesis.affordance.base_detector import BaseDetector
-from thesis.utils.utils import add_img_text, get_abspath, load_aff_model, resize_pixel
+from thesis.utils.utils import add_img_text, resize_pixel, get_aff_model
 from lfp.evaluation.utils import join_vis_lang
 from omegaconf import OmegaConf
 import os
@@ -20,7 +20,7 @@ class BaseAgent:
         self.origin = np.array(_info["tcp_pos"]) # np.array([-0.25, -0.3, 0.6])  # 
         self.target_orn = np.array([np.pi, 0, np.pi/2]) # np.array(_info["tcp_orn"])
         self.logger = logging.getLogger(__name__)
-        self.point_detector = self.get_point_detector(aff_cfg)
+        self.point_detector, _ = get_aff_model(**aff_cfg.checkpoint)
         self.device = self.env.device
         self.model_free = None
         self.offset = np.array([*offset, 1])
@@ -33,21 +33,6 @@ class BaseAgent:
     @env.setter
     def env(self, value):
         self._env = value
-
-    def get_point_detector(self, aff_cfg):
-        checkpoint_path = get_abspath(aff_cfg.checkpoint.train_folder)
-        if os.path.exists(checkpoint_path):
-            point_detector = load_aff_model(checkpoint_path,
-                                            aff_cfg.checkpoint.model_name,
-                                            aff_cfg.model_cfg,
-                                            transforms=aff_cfg.dataset.transforms['validation'],
-                                            eval=True)
-                                            # hough_voting=cfg.hough_voting)
-            point_detector.eval()
-        else:
-            self.logger.info("No point detector checkpoint found, loading base detector...")
-            point_detector = BaseDetector()
-        return point_detector
 
     def load_model_free(self, train_folder, model_name, **kwargs):
         self.logger.info("Base Agent has no policy implemented. Step will be a waiting period...")

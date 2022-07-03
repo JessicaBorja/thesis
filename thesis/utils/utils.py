@@ -79,7 +79,7 @@ def add_img_text(img, text_label):
     return out_img
 
 
-def load_aff_model(hydra_run_dir, model_name, model_cfg, eval=False, **kwargs):
+def load_aff_model(hydra_run_dir, model_name, eval=False, **kwargs):
     # Load model
     checkpoint_path = os.path.join(hydra_run_dir, 'checkpoints')
     checkpoint_path = os.path.join(checkpoint_path, model_name)
@@ -106,8 +106,9 @@ def load_aff_model(hydra_run_dir, model_name, model_cfg, eval=False, **kwargs):
             model.init_voting_layer(kwargs['hough_voting'])
         logger.info("Model successfully loaded: %s" % checkpoint_path)
     else:
-        model = hydra.utils.instantiate(model_cfg).cuda()
         logger.info("No checkpoint file found, loading untrained model: %s" % checkpoint_path)
+    if eval:
+        model.eval()
     return model
 
 
@@ -277,24 +278,18 @@ def load_image(img_path, resize=None):
         image = image.resize((resize, resize))
     return np.asarray(image).astype(np.float32) / 255.
 
+def get_aff_model(train_folder, model_name, img_resize=None, eval=True):
+    hydra_run_dir = get_abspath(train_folder)
+    hydra_cfg_path = os.path.join(hydra_run_dir, ".hydra/config.yaml")
+    if os.path.exists(hydra_cfg_path):
+        run_cfg = OmegaConf.load(hydra_cfg_path)
+    else:
+        print("path does not exist %s" % hydra_cfg_path)
+        return None, None
 
-def load_hydra_config(train_folder):
-    checkpoint_path = get_abspath(train_folder)
-    policy_cfg = os.path.join(checkpoint_path, "./.hydra/config.yaml")
-    if os.path.isfile(policy_cfg):
-        run_cfg = OmegaConf.load(policy_cfg)
-    else: run_cfg = None
-    return run_cfg
-
-
-def get_combined_agent(env, agent_cfg, aff_cfg):
-    checkpoint_path = get_abspath(aff_cfg.checkpoint.train_folder)
-    point_detector = load_aff_model(checkpoint_path,
-                                    aff_cfg.checkpoint.model_name,
-                                    aff_cfg.model,
-                                    transforms=aff_cfg.dataset.transforms['validation'])
-                                    # hough_voting=cfg.hough_voting)
-    point_detector.eval()
-    agent = hydra.utils.instantiate(agent_cfg, env=env, 
-    point_detector=point_detector)    
-    return agent
+    # Load model
+    model = load_aff_model(hydra_run_dir,
+                           model_name,
+                           transforms=run_cfg.aff_detection.dataset.transforms['validation'],
+                           eval=eval)
+    return model, run_cfg

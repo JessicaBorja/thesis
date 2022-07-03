@@ -2,7 +2,6 @@ defaults:
   - robot: panda_longer_finger
   - scene: calvin_scene_D
   - env: env
-  - aff_detection: rn50_clip_pixel
   - cameras: static_and_gripper_calvin
   - paths: general_paths
   - agent: play_lmp
@@ -26,7 +25,6 @@ aff_detection:
     train_folder: ~/logs/thesis/aff_ablation/2022-06-15/18-23-49_aff_ablation
     # train_folder: ./hydra_outputs/affordance_model/2022-03-09/01-38-55_aff_rl
     model_name: val_err.ckpt
-    img_resize: 224
 
 hough_voting:
   skip_pixels: 4

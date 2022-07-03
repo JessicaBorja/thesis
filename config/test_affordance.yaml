@@ -8,7 +8,7 @@ save_viz: True
 
 # folders
 checkpoint:
-  train_folder: ~/logs/thesis/aff_ablation/2022-06-15/18-23-49_aff_ablation
+  train_folder: ~/logs/thesis/aff_model/2022-07-02/17-01-30_aff_model
   model_name: val_err.ckpt
 
 dataset_name: calvin_langDepthEndPt

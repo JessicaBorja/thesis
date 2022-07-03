@@ -16,7 +16,7 @@ from tqdm.auto import tqdm
 from thesis.evaluation.multistep_sequences import get_sequences
 from thesis.evaluation.utils import get_env_state_for_initial_condition
 from thesis.evaluation.manager_aff_lmp import PolicyManager as AffLMPManager
-from thesis.evaluation.manager_lmp import PolicyManager as LMPManager
+# from thesis.evaluation.manager_lmp import PolicyManager as LMPManager
 
 logger = logging.getLogger(__name__)
 
