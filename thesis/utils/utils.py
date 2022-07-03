@@ -280,6 +280,7 @@ def load_image(img_path, resize=None):
 
 def get_aff_model(train_folder, model_name, img_resize=None, eval=True):
     hydra_run_dir = get_abspath(train_folder)
+    logger.info("loading aff model from %s" % hydra_run_dir)
     hydra_cfg_path = os.path.join(hydra_run_dir, ".hydra/config.yaml")
     if os.path.exists(hydra_cfg_path):
         run_cfg = OmegaConf.load(hydra_cfg_path)
