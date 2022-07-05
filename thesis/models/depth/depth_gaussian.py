@@ -40,7 +40,7 @@ class DepthEstimationGaussian(nn.Module):
             input:
                 depth_dist: output of forward pass
         '''
-        dist, _, _ = depth_dist
+        dist, loc, scale = depth_dist
         if reparametrize:
             sample = dist.rsample()
         else:
@@ -48,6 +48,7 @@ class DepthEstimationGaussian(nn.Module):
         
         if self.normalized:
             sample = self.depth_norm_inverse(sample)
+            
         return sample
 
     def _build_decoder(self):

@@ -19,7 +19,7 @@ model:
         add_dice: true
         ce_class_weights: [0.2, 0.8]
     unet_cfg:
-      decoder_channels: [128, 64, 32]
+      decoder_channels: [256, 128, 64, 32, 16]
 
 img_size: 224
 defaults:
