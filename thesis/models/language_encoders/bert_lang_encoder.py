@@ -11,7 +11,7 @@ class BERTLang(LangEncoder):
         super(BERTLang, self).__init__(freeze_backbone, pretrained)
 
     def _load_model(self):
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', padding=True, truncation=True)
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         if self.pretrained:
             self.text_encoder = BertModel.from_pretrained('bert-base-uncased')
         else:
@@ -22,7 +22,7 @@ class BERTLang(LangEncoder):
 
     def encode_text(self, x):
         with torch.set_grad_enabled(not self.freeze_backbone):
-            inputs = self.tokenizer(x, return_tensors='pt')
+            inputs = self.tokenizer(x, return_tensors='pt', padding=True, truncation=True)
             input_ids, attention_mask = inputs['input_ids'], inputs['attention_mask']
             input_ids = input_ids.to(self.text_encoder.device)
             attention_mask = attention_mask.to(self.text_encoder.device)
