@@ -11,7 +11,7 @@ class BERTLang(LangEncoder):
         super(BERTLang, self).__init__(freeze_backbone, pretrained)
 
     def _load_model(self):
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', padding=True)
         if self.pretrained:
             self.text_encoder = BertModel.from_pretrained('bert-base-uncased')
         else:
