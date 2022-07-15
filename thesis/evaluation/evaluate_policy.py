@@ -43,7 +43,8 @@ def main():
         "--custom_model", action="store_true", help="Use this option to evaluate a custom model architecture."
     )
     parser.add_argument("--custom_lang_embeddings", action="store_true", help="Use custom language embeddings.")
-
+    parser.add_argument("--cameras", type=str)
+    parser.add_argument("--save_viz", action="store_true")
     parser.add_argument("--debug", action="store_true", help="Print debug info and visualize environment.")
 
     parser.add_argument("--log_dir", default=None, type=str, help="Where to log the evaluation results.")

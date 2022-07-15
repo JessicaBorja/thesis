@@ -193,12 +193,14 @@ def get_env_state_for_initial_condition(initial_condition):
     return robot_obs, scene_obs
 
 
-def get_env(dataset_path, obs_space=None, show_gui=True, scene=None, **kwargs):
+def get_env(dataset_path, obs_space=None, show_gui=True, scene=None, camera_conf=None,**kwargs):
     from pathlib import Path
 
     from omegaconf import OmegaConf
 
     render_conf = OmegaConf.load(Path(dataset_path) / ".hydra" / "merged_config.yaml")
+    if camera_conf is not None:
+        render_conf.cameras = camera_conf
     if scene is not None:
         render_conf.scene = scene
     if obs_space is not None:

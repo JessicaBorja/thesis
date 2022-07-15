@@ -1,21 +1,22 @@
 import torch
-from transformers import DistilBertTokenizer, DistilBertModel, DistilBertConfig
+from transformers import BertModel, BertConfig, BertTokenizer
 import torch
 import torch.nn as nn
 from thesis.models.language_encoders.base_lang_encoder import LangEncoder
+from transformers import BertModel, BertConfig
 
 
-class DistilBERTLang(LangEncoder):
+class BERTLang(LangEncoder):
     def __init__(self, freeze_backbone=True, pretrained=True) -> None:
-        super(DistilBERTLang, self).__init__(freeze_backbone, pretrained)
+        super(BERTLang, self).__init__(freeze_backbone, pretrained)
 
     def _load_model(self):
-        self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         if self.pretrained:
-            self.text_encoder = DistilBertModel.from_pretrained('distilbert-base-uncased')
+            self.text_encoder = BertModel.from_pretrained('bert-base-uncased')
         else:
-            distilbert_config = DistilBertConfig()
-            self.text_encoder = DistilBertModel(distilbert_config)
+            distilbert_config = BertConfig()
+            self.text_encoder = BertModel(distilbert_config)
         _embd_dim = 768
         self.text_fc = nn.Linear(_embd_dim, 1024)
 

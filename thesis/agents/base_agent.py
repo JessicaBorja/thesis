@@ -1,15 +1,16 @@
 import numpy as np
 import cv2
 import logging
-from thesis.affordance.base_detector import BaseDetector
 from thesis.utils.utils import add_img_text, resize_pixel, get_aff_model
 from lfp.evaluation.utils import join_vis_lang
-from omegaconf import OmegaConf
+from pathlib import Path
+from datetime import datetime
 import os
+
 logger = logging.getLogger(__name__)
 
 class BaseAgent:
-    def __init__(self, env, offset, aff_cfg, viz_obs=False, *args, **kwargs):
+    def __init__(self, env, offset, aff_cfg, viz_obs=False, save_viz=False, *args, **kwargs):
         # For debugging
         self.curr_caption = ""
         #
@@ -24,7 +25,21 @@ class BaseAgent:
         self.device = self.env.device
         self.model_free = None
         self.offset = np.array([*offset, 1])
+
+        # Not save first
+        self.save_viz = False
         self.reset_position()
+
+        # To save images
+        self.save_viz=save_viz
+        save_directory = Path(__file__).parents[2].resolve()
+        save_directory = save_directory / "hydra_outputs" / "evaluation_rollouts" / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.save_dir = {"parent": save_directory,
+                         "sequence_counter": 0,
+                         "rollout_counter": 0,
+                         "step_counter": 0}
+        self.sequence_data = {}
+        logger.info(f"Initialized PlayLMPAgent for device {self.device}")
 
     @property
     def env(self):
@@ -118,6 +133,29 @@ class BaseAgent:
         _, transition = self.move_to_pos(tcp_pos, a)
         return transition
 
+    def save_img(self, img, folder="./", name="img"):
+        outdir = os.path.join(self.save_dir["parent"],
+                              "seq_%03d" % self.save_dir["sequence_counter"])
+        outdir = os.path.join(outdir,
+                              "task_%02d" % self.save_dir["rollout_counter"])
+        outdir = os.path.join(outdir, folder)
+        output_file = os.path.join(outdir, "%s_%04d" % (name, self.save_dir["step_counter"]))
+        self.sequence_data["%s.png" % output_file] = img[:, :, ::-1]
+        return output_file
+
+    def save_sequence(self):
+        for filename, data in self.sequence_data.items():
+            dirname = os.path.dirname(filename)
+            os.makedirs(dirname, exist_ok=True)
+            if filename.split('.')[-1] == "txt":
+                with open(filename, 'w') as f:
+                    for line in data:
+                        f.write(line)
+                        f.write('\n')
+            else:
+                cv2.imwrite(filename, data)
+        self.sequence_data = {}
+
     def move_to_pos(self, tcp_pos, action):
         last_pos = tcp_pos.copy()
         target_pos = action[0]
@@ -141,4 +179,9 @@ class BaseAgent:
                 # img = cv2.resize([:, :, ::-1], (300,300))
                 # cv2.imshow("static_cam", img)
                 cv2.waitKey(1)
+
+            if self.save_viz:
+                self.save_img(ns["rgb_obs"]["rgb_static"], "./model_based/static_cam")
+                self.save_img(ns["rgb_obs"]["rgb_gripper"], "./model_based/gripper_cam")
+                self.save_dir["step_counter"] += 1
         return curr_pos, (ns, r, d, info)

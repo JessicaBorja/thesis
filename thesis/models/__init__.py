@@ -5,12 +5,14 @@ from .visual_lang_encoders.rn50_clip_lingunet import CLIPLingUNet
 
 # Language encoders
 from .language_encoders.clip_lang_encoder import CLIPLang
-from .language_encoders.distilbert_lang_encoder import BERTLang
+from .language_encoders.bert_lang_encoder import BERTLang
+from .language_encoders.distilbert_lang_encoder import DistilBERTLang
 from .language_encoders.sbert_lang_encoder import SBertLang
 
 lang_encoders = {
     "clip": CLIPLang,
     "bert": BERTLang,
+    "distilbert": DistilBERTLang,
     "sbert": SBertLang
 }
 

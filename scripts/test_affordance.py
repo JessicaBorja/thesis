@@ -59,7 +59,7 @@ def main(cfg):
         info = labels  # labels
         pred = model.predict(obs, info=info)
         out_shape = (400, 400)
-        pred_img = model.get_preds_viz(obs, pred, gt_depth=labels["depth"],out_shape=out_shape)
+        pred_img, _ = model.get_preds_viz(obs, pred, gt_depth=labels["depth"],out_shape=out_shape)
         label_img = cv2.resize(out_img, out_shape) / 255
 
         out_img = np.concatenate([pred_img, label_img], axis=1)

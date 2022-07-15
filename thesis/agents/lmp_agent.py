@@ -1,4 +1,3 @@
-from turtle import color
 from thesis.agents.base_agent import BaseAgent
 from thesis.utils.utils import get_abspath, resize_pixel, pos_orn_to_matrix
 from thesis.models.core.language_network import SBert
@@ -20,7 +19,6 @@ import numpy as np
 import torch
 import logging
 import importlib
-import pybullet as p
 logger = logging.getLogger(__name__)
 
 
@@ -40,7 +38,6 @@ class PlayLMPAgent(BaseAgent):
             self.relative_actions = True
         self.model_free = self.model_free.to(self.device)
         self.aff_transforms = self.point_detector.pred_transforms
-        logger.info(f"Initialized PlayLMPAgent for device {self.device}")
 
     def instantiate_transforms(self, transforms):
         _transforms = {
@@ -140,7 +137,7 @@ class PlayLMPAgent(BaseAgent):
         # offset_pos = offset_global_frame[:3]
         offset_pos = pos + self.offset[:3]
         return offset_pos
-
+        
     def get_aff_pred(self, caption):
         obs = self.env.get_obs()
         inp = {"img": obs["rgb_obs"]["rgb_static"],
@@ -148,10 +145,24 @@ class PlayLMPAgent(BaseAgent):
         im_shape = inp["img"].shape[:2]
 
         pred = self.point_detector.predict(inp)
+        out_img, _info = self.point_detector.get_preds_viz(inp, pred,
+                                                           out_shape=inp["img"].shape[:2])
+
         if self.viz_obs:
-            out_img = self.point_detector.get_preds_viz(inp, pred)
             cv2.imshow("img", out_img[:, :, ::-1])
             cv2.waitKey(1)
+        
+        if self.save_viz:
+            heatmap = _info["heatmap"] * 255
+            out_file = self.save_img(heatmap, ".", "aff_pred")
+            out_file = self.save_img(heatmap, ".", "aff_pred")
+            rollout_dir = os.path.dirname(out_file)
+            sequence_dir = os.path.dirname(rollout_dir)
+            caption_file = os.path.join(os.path.dirname(sequence_dir), "captions.txt")
+            if caption_file in self.sequence_data:
+                self.sequence_data[caption_file].append(caption)
+            else:
+                self.sequence_data[caption_file] = [caption]
 
         pixel = resize_pixel(pred["pixel"], pred['softmax'].shape[:2], im_shape)
 
@@ -183,6 +194,7 @@ class PlayLMPAgent(BaseAgent):
         return target_pos, pixel
 
     def reset(self, caption):
+        self.save_dir["step_counter"] = 0
         if self.move_outside:
             self.reset_position()
         # Open gripper
@@ -249,6 +261,11 @@ class PlayLMPAgent(BaseAgent):
                 - depth_obs: 
                 - rgb_obs: 
         '''
+        if self.save_viz:
+            self.save_img(obs["rgb_obs"]["rgb_static"], "./model_free/static_cam")
+            self.save_img(obs["rgb_obs"]["rgb_gripper"], "./model_free/gripper_cam")
+            self.save_dir["step_counter"] += 1
+
         obs = self.transform_observation(obs)
         # imgs: B, S, C, W, H
         action = self.model_free.step(obs, goal_embd)

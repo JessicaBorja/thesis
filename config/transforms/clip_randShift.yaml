@@ -2,7 +2,7 @@ training:
   - _target_: torchvision.transforms.Resize
     size: ${aff_detection.img_size}
   - _target_: thesis.datasets.transforms.RandomShiftsAug
-    pad: 10
+    pad: 5
   - _target_: thesis.datasets.transforms.ScaleImageTensor  # Scale 0-255 to 0-1
   # - _target_: thesis.datasets.transforms.ColorTransform
   #   contrast: 0.05

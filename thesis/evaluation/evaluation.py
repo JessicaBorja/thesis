@@ -27,6 +27,7 @@ class Evaluation:
         self.policy_manager = AffLMPManager(train_folder=args.aff_train_folder,
                                             checkpoint=args.aff_checkpoint,
                                             debug=args.debug,
+                                            save_viz=args.save_viz,
                                             use_affordances=use_affordances)
         # if use_affordances:
         #     self.policy_manager = AffLMPManager(train_folder=args.aff_train_folder,
@@ -41,13 +42,19 @@ class Evaluation:
             s = "config/scene/%s.yaml" % args.scene
             scene = OmegaConf.load(Path(__file__).parents[2] / s)
 
+        camera_conf = args.cameras
+        if args.cameras is not None:
+            s = "config/cameras/%s.yaml" % args.cameras
+            camera_conf = OmegaConf.load(Path(__file__).parents[2] / s)
+
         model, env, _, lang_embeddings = self.policy_manager.get_default_model_and_env(
             args.train_folder,
             args.dataset_path,
             checkpoint,
             device_id=args.device,
             scene=scene,
-            env=env
+            env=env,
+            camera_conf=camera_conf
         )
         self.model = model
         self.env = env
@@ -187,10 +194,18 @@ class Evaluation:
             print()
             print(f"Evaluating sequence: {' -> '.join(eval_sequence)}")
             print("Subtask: ", end="")
+        self.model.save_dir["rollout_counter"] = 0
         for subtask in eval_sequence:
             success = self.policy_manager.rollout(self.env, self.model, task_checker, args, subtask, self.lang_embeddings, val_annotations, plans)
             if success:
                 success_counter += 1
+                self.model.save_dir["rollout_counter"] += 1
             else:
+                self.model.sequence_data = {}
                 return success_counter
+                
+            if success_counter >= 5:
+                self.model.save_sequence()
+                self.model.save_dir["sequence_counter"] += 1
+                self.model.save_dir["rollout_counter"] = 0
         return success_counter

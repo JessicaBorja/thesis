@@ -16,7 +16,7 @@ model_cfg:
   streams: ${aff_detection.streams}
   batchnorm: False 
   unet_cfg: # [256, 128, 64, 32, 16]
-    decoder_channels: [256, 128, 64, 32, 16]
+    decoder_channels: [256, 128, 64, 32]
 
 defaults:
   - pixel_data

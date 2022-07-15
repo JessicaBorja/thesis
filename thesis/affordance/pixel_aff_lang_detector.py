@@ -237,8 +237,9 @@ class PixelAffLangDetector(LightningModule):
         heatmap = cm(pred["softmax"])[:, :, [0,1,2]] * 255
         heatmap = heatmap.astype('uint8')
 
-        frame = cv2.resize(frame, heatmap.shape[:2])
-        heatmap = blend_imgs(frame.copy(), heatmap, alpha=0.7)
+        #frame = cv2.resize(frame, heatmap.shape[:2])
+        heatmap = cv2.resize(heatmap, frame.shape[:2])
+        heatmap = blend_imgs(frame.copy(), heatmap, alpha=0.8)
 
         pixel = pred["pixel"]
         pixel = resize_pixel(pixel, self.in_shape[:2], pred_img.shape[:2])
@@ -266,5 +267,6 @@ class PixelAffLangDetector(LightningModule):
             text = "DepthErr: %.3f, Goal: %s" % (np.abs(depth_est - gt_depth), inp["lang_goal"])
         else:
             text = "DepthPred: %.3f, Goal: %s" % (depth_est, inp["lang_goal"])
-        out_img = add_img_text(out_img, text)
-        return out_img
+        # out_img = add_img_text(out_img, text)
+        
+        return out_img, {"pred_pixel": pred_img, "heatmap": heatmap}

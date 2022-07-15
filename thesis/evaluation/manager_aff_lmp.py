@@ -12,11 +12,13 @@ logger = logging.getLogger(__name__)
 import cv2
 
 class PolicyManager:
-    def __init__(self, train_folder, checkpoint, debug=False, use_affordances=True) -> None:
+    def __init__(self, train_folder, checkpoint, debug=False, save_viz=False, use_affordances=True) -> None:
         self.debug = debug
         self.train_folder = train_folder
         self.checkpoint = checkpoint + ".ckpt"
         self.use_affordances = use_affordances
+        self.save_viz = save_viz
+        self.rollout_counter = 0
 
     def rollout(self, env, model, task_oracle, args, subtask, lang_embeddings, val_annotations, plans):
         if args.debug:
@@ -68,7 +70,7 @@ class PolicyManager:
             print(colored("fail", "red"), end=" ")
         return False
 
-    def get_default_model_and_env(self, train_folder, dataset_path, checkpoint, env=None, lang_embeddings=None, device_id=0, scene=None):
+    def get_default_model_and_env(self, train_folder, dataset_path, checkpoint, env=None, lang_embeddings=None, device_id=0, scene=None, camera_conf=None):
         # Load Dataset
         train_cfg_path = Path(train_folder) / ".hydra/config.yaml"
         train_cfg_path = format_sftp_path(train_cfg_path)
@@ -98,7 +100,7 @@ class PolicyManager:
 
         if env is None:
             env = get_env(dataset.abs_datasets_dir, show_gui=False, obs_space=dataset.observation_space,
-                          scene=scene)
+                          scene=scene, camera_conf=camera_conf)
             rollout_cfg = OmegaConf.load(Path(__file__).parents[2] / "config/lfp/rollout/aff_lfp.yaml")
             env = hydra.utils.instantiate(rollout_cfg.env_cfg, env=env, device=device)
 
@@ -121,6 +123,7 @@ class PolicyManager:
         model = hydra.utils.instantiate(cfg.agent,
                                         viz_obs=self.debug,
                                         env=env,
+                                        save_viz=self.save_viz,
                                         aff_cfg=cfg.aff_detection)
         print(f"Successfully loaded affordance model: {self.train_folder}/{self.checkpoint}")
         logger.info(f"Successfully loaded affordance model: {self.train_folder}/{self.checkpoint}")

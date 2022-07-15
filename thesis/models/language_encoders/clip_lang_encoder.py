@@ -25,6 +25,7 @@ class CLIPLang(LangEncoder):
     def encode_text(self, x):
         with torch.set_grad_enabled(not self.freeze_backbone):
             tokens = tokenize(x)
+            tokens = tokens.to(self.model.positional_embedding.device)
             text_feat, text_emb = self.model.encode_text_with_embeddings(tokens)
 
         text_mask = torch.where(tokens==0, tokens, 1)
