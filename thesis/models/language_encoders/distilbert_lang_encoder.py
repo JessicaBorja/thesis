@@ -10,7 +10,7 @@ class DistilBERTLang(LangEncoder):
         super(DistilBERTLang, self).__init__(freeze_backbone, pretrained)
 
     def _load_model(self):
-        self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased', padding=True)
+        self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased', padding=True, truncation=True)
         if self.pretrained:
             self.text_encoder = DistilBertModel.from_pretrained('distilbert-base-uncased')
         else:
