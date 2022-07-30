@@ -179,7 +179,7 @@ class Evaluation:
             results.append(result)
 
             if result <= 3: # self.n_completed:
-                saved_sequences.append[i]
+                saved_sequences.append(i)
                 self.model.save_sequence_txt("sequence_%04d" % i, seq_annotations)
                 self.model.save_sequence()
                 self.model.save_dir["sequence_counter"] += 1
