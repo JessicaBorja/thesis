@@ -133,6 +133,18 @@ class BaseAgent:
         _, transition = self.move_to_pos(tcp_pos, a)
         return transition
 
+    def save_sequence_txt(self, filename, data):
+        output_dir = os.path.join(self.save_dir["parent"],
+                              "seq_%03d" % self.save_dir["sequence_counter"])
+        filedir = os.path.join(output_dir, "%s.txt" % filename)
+        if filedir in self.sequence_data:
+            self.sequence_data[filedir].append(data)
+        else:
+            if isinstance(data, list):
+                self.sequence_data[filedir] = data
+            else:
+                self.sequence_data[filedir] = [data]
+
     def save_img(self, img, folder="./", name="img"):
         outdir = os.path.join(self.save_dir["parent"],
                               "seq_%03d" % self.save_dir["sequence_counter"])

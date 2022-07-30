@@ -140,13 +140,14 @@ class PixeLabelDataLang(Dataset):
                   "p0": center,
                   "depth": depth,
                   "normalized_depth": norm_depth,
+                  "tcp_pos_world_frame": data["tcp_pos_world_frame"],
                   "tetha0": []}
         return inp, labels
 
 
 @hydra.main(config_path="../../config", config_name="train_affordance")
 def main(cfg):
-    data = PixeLabelDataLang(split="training", log=None, **cfg.aff_detection.dataset)
+    data = PixeLabelDataLang(split="validation", log=None, **cfg.aff_detection.dataset)
     loader = DataLoader(data, num_workers=1, batch_size=1, pin_memory=True)
     print("minibatches {}".format(len(loader)))
 

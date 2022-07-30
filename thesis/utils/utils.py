@@ -64,6 +64,7 @@ def add_img_text(img, text_label):
     font_scale = 0.6
     thickness = 2
     color = (0, 0, 0)
+    im_w, im_h = img.shape[:2]
     x1, y1 = 10, 20
     (w, h), _ = cv2.getTextSize(text_label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
     out_img = cv2.rectangle(img, (x1, y1 - 20), (x1 + w, y1 + h), color, -1)

@@ -50,7 +50,8 @@ def main():
     parser.add_argument("--log_dir", default=None, type=str, help="Where to log the evaluation results.")
 
     parser.add_argument("--device", default=0, type=int, help="CUDA device")
-    
+    parser.add_argument("--n_completed", default=0, type=int, help="Save rollout after n_completed succesful tasks")
+
     parser.add_argument("--aff_train_folder", default=None, help="Affordance model train folder to use model-based model-free combination method.")
     parser.add_argument("--aff_checkpoint", default="val_err", help="Affordance model checkpoint name w/extension to use model-based model-free combination method.")
     # Overriding scene

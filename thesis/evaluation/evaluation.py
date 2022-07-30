@@ -36,7 +36,7 @@ class Evaluation:
         #                                         use_affordances=True)
         # else:
         #     self.policy_manager = LMPManager()
-        
+        self.n_completed = args.n_completed
         scene = args.scene
         if args.scene is not None:
             s = "config/scene/%s.yaml" % args.scene
@@ -170,9 +170,19 @@ class Evaluation:
         if not args.debug:
             eval_sequences = tqdm(eval_sequences, position=0, leave=True)
 
-        for initial_state, eval_sequence in eval_sequences:
+        for i, initial_state, eval_sequence in enumerate(eval_sequences):
+            seq_annotations = [val_annotations[subtask][0] for subtask in eval_sequence]
+
+
             result = self.evaluate_sequence(task_oracle, initial_state, eval_sequence, val_annotations, args, plans)
             results.append(result)
+
+            if result >= self.n_completed:
+                self.model.save_sequence_txt("sequence_%04d" % i, seq_annotations)
+                # self.model.save_sequence()
+                # self.model.save_dir["sequence_counter"] += 1
+                # self.model.save_dir["rollout_counter"] = 0
+
             if not args.debug:
                 eval_sequences.set_description(
                     " ".join([f"{i + 1}/5 : {v * 100:.1f}% |" for i, v in enumerate(self.count_success(results))]) + "|"
@@ -203,9 +213,4 @@ class Evaluation:
             else:
                 self.model.sequence_data = {}
                 return success_counter
-                
-            if success_counter >= 5:
-                self.model.save_sequence()
-                self.model.save_dir["sequence_counter"] += 1
-                self.model.save_dir["rollout_counter"] = 0
         return success_counter

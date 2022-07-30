@@ -13,17 +13,17 @@ def main(cfg):
                                     aff_cfg=cfg.aff_detection)
     obs = env.reset()
 
-    captions = ["Open the drawer",
-                "Move the sliding door",
-                "Turn on the light switch",
-                "Turn on the green led",
-                "Lift the pink block"]
+    captions = ["Lift the pink block",
+                "Stored the grasped block in the cabinet"]
     for caption in captions:  # n instructions
         # caption = "use the switch to turn on the light bulb" # input("Type an instruction \n")
         # caption = "open the drawer"
         # obs = env.reset()
         agent.reset(caption)
-        goal = agent.encode(caption)
+        if agent.model_free.lang_encoder is not None:
+            goal = {"lang": [caption]}
+        else:
+            goal = agent.encode(caption)
         for j in range(cfg.max_timesteps):
             action = agent.step(obs, goal)
             obs, _, _, info = env.step(action)

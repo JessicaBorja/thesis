@@ -5,14 +5,25 @@ import cv2
 import hydra
 import numpy as np
 import matplotlib.pyplot as plt
+from omegaconf import OmegaConf
+from thesis.affordance.dataset_creation.core.utils import instantiate_env
 
-from thesis.utils.utils import get_aff_model
+from thesis.utils.utils import get_abspath, get_aff_model, torch_to_numpy
 from torch.utils.data import DataLoader
 import logging
 
 
+def get_camera(cfg):
+    play_data_hydra_cfg = cfg.aff_detection.dataset.data_dir + "/.hydra"
+    play_data_hydra_cfg = get_abspath(play_data_hydra_cfg)
+    play_data_cfg = OmegaConf.load(play_data_hydra_cfg + "/config.yaml")
+    static_cam, _, _ = instantiate_env(play_data_cfg,"simulation")
+    return static_cam
+
 @hydra.main(config_path="../config", config_name='test_affordance')
 def main(cfg):
+    camera = get_camera(cfg)
+
     model, run_cfg = get_aff_model(**cfg.checkpoint)
     model = model.cuda()
     run_cfg.aff_detection.dataset.data_dir = cfg.aff_detection.dataset.data_dir
@@ -59,7 +70,19 @@ def main(cfg):
         info = labels  # labels
         pred = model.predict(obs, info=info)
         out_shape = (400, 400)
-        pred_img, _ = model.get_preds_viz(obs, pred, gt_depth=labels["depth"],out_shape=out_shape)
+        pred_img, _ = model.get_preds_viz(obs, pred, gt_depth=labels["depth"], out_shape=out_shape)
+        
+        pred_pos = camera.deproject_single_depth(pred["pixel"], pred["depth"])
+        gt_pixel = torch_to_numpy(labels["p0"])[0][::-1]
+        gt_depth = torch_to_numpy(labels["depth"]).squeeze()
+        gt_pos_deproject = camera.deproject_single_depth(list(gt_pixel), gt_depth)
+        gt_pos = torch_to_numpy(labels["tcp_pos_world_frame"])[0]
+
+        depth_error = np.abs(gt_depth - pred["depth"])
+        px_error = np.linalg.norm(gt_pixel - pred["pixel"])
+        world_pos_error_deprojected = np.linalg.norm(gt_pos_deproject - pred_pos)
+        world_pos_error = np.linalg.norm(gt_pos - pred_pos)
+
         label_img = cv2.resize(out_img, out_shape) / 255
 
         out_img = np.concatenate([pred_img, label_img], axis=1)

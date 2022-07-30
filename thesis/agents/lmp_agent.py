@@ -137,7 +137,9 @@ class PlayLMPAgent(BaseAgent):
         # offset_pos = offset_global_frame[:3]
         offset_pos = pos + self.offset[:3]
         return offset_pos
-        
+    
+    
+
     def get_aff_pred(self, caption):
         obs = self.env.get_obs()
         inp = {"img": obs["rgb_obs"]["rgb_static"],
@@ -154,15 +156,10 @@ class PlayLMPAgent(BaseAgent):
         
         if self.save_viz:
             heatmap = _info["heatmap"] * 255
-            out_file = self.save_img(heatmap, ".", "aff_pred")
-            out_file = self.save_img(heatmap, ".", "aff_pred")
-            rollout_dir = os.path.dirname(out_file)
-            sequence_dir = os.path.dirname(rollout_dir)
-            caption_file = os.path.join(os.path.dirname(sequence_dir), "captions.txt")
-            if caption_file in self.sequence_data:
-                self.sequence_data[caption_file].append(caption)
-            else:
-                self.sequence_data[caption_file] = [caption]
+            self.save_img(heatmap, ".", "aff_pred")
+            self.save_img(_info["pred_pixel"], ".", "pred_pixel")
+            self.save_img(inp["img"], ".", "orig_img")
+            self.save_sequence_txt("completed_tasks", caption)
 
         pixel = resize_pixel(pred["pixel"], pred['softmax'].shape[:2], im_shape)
 

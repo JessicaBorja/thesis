@@ -7,3 +7,5 @@ trained_agents/
 build/
 dist/
 lmp_train_command.txt
+analysis/figures/*
+analysis/data/
