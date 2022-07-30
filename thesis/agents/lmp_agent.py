@@ -137,8 +137,6 @@ class PlayLMPAgent(BaseAgent):
         # offset_pos = offset_global_frame[:3]
         offset_pos = pos + self.offset[:3]
         return offset_pos
-    
-    
 
     def get_aff_pred(self, caption):
         obs = self.env.get_obs()
