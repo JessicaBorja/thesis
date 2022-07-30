@@ -174,7 +174,8 @@ class Evaluation:
         for i, (initial_state, eval_sequence) in enumerate(eval_sequences):
             seq_annotations = [val_annotations[subtask][0] for subtask in eval_sequence]
 
-
+            # The model uses the sequence counter to generate the image filenames
+            self.model.save_dir["sequence_counter"] = i
             result = self.evaluate_sequence(task_oracle, initial_state, eval_sequence, val_annotations, args, plans)
             results.append(result)
 
@@ -182,9 +183,9 @@ class Evaluation:
                 saved_sequences.append(i)
                 self.model.save_sequence_txt("sequence_%04d" % i, seq_annotations)
                 self.model.save_sequence()
-                self.model.save_dir["sequence_counter"] += 1
-                self.model.save_dir["rollout_counter"] = 0
 
+            self.model.save_dir["rollout_counter"] = 0
+            self.model.sequence_data = {}
             if not args.debug:
                 eval_sequences.set_description(
                     " ".join([f"{i + 1}/5 : {v * 100:.1f}% |" for i, v in enumerate(self.count_success(results))]) + "|"
@@ -207,13 +208,11 @@ class Evaluation:
             print()
             print(f"Evaluating sequence: {' -> '.join(eval_sequence)}")
             print("Subtask: ", end="")
-        self.model.save_dir["rollout_counter"] = 0
         for subtask in eval_sequence:
             success = self.policy_manager.rollout(self.env, self.model, task_checker, args, subtask, self.lang_embeddings, val_annotations, plans)
             if success:
                 success_counter += 1
                 self.model.save_dir["rollout_counter"] += 1
             else:
-                self.model.sequence_data = {}
                 return success_counter
         return success_counter
