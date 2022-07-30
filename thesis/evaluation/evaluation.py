@@ -178,7 +178,7 @@ class Evaluation:
             result = self.evaluate_sequence(task_oracle, initial_state, eval_sequence, val_annotations, args, plans)
             results.append(result)
 
-            if result <= 3: # self.n_completed:
+            if result >= 4: # self.n_completed:
                 saved_sequences.append(i)
                 self.model.save_sequence_txt("sequence_%04d" % i, seq_annotations)
                 self.model.save_sequence()
