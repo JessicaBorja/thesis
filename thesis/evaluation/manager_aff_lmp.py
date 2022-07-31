@@ -124,7 +124,8 @@ class PolicyManager:
                                         viz_obs=self.debug,
                                         env=env,
                                         save_viz=self.save_viz,
-                                        aff_cfg=cfg.aff_detection)
+                                        aff_cfg=cfg.aff_detection,
+                                        use_aff=self.use_affordances)
         print(f"Successfully loaded affordance model: {self.train_folder}/{self.checkpoint}")
         logger.info(f"Successfully loaded affordance model: {self.train_folder}/{self.checkpoint}")
         return model, env, data_module, lang_embeddings

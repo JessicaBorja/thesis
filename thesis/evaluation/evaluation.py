@@ -23,12 +23,12 @@ logger = logging.getLogger(__name__)
 
 class Evaluation:
     def __init__(self, args, checkpoint, env=None) -> None:
-        use_affordances = args.aff_train_folder is not None
+        self.use_affordances = args.aff_train_folder is not None
         self.policy_manager = AffLMPManager(train_folder=args.aff_train_folder,
                                             checkpoint=args.aff_checkpoint,
                                             debug=args.debug,
                                             save_viz=args.save_viz,
-                                            use_affordances=use_affordances)
+                                            use_affordances=self.use_affordances)
         # if use_affordances:
         #     self.policy_manager = AffLMPManager(train_folder=args.aff_train_folder,
         #                                         checkpoint=args.aff_checkpoint,
@@ -163,7 +163,8 @@ class Evaluation:
         val_annotations = OmegaConf.load(conf_dir / "lfp/annotations/new_playtable_validation.yaml")
 
         eval_sequences = get_sequences(args.num_sequences)
-	eval_sequences = [eval_sequences[i] for i in [4,6,9,11,12,17,19,24,47,55,59,70]]
+        # eval_sequences = [eval_sequences[i] for i in [4,6,9,11,12,17,19,24,47,55,59,70]]
+        eval_sequences = eval_sequences[:200]
         results = []
         plans = defaultdict(list)
 
@@ -179,7 +180,8 @@ class Evaluation:
             result = self.evaluate_sequence(task_oracle, initial_state, eval_sequence, val_annotations, args, plans)
             results.append(result)
 
-            if result <= 3: # self.n_completed:
+            if (result <= 3 and not self.use_affordances) \
+                or (result >=4 and self.use_affordances): # self.n_completed:
                 saved_sequences.append(i)
                 self.model.save_sequence_txt("sequence_%04d" % i, seq_annotations)
                 self.model.save_sequence()
@@ -191,7 +193,7 @@ class Evaluation:
                     " ".join([f"{i + 1}/5 : {v * 100:.1f}% |" for i, v in enumerate(self.count_success(results))]) + "|"
                 )
         
-        self.model.save_sequence_txt("sequence_ids" % i, saved_sequences)
+        self.model.save_sequence_txt("sequence_ids", saved_sequences)
         return results, plans
 
 

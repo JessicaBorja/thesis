@@ -39,16 +39,6 @@ def add_text(img, lang_text):
             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
             fontScale=font_scale,
             color=(0, 0, 0),
-            thickness=thickness * 3,
-            lineType=cv2.LINE_AA,
-        )
-        cv2.putText(
-            img,
-            text=lang_text,
-            org=coord,
-            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-            fontScale=font_scale,
-            color=(255, 255, 255),
             thickness=thickness,
             lineType=cv2.LINE_AA,
         )
