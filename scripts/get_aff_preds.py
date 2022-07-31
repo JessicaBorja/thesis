@@ -21,13 +21,14 @@ def get_camera(cfg):
     static_cam, _, _ = instantiate_env(play_data_cfg,"simulation")
     return static_cam
 
-def save_sample(task, img, aff_pred, merged, errors_dct):
+def save_sample(task, img, px_pred, aff_pred, merged, errors_dct):
     sample_id = len(glob.glob("./%s/*" % task))
     sample_dir = "./%s/%d" % (task, sample_id)
     os.makedirs(sample_dir)
 
     # Save images
     cv2.imwrite(os.path.join(sample_dir, "orig.png"), img[:, :, ::-1])
+    cv2.imwrite(os.path.join(sample_dir, "pixel_img.png"), px_pred[:, :, ::-1])
 
     aff_pred = aff_pred * 255
     merged = merged * 255
@@ -118,7 +119,7 @@ def main(cfg):
         aff_pred = np.pad(aff_pred, ((0, 0), (0, n_pad), (0, 0)), mode='constant', constant_values=1.0)
         label_img = np.pad(label_img, ((0, 0), (0, n_pad), (0, 0)), mode='constant', constant_values=1.0)
         out_img = np.concatenate([label_img, aff_pred, px_pred], axis=1)
-        out_img = add_title(out_img, caption.title(), font_scale=0.7, bottom=True)
+        out_img = add_title(out_img, caption.capitalize(), font_scale=0.7, bottom=True)
 
         if(caption not in im_dct or len(im_dct[caption]) <= 2):
             error_dct = {"depth": depth_error,
@@ -129,7 +130,7 @@ def main(cfg):
 
             frame = cv2.resize(frame, out_shape)
             task = labels["task"][0]
-            save_sample(task, frame, pred_dct["heatmap"], out_img, error_dct)
+            save_sample(task, frame, px_pred, pred_dct["heatmap"], out_img, error_dct)
 
         if cfg.debug:
             cv2.imshow("img", out_img[:, :, ::-1])
