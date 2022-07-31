@@ -11,7 +11,8 @@ from thesis.evaluation.utils import add_title
 from thesis.utils.utils import get_abspath, get_aff_model, torch_to_numpy
 from torch.utils.data import DataLoader
 import logging
-
+import glob
+from pathlib import Path
 
 def get_camera(cfg):
     play_data_hydra_cfg = cfg.aff_detection.dataset.data_dir + "/.hydra"
@@ -20,8 +21,9 @@ def get_camera(cfg):
     static_cam, _, _ = instantiate_env(play_data_cfg,"simulation")
     return static_cam
 
-def save_sample(task, id, img, aff_pred, merged, errors_dct):
-    sample_dir = "./%s/%d" % (task, id)
+def save_sample(task, img, aff_pred, merged, errors_dct):
+    sample_id = len(glob.glob("./%s/*" % task))
+    sample_dir = "./%s/%d" % (task, sample_id)
     os.makedirs(sample_dir)
 
     # Save images
@@ -124,10 +126,10 @@ def main(cfg):
                          "world_pos_deproject": world_pos_error_deprojected,
                          "world_pos": world_pos_error}
             im_dct[caption].append(error_dct)
-            sample_id = len(im_dct[caption])
+
             frame = cv2.resize(frame, out_shape)
             task = labels["task"][0]
-            save_sample(task, sample_id, frame, pred_dct["heatmap"], out_img, error_dct)
+            save_sample(task, frame, pred_dct["heatmap"], out_img, error_dct)
 
         if cfg.debug:
             cv2.imshow("img", out_img[:, :, ::-1])
