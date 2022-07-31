@@ -34,7 +34,10 @@ class BaseAgent:
         self.save_viz=save_viz
         # save_directory = Path(__file__).parents[2].resolve()
         save_directory = Path(os.path.expanduser("~/logs")).resolve()
-        save_directory = save_directory / "evaluation_rollouts" / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        
+        model = "ours" if kwargs["use_aff"] else "baseline"
+        filename = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + model
+        save_directory = save_directory / "evaluation_rollouts" / filename
         self.save_dir = {"parent": save_directory,
                          "sequence_counter": 0,
                          "rollout_counter": 0,
