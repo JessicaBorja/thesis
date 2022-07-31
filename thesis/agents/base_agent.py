@@ -34,7 +34,10 @@ class BaseAgent:
         self.save_viz=save_viz
         # save_directory = Path(__file__).parents[2].resolve()
         save_directory = Path(os.path.expanduser("~/logs")).resolve()
-        save_directory = save_directory / "evaluation_rollouts" / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        
+        model = "ours" if kwargs["use_aff"] else "baseline"
+        filename = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + model
+        save_directory = save_directory / "evaluation_rollouts" / filename
         self.save_dir = {"parent": save_directory,
                          "sequence_counter": 0,
                          "rollout_counter": 0,
@@ -124,6 +127,11 @@ class BaseAgent:
         a = [reach_target.copy(), target_orn, gripper_action]
         tcp_pos, _ = self.move_to_pos(tcp_pos, a)
 
+        # Move in -y
+        reach_target = [tcp_pos[0], tcp_pos[1]-0.03, tcp_pos[-1]]
+        a = [reach_target.copy(), target_orn, gripper_action]
+        tcp_pos, _ = self.move_to_pos(tcp_pos, a)
+
         # Move in xy
         reach_target = [*target_pos[:2], tcp_pos[-1]]
         a = [reach_target.copy(), target_orn, gripper_action]
@@ -177,11 +185,21 @@ class BaseAgent:
         ns, r, d, info = self.env.step(action)
         curr_pos = np.array(info["robot_info"]["tcp_pos"])
         curr_orn = np.array(info["robot_info"]["tcp_orn"])
-
+        
+        kp, kd = 0.07, 0.04
+        derivative = 0
         while(np.linalg.norm(curr_pos - target_pos) > 0.01
               and np.linalg.norm(curr_pos - last_pos) > 0.001
               and np.linalg.norm(curr_orn - target_orn) > 0.01):
             last_pos = curr_pos
+            error = (target_pos - curr_pos) 
+            rel_pos = error * kp + derivative * kd
+            derivative = error
+
+            action = [curr_pos + rel_pos,
+                      target_orn,
+                      action[-1]]
+
             ns, r, d, info = self.env.step(action)             
             curr_pos = np.array(info["robot_info"]["tcp_pos"])
             curr_orn = np.array(info["robot_info"]["tcp_orn"])
