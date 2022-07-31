@@ -29,8 +29,8 @@ def save_sample(task, img, aff_pred, merged, errors_dct):
     # Save images
     cv2.imwrite(os.path.join(sample_dir, "orig.png"), img[:, :, ::-1])
 
-    aff_pred = (aff_pred * 255).astype("uint8")
-    merged = (merged * 255).astype("uint8")
+    aff_pred = aff_pred * 255
+    merged = merged * 255
     cv2.imwrite(os.path.join(sample_dir, "aff_heatmap.png"), aff_pred[:, :, ::-1])
     cv2.imwrite(os.path.join(sample_dir, "merged.png"), merged[:, :, ::-1])
 
