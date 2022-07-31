@@ -156,7 +156,7 @@ class PixelAffLangDetector(LightningModule):
         err = {}
         if compute_err:
             # Pixel distance error
-            p0_pix, depth_sample, _ = self.model.predict(inp["img"], inp["lang_goal"])  # B, H, W 
+            p0_pix, depth_sample, _, _ = self.model.predict(inp["img"], inp["lang_goal"])  # B, H, W 
             # Depth error
             depth_error = 0
             if self.pred_depth:
@@ -257,6 +257,7 @@ class PixelAffLangDetector(LightningModule):
         pred_img = cv2.resize(pred_img, out_shape, interpolation=cv2.INTER_CUBIC)
         heatmap = cv2.resize(heatmap, out_shape, interpolation=cv2.INTER_CUBIC)
         pred_img = pred_img.astype(float) / 255
+        
         out_img = np.concatenate([pred_img, heatmap], axis=1)
 
 

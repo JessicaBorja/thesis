@@ -38,7 +38,7 @@ dataloader:
   pin_memory: true
 
 #-- Hydra config --#
-hydra_outputs: ./hydra_outputs/tmp/
+hydra_outputs: ./hydra_outputs/aff_preds/
 hydra:
   run:
     dir: ${hydra_outputs}/${now:%Y-%m-%d}/${now:%H-%M-%S} # Output
