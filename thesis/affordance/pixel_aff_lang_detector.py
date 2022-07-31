@@ -196,7 +196,7 @@ class PixelAffLangDetector(LightningModule):
         # Attention model forward pass.
         net_inp = {'img': img,
                    'lang_goal': [lang_goal]}
-        p0_pix, depth, logits = self.model.predict(img, lang_goal)
+        p0_pix, depth, uncertainty, logits = self.model.predict(img, lang_goal)
         p0_pix = p0_pix.squeeze()
         depth = depth.squeeze()
 

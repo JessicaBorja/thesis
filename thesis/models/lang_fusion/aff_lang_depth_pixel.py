@@ -88,7 +88,11 @@ class AffDepthLangFusionPixel(nn.Module):
         if "depth_dist" in output:
             depth_pred = self.depth_stream.sample(output["depth_dist"])
             depth_pred = depth_pred.detach().cpu().numpy().squeeze()
-        return p0_pix, depth_pred, logits.squeeze()
+            
+            uncertainty = self.depth_stream.depth_norm_inverse(output["depth_dist"][-1])
+            uncertainty = uncertainty.detach().cpu().numpy().squeeze()
+
+        return p0_pix, depth_pred, uncertainty, logits.squeeze()
 
     def forward(self, inp_img, lang_goal, softmax=True):
         """
