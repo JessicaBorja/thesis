@@ -26,18 +26,23 @@ def format_sftp_path(path):
         path = Path(f"/run/user/{uid}/gvfs/sftp:host={path.as_posix()[6:]}")
     return path
 
-def add_title(img, caption, font_scale=0.6):
+def add_title(img, caption, font_scale=0.6, bottom=False):
     h, w, c = img.shape
 
-    # Add top rectangle
+    # Add caption rectangle
     title_h = 45
-    rectangle = np.zeros((title_h, w, c), dtype=img.dtype)
-    out_img = np.vstack([rectangle, img])
-
     # Add caption
     thickness = 1
     (w_txt, h_txt), _ = cv2.getTextSize(caption, cv2.FONT_HERSHEY_DUPLEX, font_scale, thickness)
-    coord = ((w - w_txt)//2, (title_h + h_txt)//2)
+
+    if bottom:
+        rectangle = np.zeros((title_h, w, c), dtype=img.dtype)
+        out_img = np.vstack([img, rectangle])
+        coord = ((w - w_txt)//2, h + (title_h + h_txt)//2)
+    else:
+        rectangle = np.zeros((title_h, w, c), dtype=img.dtype)
+        out_img = np.vstack([rectangle, img])
+        coord = ((w - w_txt)//2, (title_h + h_txt)//2)
 
     scale = 1 if img.dtype == "float64" else 255
     out_img = cv2.putText(

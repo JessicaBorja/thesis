@@ -5,13 +5,14 @@ defaults:
 
 #
 save_viz: True
+debug: False
 
 # folders
 checkpoint:
   train_folder: ~/logs/thesis/aff_model/2022-07-02/17-01-30_aff_model
   model_name: val_err.ckpt
 
-dataset_name: calvin_langDepthEndPt
+dataset_name: calvin_lang_MoCEndPt
 aff_detection:
   dataset:
     _recursive_: False

@@ -116,7 +116,7 @@ def main(cfg):
         aff_pred = np.pad(aff_pred, ((0, 0), (0, n_pad), (0, 0)), mode='constant', constant_values=1.0)
         label_img = np.pad(label_img, ((0, 0), (0, n_pad), (0, 0)), mode='constant', constant_values=1.0)
         out_img = np.concatenate([label_img, aff_pred, px_pred], axis=1)
-        out_img = add_title(out_img, caption.title(), font_scale=0.7)
+        out_img = add_title(out_img, caption.title(), font_scale=0.7, bottom=True)
 
         if(caption not in im_dct or len(im_dct[caption]) <= 2):
             error_dct = {"depth": depth_error,
@@ -129,8 +129,9 @@ def main(cfg):
             task = labels["task"][0]
             save_sample(task, sample_id, frame, pred_dct["heatmap"], out_img, error_dct)
 
-        cv2.imshow("img", out_img[:, :, ::-1])
-        cv2.waitKey(0)
+        if cfg.debug:
+            cv2.imshow("img", out_img[:, :, ::-1])
+            cv2.waitKey(0)
 
 if __name__ == '__main__':
     main()
