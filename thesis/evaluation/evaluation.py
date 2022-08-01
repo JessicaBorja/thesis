@@ -164,7 +164,7 @@ class Evaluation:
 
         eval_sequences = get_sequences(args.num_sequences)
         # eval_sequences = [eval_sequences[i] for i in [4,6,9,11,12,17,19,24,47,55,59,70]]
-        eval_sequences = eval_sequences[:200]
+        # eval_sequences = eval_sequences[:200]
         results = []
         plans = defaultdict(list)
 

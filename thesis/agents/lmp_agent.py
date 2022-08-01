@@ -197,6 +197,10 @@ class PlayLMPAgent(BaseAgent):
         # Open gripper
         robot_obs = self.env.robot.get_observation()[1]
         
+        width = robot_obs["gripper_opening_width"]
+        if width < 0.03:
+            for i in range(5):
+                self.env.step([robot_obs["tcp_pos"], robot_obs["tcp_orn"], 1])
         # gripper_action = int(robot_obs["gripper_action"])
         # gripper_action = 1
         # self.move_to(self.origin, self.target_orn, gripper_action)
@@ -213,13 +217,8 @@ class PlayLMPAgent(BaseAgent):
         tcp_px = self.env.cameras[0].project(np.array([*robot_obs["tcp_pos"], 1]))
         px_dist = np.linalg.norm(pred_px - tcp_px)
         move = px_dist > 15
-
-        width = robot_obs["gripper_opening_width"]
-        if width < 0.03 and move:
-            for i in range(5):
-                self.env.step([robot_obs["tcp_pos"], robot_obs["tcp_orn"], 1])
     
-        if px_dist > 15: # diff_target > 0.08 and diff_offset > 0.08:
+        if move: # diff_target > 0.08 and diff_offset > 0.08:
             # self.reset_position()
             # self.env.robot.reset()
             obs, _, _, info = self.move_to(offset_pos, gripper_action=1)
