@@ -150,12 +150,14 @@ class PlayLMPAgent(BaseAgent):
 
         if self.viz_obs:
             cv2.imshow("img", out_img[:, :, ::-1])
+            # cv2.imshow("heatmap", (_info["heatmap"])[:, :, ::-1])
+            # cv2.imshow("pred_pixel", (_info["pred_pixel"])[:, :, ::-1])
             cv2.waitKey(1)
         
         if self.save_viz:
             heatmap = _info["heatmap"] * 255
             self.save_img(heatmap, ".", "aff_pred")
-            self.save_img(_info["pred_pixel"], ".", "pred_pixel")
+            self.save_img(_info["pred_pixel"] * 255, ".", "pred_pixel")
             self.save_img(inp["img"], ".", "orig_img")
             self.save_sequence_txt("completed_tasks", caption)
 
@@ -194,10 +196,10 @@ class PlayLMPAgent(BaseAgent):
             self.reset_position()
         # Open gripper
         robot_obs = self.env.robot.get_observation()[1]
-        width = robot_obs["gripper_opening_width"]
-        if width < 0.03:
-            for i in range(5):
-                self.env.step([robot_obs["tcp_pos"], robot_obs["tcp_orn"], 1])
+        
+        # gripper_action = int(robot_obs["gripper_action"])
+        # gripper_action = 1
+        # self.move_to(self.origin, self.target_orn, gripper_action)
 
         # Get Target
         target_pos, pred_px = self.get_aff_pred(caption)
@@ -210,7 +212,13 @@ class PlayLMPAgent(BaseAgent):
         # 2d dist
         tcp_px = self.env.cameras[0].project(np.array([*robot_obs["tcp_pos"], 1]))
         px_dist = np.linalg.norm(pred_px - tcp_px)
+        move = px_dist > 15
 
+        width = robot_obs["gripper_opening_width"]
+        if width < 0.03 and move:
+            for i in range(5):
+                self.env.step([robot_obs["tcp_pos"], robot_obs["tcp_orn"], 1])
+    
         if px_dist > 15: # diff_target > 0.08 and diff_offset > 0.08:
             # self.reset_position()
             # self.env.robot.reset()

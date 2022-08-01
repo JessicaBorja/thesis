@@ -5,7 +5,7 @@ import numpy as np
 import os
 from glob import glob
 import tqdm
-from thesis.evaluation.utils import add_text
+from thesis.evaluation.utils import add_title
 from pathlib import Path
 
 
@@ -27,34 +27,6 @@ def read_captions(input_dir):
     with open(caption_file) as f:
         captions = f.read().splitlines()
     return captions
-
-def add_title(img, caption):
-    h, w, c = img.shape
-
-    # Add top rectangle
-    title_h = 50
-    rectangle = np.zeros((title_h, w, c), dtype=img.dtype)
-    out_img = np.vstack([rectangle, img])
-
-    # Add caption
-    font_scale = 0.6
-    thickness = 1
-    (w_txt, h_txt), _ = cv2.getTextSize(caption, cv2.FONT_HERSHEY_DUPLEX, font_scale, thickness)
-    coord = ((w - w_txt)//2, (title_h + h_txt)//2)
-
-    out_img = cv2.putText(
-        out_img,
-        caption,
-        org=coord,
-        fontFace=cv2.FONT_HERSHEY_DUPLEX,
-        fontScale=font_scale,
-        color=(255, 255, 255),
-        thickness=thickness,
-        lineType=cv2.LINE_AA
-    )
-    cv2.imshow("x", out_img)
-    cv2.waitKey(0)
-    return out_img
 
 def add_bottom_txt(img, txt):
     im_w, im_h = img.shape[:2]
@@ -105,6 +77,8 @@ def merge_images(aff_pred, static_cam_imgs, gripper_cam_imgs, caption, policy_ty
         
         # Add caption as title
         full_img = add_title(full_img, caption)
+        cv2.imshow("x", full_img)
+        cv2.waitKey(0)
         img_list.append(full_img)
     return img_list
 

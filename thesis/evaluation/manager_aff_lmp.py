@@ -57,17 +57,22 @@ class PolicyManager:
             obs, _, _, current_info = env.step(action.copy())
             if args.debug:
                 img = env.render(mode="rgb_array")
-                cv2.imshow("Gripper cam", img["rgb_gripper"][:, :, ::-1])   
-                join_vis_lang(img["rgb_static"], lang_annotation)
+                cv2.imshow("Gripper cam", img["rgb_gripper"][:, :, ::-1])
+                # cv2.imshow("Orig", img["rgb_static"][:, :, ::-1])
+                # join_vis_lang(img["rgb_static"], lang_annotation)
                 # time.sleep(0.1)
             # check if current step solves a task
             current_task_info = task_oracle.get_task_info_for_set(start_info, current_info, {subtask})
             if len(current_task_info) > 0:
                 if args.debug:
                     print(colored("success", "green"), end=" ")
+                # if "grasped" in lang_annotation:
+                #     model.save_sequence()
                 return True
         if args.debug:
             print(colored("fail", "red"), end=" ")
+        # if "grasped" in lang_annotation:
+        #     model.save_sequence()
         return False
 
     def get_default_model_and_env(self, train_folder, dataset_path, checkpoint, env=None, lang_embeddings=None, device_id=0, scene=None, camera_conf=None):
