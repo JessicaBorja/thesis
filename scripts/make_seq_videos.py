@@ -9,16 +9,15 @@ from thesis.evaluation.utils import add_title
 from pathlib import Path
 
 
-def make_video(files, fps=60, filename="v", caption=""):
-    h, w, c = cv2.imread(files[0]).shape
+def make_video(im_lst, fps=60, filename="v"):
+    h, w, c = im_lst[0].shape
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    video = cv2.VideoWriter(filename, fourcc, fps, (w, h))  # 30 fps
-    print("writing video to %s" % filename)
-    for f in tqdm.tqdm(files):
-        img = cv2.imread(f)
-        if caption != "":
-            img.add_text(caption)
-        video.write(img)
+
+    file = filename + ".mp4"
+    video = cv2.VideoWriter(file, fourcc, fps, (w, h))  # 30 fps
+    print("writing video to %s" % file)
+    for im in tqdm.tqdm(im_lst):
+        video.write(im)
     cv2.destroyAllWindows()
     video.release()
 
@@ -78,13 +77,13 @@ def merge_images(aff_pred, static_cam_imgs, gripper_cam_imgs, caption, policy_ty
         # Add caption as title
         full_img = add_title(full_img, caption)
         cv2.imshow("x", full_img)
-        cv2.waitKey(0)
+        cv2.waitKey(1)
         img_list.append(full_img)
     return img_list
 
 
 def make_rollout_videos(input_dir):
-    fps=30
+    fps=20
     policy_title = {"model_based": "Model-based policy",
                     "model_free": "Learning-based policy"}
 
@@ -93,12 +92,11 @@ def make_rollout_videos(input_dir):
         seq_id = int(Path(seq_dir).name.split("_")[-1])
         tasks = sorted(glob(seq_dir + "/*/", recursive=True))
         captions = read_captions(seq_dir)
-
+        rollout_imgs = []
         for caption, task_dir in zip(captions, tasks):
             policies = sorted(glob(task_dir + "/*/", recursive=True))
             aff_pred = glob(task_dir + "aff_pred*.png", recursive=True)[0]
             aff_img = cv2.imread(aff_pred)
-            rollout_imgs = []
             for policy_dir in policies:
                 policy_type = Path(policy_dir).name
                 cam_folder = glob(policy_dir + "/*/", recursive=True)
@@ -114,9 +112,7 @@ def make_rollout_videos(input_dir):
                                            caption,
                                            policy_title[policy_type])
                 rollout_imgs.extend(merged_imgs)
-                
-    
-    # make_video(video_imgs, fps, filename, caption=caption)
+        make_video(rollout_imgs, fps, seq_dir[:-1])
     return
 
 if __name__ == "__main__":
