@@ -52,9 +52,9 @@ class SheetPlots:
                     marker='o',
                     label=s.replace("%", "\%"),
                     color=c)
-            if i == 1:
+            if i == 0:
                 for i, v in enumerate(row[columns]):
-                    ax.text(i, v+0.1, "%0.2f" % v, ha="center", color=c, fontsize=20)
+                    ax.text(i, v+0.05, "%0.2f" % v, ha="center", color=c, fontsize=20)
         
         ax.set_xticks(x)
         ax.set_xticklabels(columns)

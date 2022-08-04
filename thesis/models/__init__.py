@@ -1,6 +1,6 @@
 # Vision networks
 from .visual_lang_encoders.rn50_unet import RN50LingUNet
-from .visual_lang_encoders.rn18_unet import RN18Lingunet
+from .visual_lang_encoders.rn_lingunet import RNLingunet
 from .visual_lang_encoders.rn50_clip_lingunet import CLIPLingUNet
 
 # Language encoders
@@ -19,8 +19,8 @@ lang_encoders = {
 vision_encoders = {
     # Lang Nets
     'clip': CLIPLingUNet,
-    'rn50': RN50LingUNet,
-    'rn18': RN18Lingunet,
+    'rn': RNLingunet, # RN50LingUNet,
+    # 'rn18': RNLingunet,
 }
 
 # Depth estimatiom models

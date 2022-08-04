@@ -22,7 +22,8 @@ def make_video(im_lst, fps=60, filename="v"):
     video.release()
 
 def read_captions(input_dir):
-    caption_file = os.path.join(input_dir, "completed_tasks.txt")
+    caption_file = glob(input_dir + "/sequence*.txt")[0]
+    # caption_file = os.path.join(input_dir, "completed_tasks.txt")
     with open(caption_file) as f:
         captions = f.read().splitlines()
     return captions
@@ -91,12 +92,15 @@ def make_rollout_videos(input_dir):
     for seq_dir in sequences:
         seq_id = int(Path(seq_dir).name.split("_")[-1])
         tasks = sorted(glob(seq_dir + "/*/", recursive=True))
-        captions = read_captions(seq_dir)
+        captions = read_captions(seq_dir)[:len(tasks)]
         rollout_imgs = []
         for caption, task_dir in zip(captions, tasks):
             policies = sorted(glob(task_dir + "/*/", recursive=True))
-            aff_pred = glob(task_dir + "aff_pred*.png", recursive=True)[0]
-            aff_img = cv2.imread(aff_pred)
+            aff_pred = glob(task_dir + "aff_pred*.png", recursive=True)
+            if len(aff_pred) > 0:
+                aff_img = cv2.imread(aff_pred[0])
+            else: 
+                aff_img = np.ones((100,100,3), dtype=np.uint8) * 255
             for policy_dir in policies:
                 policy_type = Path(policy_dir).name
                 cam_folder = glob(policy_dir + "/*/", recursive=True)
@@ -116,6 +120,7 @@ def make_rollout_videos(input_dir):
     return
 
 if __name__ == "__main__":
-    input_dir = "~/logs/evaluation_rollouts/2022-07-30_21-25-24/"
+    # input_dir = "~/logs/evaluation_rollouts/2022-07-31_02-37-57baseline/new"
+    input_dir = "~/logs/evaluation_rollouts/2022-07-31_02-37-50ours/new"
     input_dir = os.path.expanduser(input_dir)
     make_rollout_videos(input_dir)

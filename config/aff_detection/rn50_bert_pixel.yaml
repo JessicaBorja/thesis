@@ -3,7 +3,7 @@
 # Single pixel prediction
 _target_: thesis.affordance.pixel_aff_lang_detector.PixelAffLangDetector
 _recursive_: False
-name: rn18_bert_pixel
+name: rn50_bert_pixel
 img_size: 224
 
 model_cfg:
@@ -15,7 +15,7 @@ model_cfg:
   lang_fusion_type: 'mult'
   streams: ${aff_detection.streams}
   batchnorm: False
-  encoder_name: resnet18
+  encoder_name: resnet50
   unet_cfg:
     decoder_channels: [256, 128, 64, 32]
 
