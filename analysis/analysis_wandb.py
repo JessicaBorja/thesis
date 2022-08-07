@@ -183,6 +183,7 @@ if __name__ == "__main__":
         "RN18 BERT": "jessibd/aff_lang_thesis/3sp7apuu",
         "RN18 DistilBERT": "jessibd/aff_lang_thesis/jeocyqpl",
         "RN50 CLIP": "jessibd/aff_lang_thesis/hcmulu5z",
+        "RN50 SBERT": "jessibd/aff_lang_thesis/13cdqlr8"
     }
 
     # Data percentage
