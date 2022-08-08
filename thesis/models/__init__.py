@@ -20,7 +20,7 @@ vision_encoders = {
     # Lang Nets
     'clip': CLIPLingUNet,
     'rn': RNLingunet, # RN50LingUNet,
-    # 'rn18': RNLingunet,
+    'rn18': RNLingunet,
 }
 
 # Depth estimatiom models
