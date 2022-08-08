@@ -27,15 +27,6 @@ pip install -e .
 ```
 
 # Training Affordance Model
-## Find normalization values for depth
-Script: [find_norm_values.py](./scripts/find_norm_values.py)
-
-### Running on a cluster:
-```
-cd run_on_cluster
-python cluster.py -v "env" --train_file "../scripts/find_norm_values.py" --no_clone  -j norm_values --data_dir DATASET_ABS_PATH
-```
-
 ## Generate affordance dataset
 
 The dataset will automatically be generated in /home/USER/datasets. To change this add the following line:
@@ -75,9 +66,12 @@ The directories to merge are specified in [cfg_merge_dataset.yaml](./config/cfg_
 python merge_datasets.py
 ```
 
-### Find norm values
-Run on a cluster
+## Find normalization values for depth prediction
+Script: [find_norm_values.py](./scripts/find_norm_values.py)
+
+### Running on a cluster:
 ```
+cd run_on_cluster
 python cluster.py -v "thesis" --train_file "../scripts/find_norm_values.py" --no_clone  -j norm_values --data_dir /DATASETS_PATH/calvin_langDepthEndPt/
 ```
 
