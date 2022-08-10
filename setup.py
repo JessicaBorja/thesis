@@ -16,5 +16,8 @@ setup(name='thesis',
           'tqdm',
           'wandb',
           'omegaconf',
-          'matplotlib']
+          'matplotlib',
+          'sentence-transformers',
+          'segmentation_models_pytorch',
+          'ftfy']
      )
