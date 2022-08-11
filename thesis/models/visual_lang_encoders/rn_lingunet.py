@@ -9,7 +9,7 @@ from thesis.models.visual_lang_encoders.base_lingunet import BaseLingunet
 class RNLingunet(BaseLingunet):
     """Resnet 18 with U-Net skip connections and [] language encoder"""
 
-    def __init__(self, input_shape, output_dim, cfg):
+    def __init__(self, input_shape, output_dim, cfg, device):
         super(RNLingunet, self).__init__(input_shape, output_dim, cfg)
         self.in_channels = input_shape[-1]
         self.n_classes = output_dim
@@ -64,11 +64,13 @@ class RNLingunet(BaseLingunet):
         # Language encoding
         l_enc, l_emb, l_mask  = text_enc
         l_input = l_enc.to(dtype=x.dtype)
-    
+
         # Decoder
         # encode image
         decoder_feat = self.decoder(l_input, *encoder_feat)
+        print("decoder_feat: ", decoder_feat.shape)
         aff_out = self.unet.segmentation_head(decoder_feat)
+        print("aff_out: ", aff_out.shape)
 
         info = {"decoder_out": [decoder_feat],
                 "hidden_layers": encoder_feat,
