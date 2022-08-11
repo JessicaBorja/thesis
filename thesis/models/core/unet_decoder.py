@@ -61,7 +61,8 @@ class DecoderBlock(nn.Module):
         if self.lang_fuser is not None and l_input is not None:
             x = self.lang_fuser(x, l_input, x2_proj=self.lang_proj)
         # Upscaling
-        x = F.interpolate(x, scale_factor=2, mode="nearest")
+        scale_factor = skip.shape[-1] // x.shape[-1]
+        x = F.interpolate(x, scale_factor=scale_factor, mode="nearest")
 
         # Double conv
         if skip is not None:
