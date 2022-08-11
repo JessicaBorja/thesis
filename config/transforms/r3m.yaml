@@ -9,8 +9,14 @@ training:
     brightness: 0.05
     hue: 0.02
     prob: 1
-  - _target_: thesis.datasets.transforms.ToIntRange  # Scale 0-1 to 0-255 
+  - _target_: torchvision.transforms.Normalize
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225] 
     
 validation:
   - _target_: torchvision.transforms.Resize
     size: ${aff_detection.img_size}
+  - _target_: thesis.datasets.transforms.ScaleImageTensor  # Scale 0-255 to 0-1
+  - _target_: torchvision.transforms.Normalize                         
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
