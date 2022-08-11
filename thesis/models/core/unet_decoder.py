@@ -57,11 +57,16 @@ class DecoderBlock(nn.Module):
         self.lang_fuser = lang_fusion
         self.lang_proj = nn.Linear(lang_embed_dim, in_channels)
 
-    def forward(self, x, l_input=None, skip=None):
+    def forward(self, x, l_input=None, skip=None, out_dim=None):
         if self.lang_fuser is not None and l_input is not None:
             x = self.lang_fuser(x, l_input, x2_proj=self.lang_proj)
         # Upscaling
-        scale_factor = skip.shape[-1] // x.shape[-1]
+        if skip is not None:
+            scale_factor = skip.shape[-1] // x.shape[-1]
+        elif out_dim:
+            scale_factor = out_dim[-1] // x.shape[-1]
+        else:
+            scale_factor = 2
         x = F.interpolate(x, scale_factor=scale_factor, mode="nearest")
 
         # Double conv
@@ -117,15 +122,19 @@ class UnetLangFusionDecoder(nn.Module):
 
 
     def forward(self, l_input, *features):
+        out_dim = features[0].shape
         features = features[1:]    # remove first skip with same spatial resolution
         features = features[::-1]  # reverse channels to start from head of encoder
 
         x = features[0]
         skips = features[1:]
-
+        
         for i, decoder_block in enumerate(self.blocks):
-            skip = skips[i] if i < len(skips) else None
-            x = decoder_block(x, l_input, skip)
+            if i < len(skips):
+                x = decoder_block(x, l_input, skips[i])
+            else:
+                x = decoder_block(x, l_input, None, out_dim)
+
 
         return x
 

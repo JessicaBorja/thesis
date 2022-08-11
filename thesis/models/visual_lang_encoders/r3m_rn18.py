@@ -45,19 +45,25 @@ class R3M(BaseLingunet):
     def calc_img_enc_size(self):
         test_tensor = torch.zeros(self.input_shape).permute(2, 0, 1)
         test_tensor = test_tensor.unsqueeze(0).to(self.r3m.device)
-        shape = self.r3m(test_tensor)[-1].shape
+        shape = self.r3m_resnet18(test_tensor)[0].shape[1:]
         return shape
 
     def _build_decoder(self, decoder_channels):
         # decoder_channels = (256, 128, 64, 64, 32)
-        decoder_channels = (512, 256, 128, 64, 32)
-        print("decoder channels", decoder_channels)
+        decoder_channels = (512, 256, 128, 64, 32)        
         self.decoder = UnetLangFusionDecoder(
             fusion_module=fusion.names[self.lang_fusion_type],
             lang_embed_dim=self.lang_embed_dim,
             encoder_channels=(3, 64, 64, 128, 256, 512),
             decoder_channels=decoder_channels,
             n_blocks=len(decoder_channels))
+
+        kernel_size = 3
+        n_classes = 1
+        self.segmentation_head = nn.Conv2d(decoder_channels[-1],
+                                           n_classes,
+                                           kernel_size=kernel_size,
+                                           padding=kernel_size // 2)
         # self.conv1_dec = nn.Sequential(
         #     nn.Conv2d(self.input_dim, 512, kernel_size=3, stride=1, padding=1, bias=False),
         #     nn.ReLU(True)
@@ -113,18 +119,23 @@ class R3M(BaseLingunet):
     def forward(self, x, text_enc):
         in_type = x.dtype
         in_shape = x.shape
-        x = x[:,:3]  # select RGB
+        input = x[:,:3]  # select RGB
         #input 32, 3, 224, 224
-        x, im = self.encode_image(x) # 32, 512, 7, 7
+        x, im = self.encode_image(input) # 32, 512, 7, 7
         x = x.to(in_type)
 
         # encode language
         l_enc, l_emb, l_mask = text_enc
         l_input = l_enc.to(dtype=x.dtype)  # [32, 1024]
 
-        decoder_feat = self.decoder(l_input, *im)
-        print("decoder_feat: ", decoder_feat.shape)
+        encoder_feat = [input, *im]
+        decoder_feat = self.decoder(l_input, *encoder_feat)
+        aff_out = self.segmentation_head(decoder_feat)
 
+        info = {"decoder_out": [decoder_feat],
+                "hidden_layers": encoder_feat,
+                "affordance": aff_out,
+                "text_enc": l_input}
         # # encode image
         # assert x.shape[1] == self.input_dim
         # x = self.conv1_dec(x)  # [32, 512, 7, 7]
@@ -144,4 +155,4 @@ class R3M(BaseLingunet):
         # # shape: torch.Size([32, 1, 448, 448])
         # x = F.interpolate(x, size=(in_shape[-2], in_shape[-1]), mode='bilinear')
         # print("finakl: ", x.shape)
-        return x
+        return aff_out, info

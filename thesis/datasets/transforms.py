@@ -21,6 +21,17 @@ class ScaleImageTensor(object):
         assert isinstance(tensor, torch.Tensor)
         return tensor.float().div(255)
 
+class ToIntRange(object):
+    """Scale tensor of shape (batch, C, H, W) containing images to [0, 1] range
+    Args:
+        tensor (torch.tensor): Tensor to be scaled.
+    Returns:
+        Tensor: Scaled tensor.
+    """
+
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+        assert isinstance(tensor, torch.Tensor)
+        return tensor.mul(255)
 
 class AddGaussianNoise(object):
     def __init__(self, mean=0.0, std=1.0, clip=None):

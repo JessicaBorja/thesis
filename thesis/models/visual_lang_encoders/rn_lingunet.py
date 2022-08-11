@@ -68,9 +68,7 @@ class RNLingunet(BaseLingunet):
         # Decoder
         # encode image
         decoder_feat = self.decoder(l_input, *encoder_feat)
-        print("decoder_feat: ", decoder_feat.shape)
         aff_out = self.unet.segmentation_head(decoder_feat)
-        print("aff_out: ", aff_out.shape)
 
         info = {"decoder_out": [decoder_feat],
                 "hidden_layers": encoder_feat,
