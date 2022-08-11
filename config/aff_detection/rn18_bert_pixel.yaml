@@ -21,4 +21,4 @@ model_cfg:
 
 defaults:
   - pixel_data
-  - streams: rn18_bert_lingunet
+  - streams: rn_bert_lingunet
