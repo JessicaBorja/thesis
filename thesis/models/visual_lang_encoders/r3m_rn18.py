@@ -42,6 +42,14 @@ class R3M(BaseLingunet):
         self.layer3 = modules[6]
         self.layer4 = modules[7]
 
+        # Fix encoder weights. Only train decoder
+        for layer in [self.layer1, self.layer2, self.layer3, self.layer4]:
+            for param in layer.parameters():
+                param.requires_grad = False
+        if not self.freeze_backbone:
+            for param in self.layer4.parameters():
+                param.requires_grad = True
+
     def calc_img_enc_size(self):
         test_tensor = torch.zeros(self.input_shape).permute(2, 0, 1)
         test_tensor = test_tensor.unsqueeze(0).to(self.r3m.device)
