@@ -1,16 +1,9 @@
 from r3m import load_r3m
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.models as models
 
-from transformers import DistilBertTokenizer, DistilBertModel
-from thesis.models.core.resnet import IdentityBlock, ConvBlock
-
-from thesis.models.core.unet import Up
 from thesis.models.core.unet_decoder import UnetLangFusionDecoder
 from thesis.models.core import fusion
-from torchvision import transforms
 from thesis.models.visual_lang_encoders.base_lingunet import BaseLingunet
 
 
@@ -27,8 +20,6 @@ class R3M(BaseLingunet):
         self.up_factor = 2 if self.bilinear else 1
         _encoder_name = "resnet18"
         self.freeze_backbone = cfg.freeze_encoder.aff
-        self.vision_normlayer = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-
         self._load_vision(_encoder_name, device)
         self._build_decoder(cfg.unet_cfg.decoder_channels)
 
@@ -72,44 +63,9 @@ class R3M(BaseLingunet):
                                            n_classes,
                                            kernel_size=kernel_size,
                                            padding=kernel_size // 2)
-        # self.conv1_dec = nn.Sequential(
-        #     nn.Conv2d(self.input_dim, 512, kernel_size=3, stride=1, padding=1, bias=False),
-        #     nn.ReLU(True)
-        # )
-        # self.up1 = Up(768, 512 // self.up_factor, self.bilinear)
-        # self.up2 = Up(384, 256 // self.up_factor, self.bilinear)
-        # self.up3 = Up(192, 128 // self.up_factor, self.bilinear)
-        #
-        # self.layer1_dec =  nn.Sequential(
-        #     ConvBlock(64, [64, 64, 64], kernel_size=3, stride=1, batchnorm=self.batchnorm),
-        #     IdentityBlock(64, [64, 64, 64], kernel_size=3, stride=1, batchnorm=self.batchnorm),
-        #     nn.UpsamplingBilinear2d(scale_factor=2),
-        # )
-        #
-        # self.layer2_dec = nn.Sequential(
-        #     ConvBlock(64, [32, 32, 32], kernel_size=3, stride=1, batchnorm=self.batchnorm),
-        #     IdentityBlock(32, [32, 32, 32], kernel_size=3, stride=1, batchnorm=self.batchnorm),
-        #     nn.UpsamplingBilinear2d(scale_factor=2),
-        # )
-        #
-        # self.layer3_dec = nn.Sequential(
-        #     ConvBlock(32, [16, 16, 16], kernel_size=3, stride=1, batchnorm=self.batchnorm),
-        #     IdentityBlock(16, [16, 16, 16], kernel_size=3, stride=1, batchnorm=self.batchnorm),
-        #     nn.UpsamplingBilinear2d(scale_factor=2),
-        # )
-        #
-        # self.conv2_dec = nn.Sequential(
-        #     nn.Conv2d(16, self.output_dim, kernel_size=1)
-        # )
 
     def r3m_resnet18(self, x):
         im = []
-        # preprocess = nn.Sequential(
-        #     self.vision_normlayer,
-        # )
-        # ## Input must be [0, 255], [3,244,244]
-        # x = x.float() / 255.0
-        # x = preprocess(x)
         for layer in [self.stem, self.layer1, self.layer2, self.layer3, self.layer4]:
             x = layer(x)
             im.append(x)
@@ -117,11 +73,7 @@ class R3M(BaseLingunet):
 
     def encode_image(self, img):
         with torch.no_grad():
-            # print("forward shape: ", img.shape)
-            # print("max: ", torch.max(img))
-            # print("min: ", torch.min(img))
             img_encoding, img_im = self.r3m_resnet18(img)
-            # print("forward 2: ", img_encoding.shape)
         return img_encoding, img_im
 
     def forward(self, x, text_enc):
@@ -144,23 +96,4 @@ class R3M(BaseLingunet):
                 "hidden_layers": encoder_feat,
                 "affordance": aff_out,
                 "text_enc": l_input}
-        # # encode image
-        # assert x.shape[1] == self.input_dim
-        # x = self.conv1_dec(x)  # [32, 512, 7, 7]
-        # x = self.lang_fuser1(x, l_input, x2_mask=l_mask, x2_proj=self.lang_proj1)
-        # x = self.up1(x, im[-2])  # 32, 256, 14, 14
-        #
-        # x = self.lang_fuser2(x, l_input, x2_mask=l_mask, x2_proj=self.lang_proj2)
-        # x = self.up2(x, im[-3])  # 32, 128, 28, 28
-        #
-        # x = self.lang_fuser3(x, l_input, x2_mask=l_mask, x2_proj=self.lang_proj3)
-        # x = self.up3(x, im[-4])  # 32, 64, 56, 56
-        #
-        # for layer in [self.layer1_dec, self.layer2_dec, self.layer3_dec, self.conv2_dec]:
-        #     print("layer")
-        #     x = layer(x)
-        #     print(x.shape)
-        # # shape: torch.Size([32, 1, 448, 448])
-        # x = F.interpolate(x, size=(in_shape[-2], in_shape[-1]), mode='bilinear')
-        # print("finakl: ", x.shape)
         return aff_out, info
