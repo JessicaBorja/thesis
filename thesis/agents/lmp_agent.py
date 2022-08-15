@@ -1,6 +1,7 @@
 from thesis.agents.base_agent import BaseAgent
-from thesis.utils.utils import get_abspath, resize_pixel, pos_orn_to_matrix
+from thesis.utils.utils import get_abspath, resize_pixel
 from thesis.models.core.language_network import SBert
+from thesis.evaluation.utils import join_vis_lang
 
 from calvin_agent.models.play_lmp import PlayLMP
 from thesis.utils.episode_utils import load_dataset_statistics, process_depth, process_rgb, process_state
@@ -13,7 +14,7 @@ import torchvision
 import hydra
 import cv2
 
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Union
 from pathlib import Path
 import numpy as np
 import torch
@@ -191,6 +192,7 @@ class PlayLMPAgent(BaseAgent):
         return target_pos, pixel
 
     def reset(self, caption):
+        self.curr_caption = caption
         self.save_dir["step_counter"] = 0
         if self.move_outside:
             self.reset_position()
@@ -262,7 +264,13 @@ class PlayLMPAgent(BaseAgent):
                 # B, 384
                 - depth_obs: 
                 - rgb_obs: 
-        '''
+        '''   
+        if self.viz_obs:
+            _caption = "MF: %s" % goal_embd['lang'][0]
+            join_vis_lang(obs['rgb_obs']['rgb_static'], _caption)
+            # img = cv2.resize([:, :, ::-1], (300,300))
+            # cv2.imshow("static_cam", img)
+            cv2.waitKey(1)   
         if self.save_viz:
             self.save_img(obs["rgb_obs"]["rgb_static"], "./model_free/static_cam")
             self.save_img(obs["rgb_obs"]["rgb_gripper"], "./model_free/gripper_cam")

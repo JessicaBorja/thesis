@@ -6,7 +6,7 @@ import torch
 @hydra.main(config_path="../config", config_name="cfg_calvin")
 def main(cfg):
     # Load env
-    env = hydra.utils.instantiate(cfg.env, show_gui=True,)
+    env = hydra.utils.instantiate(cfg.env)
     env = PlayLMPWrapper(env, torch.device('cuda:0'))
     agent = hydra.utils.instantiate(cfg.agent,
                                     env=env,
@@ -28,9 +28,9 @@ def main(cfg):
         for j in range(cfg.max_timesteps):
             action = agent.step(obs, goal)
             obs, _, _, info = env.step(action)
-            img = cv2.resize(obs['rgb_obs']['rgb_static'][:, :, ::-1], (300, 300))
-            cv2.imshow("static_cam", img)
-            cv2.waitKey(1)
+        agent.save_dir["rollout_counter"] += 1
+    agent.save_sequence_txt("sequence", captions)
+    agent.save_sequence()
 
 if __name__ == "__main__":
     main()

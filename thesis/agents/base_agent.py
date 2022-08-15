@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import logging
 from thesis.utils.utils import add_img_text, resize_pixel, get_aff_model
-from lfp.evaluation.utils import join_vis_lang
+from thesis.evaluation.utils import join_vis_lang
 from pathlib import Path
 from datetime import datetime
 import os
@@ -119,16 +119,17 @@ class BaseAgent:
         # offset_global_frame = tcp_mat @ np.array([0.0, 0.0, -0.08, 1.0])
         # reach_target = offset_global_frame[:3]
 
-        tcp_up = tcp_pos[-1] + 0.07
+        tcp_up = tcp_pos[-1] + 0.08
         move_z = max(tcp_up, target_pos[-1])
-        move_z = min(move_z, 0.7)
+        move_z = min(move_z, 0.8)
 
-        reach_target = [*tcp_pos[:2], move_z]
+        # Move in +z
+        reach_target = [*tcp_pos[:2], tcp_pos[-1] + 0.03]
         a = [reach_target.copy(), target_orn, gripper_action]
         tcp_pos, _ = self.move_to_pos(tcp_pos, a)
 
         # Move in -y
-        reach_target = [tcp_pos[0], tcp_pos[1]-0.03, tcp_pos[-1]]
+        reach_target = [tcp_pos[0], tcp_pos[1]-0.03, move_z]
         a = [reach_target.copy(), target_orn, gripper_action]
         tcp_pos, _ = self.move_to_pos(tcp_pos, a)
 
@@ -178,21 +179,27 @@ class BaseAgent:
         self.sequence_data = {}
 
     def move_to_pos(self, tcp_pos, action):
-        last_pos = tcp_pos.copy()
+        last_pos = action[0].copy()
         target_pos = action[0]
         target_orn = action[1]
+
+        # Get env info
+        ns = self.env.get_obs()
+        info = self.env.get_info()
+        self.img_save_viz_mb(ns)
         # When robot is moving and far from target
-        ns, r, d, info = self.env.step(action)
         curr_pos = np.array(info["robot_info"]["tcp_pos"])
         curr_orn = np.array(info["robot_info"]["tcp_orn"])
         
-        kp, kd = 0.07, 0.04
+        kp, kd = 1.2, 0.05
         derivative = 0
-        while(np.linalg.norm(curr_pos - target_pos) > 0.01
-              and np.linalg.norm(curr_pos - last_pos) > 0.001
-              and np.linalg.norm(curr_orn - target_orn) > 0.01):
+        error = (target_pos - curr_pos)
+        angle_diff = curr_orn - target_orn
+        while(np.linalg.norm(error) > 0.01
+              and np.linalg.norm(curr_pos - last_pos) > 0.0005
+              or (np.arctan2(np.sin(angle_diff), np.cos(angle_diff)) > 0.01).any()
+              ):
             last_pos = curr_pos
-            error = (target_pos - curr_pos) 
             rel_pos = error * kp + derivative * kd
             derivative = error
 
@@ -200,19 +207,27 @@ class BaseAgent:
                       target_orn,
                       action[-1]]
 
-            ns, r, d, info = self.env.step(action)             
+            self.img_save_viz_mb(ns)
+            ns, _, _, info = self.env.step(action)             
             curr_pos = np.array(info["robot_info"]["tcp_pos"])
             curr_orn = np.array(info["robot_info"]["tcp_orn"])
 
-            if self.viz_obs:
-                _caption = "MB: %s" % self.curr_caption
-                join_vis_lang(ns['rgb_obs']['rgb_static'], _caption)
-                # img = cv2.resize([:, :, ::-1], (300,300))
-                # cv2.imshow("static_cam", img)
-                cv2.waitKey(1)
+            angle_diff = curr_orn - target_orn
+            error = (target_pos - curr_pos)
+        # Change motor control to stay in place
+        # ns, _, _, info = self.env.step(curr_pos)             
+        self.img_save_viz_mb(ns)
+        return curr_pos, (ns, None, None, info)
 
-            if self.save_viz:
-                self.save_img(ns["rgb_obs"]["rgb_static"], "./model_based/static_cam")
-                self.save_img(ns["rgb_obs"]["rgb_gripper"], "./model_based/gripper_cam")
-                self.save_dir["step_counter"] += 1
-        return curr_pos, (ns, r, d, info)
+    def img_save_viz_mb(self, ns):
+        if self.viz_obs:
+            _caption = "MB: %s" % self.curr_caption
+            join_vis_lang(ns['rgb_obs']['rgb_static'], _caption)
+            # img = cv2.resize([:, :, ::-1], (300,300))
+            # cv2.imshow("static_cam", img)
+            cv2.waitKey(1)
+
+        if self.save_viz:
+            self.save_img(ns["rgb_obs"]["rgb_static"], "./model_based/static_cam")
+            self.save_img(ns["rgb_obs"]["rgb_gripper"], "./model_based/gripper_cam")
+            self.save_dir["step_counter"] += 1
