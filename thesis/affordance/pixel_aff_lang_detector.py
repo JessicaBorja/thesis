@@ -115,6 +115,7 @@ class PixelAffLangDetector(LightningModule):
                          self.depth_est_dist],
             in_shape=self.in_shape,
             cfg=self.model_cfg,
+            device=self.device,
         )
 
     def forward(self, inp, softmax=True):

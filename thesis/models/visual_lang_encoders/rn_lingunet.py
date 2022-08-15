@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 
 from thesis.models.core import fusion
 import segmentation_models_pytorch as smp
@@ -7,16 +6,20 @@ from thesis.models.core.unet_decoder import UnetLangFusionDecoder
 from thesis.models.visual_lang_encoders.base_lingunet import BaseLingunet
 
 
-class RN18Lingunet(BaseLingunet):
+class RNLingunet(BaseLingunet):
     """Resnet 18 with U-Net skip connections and [] language encoder"""
 
-    def __init__(self, input_shape, output_dim, cfg):
-        super(RN18Lingunet, self).__init__(input_shape, output_dim, cfg)
+    def __init__(self, input_shape, output_dim, cfg, device):
+        super(RNLingunet, self).__init__(input_shape, output_dim, cfg)
         self.in_channels = input_shape[-1]
         self.n_classes = output_dim
         self.lang_embed_dim = 1024
         self.freeze_backbone = cfg.freeze_encoder.aff
-        self.unet = self._build_model(cfg.unet_cfg.decoder_channels, self.in_channels)
+
+        _encoder_name = "resnet18" if "encoder_name" not in cfg else cfg.encoder_name
+        self.unet = self._build_model(cfg.unet_cfg.decoder_channels,
+                                      self.in_channels,
+                                      _encoder_name)
 
     def calc_img_enc_size(self):
         test_tensor = torch.zeros(self.input_shape).permute(2, 0, 1)
@@ -24,10 +27,10 @@ class RN18Lingunet(BaseLingunet):
         shape = self.unet.encoder(test_tensor)[-1].shape[1:]
         return shape
 
-    def _build_model(self, decoder_channels, in_channels):
+    def _build_model(self, decoder_channels, in_channels, encoder_name):
         # encoder_depth Should be equal to number of layers in decoder
         unet = smp.Unet(
-            encoder_name="resnet18",
+            encoder_name=encoder_name,
             encoder_weights="imagenet",
             in_channels=in_channels,
             classes=self.n_classes,
@@ -45,9 +48,9 @@ class RN18Lingunet(BaseLingunet):
 
         self.decoder_channels = decoder_channels
         # Fix encoder weights. Only train decoder
-        if self.freeze_backbone:
-            for param in unet.encoder.parameters():
-                param.requires_grad = False
+        for param in unet.encoder.parameters():
+            param.requires_grad = False
+        if not self.freeze_backbone:
             for param in unet.encoder.layer4.parameters():
                 param.requires_grad = True
         return unet
@@ -61,7 +64,7 @@ class RN18Lingunet(BaseLingunet):
         # Language encoding
         l_enc, l_emb, l_mask  = text_enc
         l_input = l_enc.to(dtype=x.dtype)
-    
+
         # Decoder
         # encode image
         decoder_feat = self.decoder(l_input, *encoder_feat)

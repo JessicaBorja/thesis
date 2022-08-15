@@ -7,7 +7,7 @@ from thesis.utils.utils import unravel_idx
 
 class AffDepthLangFusionPixel(nn.Module):
 
-    def __init__(self, modules_cfg, in_shape, cfg, output_dim=1):
+    def __init__(self, modules_cfg, in_shape, cfg, device, output_dim=1):
         super().__init__()
         self.fusion_type = cfg.attn_stream_fusion_type
         self.modules_cfg = modules_cfg
@@ -27,6 +27,7 @@ class AffDepthLangFusionPixel(nn.Module):
         self.padding = self.padding[[1, 0, 2]] # C, H, W
         self.padding = tuple(self.padding.flatten())
         self.in_shape = in_shape
+        self.device = device
         self.output_dim = output_dim
         self._build_nets()
 
@@ -47,9 +48,10 @@ class AffDepthLangFusionPixel(nn.Module):
             kwargs = {}
 
         # Encoder and decoder
-        self.aff_stream = aff_net_model(self.in_shape,
-                                        self.output_dim,
-                                        self.cfg,
+        self.aff_stream = aff_net_model(input_shape=self.in_shape,
+                                        output_dim=self.output_dim,
+                                        cfg=self.cfg,
+                                        device=self.device,
                                         **kwargs)
         # Optional 
         if depth_est_fcn:

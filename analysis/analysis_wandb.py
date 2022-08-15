@@ -49,7 +49,7 @@ def plot_experiments(
 
     cm = plt.get_cmap("gist_rainbow")
     colors = cm(np.linspace(0, 1, len(data)))
-    colors = ['#cc0202', '#1dc200',  '#0051c2', '#bc00c2', '#c28b00']
+    colors = ['#0051c2', '#cc0202', '#1dc200', '#bc00c2', '#c28b00']
     colors = colors[:len(data)]
     for experiment, c in zip(data, colors):
         name, exp_data = experiment
@@ -59,20 +59,21 @@ def plot_experiments(
     ax.set_ylabel(y_label.title())
     ax.set_xlim(xmin=0, xmax=x_lim)
     ax.xaxis.set_major_formatter(ticker.EngFormatter())
-
+    ax.grid(axis='y')
     max_val = np.max(np.array(exp_data)[0, :, -1])
-    y_lim = min(max_val * 1.2, 20)
+    y_lim = min(max_val * 1.1, 20)
+    y_lim = round(y_lim, 2)
     ax.set_ylim(0, y_lim)
     # ax.legend(loc="upper right")
     ax.legend()
 
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
-    if show:
-        plt.show()
+    # if show:
+    # plt.show()
     if save:
         img_name = os.path.join(save_folder, "%s.png" % save_name)
-        fig.savefig(img_name, bbox_inches="tight", pad_inches=0)
+        fig.savefig(img_name, bbox_inches="tight", pad_inches=0.1)
 
 
 class WandbPlots:
@@ -182,6 +183,7 @@ if __name__ == "__main__":
         "RN18 BERT": "jessibd/aff_lang_thesis/3sp7apuu",
         "RN18 DistilBERT": "jessibd/aff_lang_thesis/jeocyqpl",
         "RN50 CLIP": "jessibd/aff_lang_thesis/hcmulu5z",
+        "RN50 SBERT": "jessibd/aff_lang_thesis/13cdqlr8"
     }
 
     # Data percentage

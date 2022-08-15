@@ -14,11 +14,13 @@ model_cfg:
   attn_stream_fusion_type: 'add'
   lang_fusion_type: 'mult'
   streams: ${aff_detection.streams}
+  # streams:
+  #   lang_enc: sbert
   batchnorm: False
   encoder_name: resnet18
   unet_cfg:
-    decoder_channels: [256, 128, 64, 32]
+    decoder_channels: [512, 256, 128, 64, 32]
 
 defaults:
   - pixel_data
-  - streams: rn_bert_lingunet
+  - streams: rn_sbert_lingunet

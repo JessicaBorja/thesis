@@ -162,9 +162,9 @@ class Evaluation:
         task_oracle = hydra.utils.instantiate(task_cfg)
         val_annotations = OmegaConf.load(conf_dir / "lfp/annotations/new_playtable_validation.yaml")
 
-        eval_sequences = get_sequences(args.num_sequences)
-        # eval_sequences = [eval_sequences[i] for i in [4,6,9,11,12,17,19,24,47,55,59,70]]
-        eval_sequences = eval_sequences[:200]
+        # eval_sequences = get_sequences(args.num_sequences)
+        eval_sequences = [eval_sequences[i] for i in [5,12,24,30,33,34,51,52,53,61,77]]
+        # eval_sequences = eval_sequences[:200]
         results = []
         plans = defaultdict(list)
 
