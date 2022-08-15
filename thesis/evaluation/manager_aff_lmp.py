@@ -66,13 +66,13 @@ class PolicyManager:
             if len(current_task_info) > 0:
                 if args.debug:
                     print(colored("success", "green"), end=" ")
-                if "grasped" in lang_annotation:
-                    model.save_sequence()
+                # if "grasped" in lang_annotation:
+                #     model.save_sequence()
                 return True
         if args.debug:
             print(colored("fail", "red"), end=" ")
-        if "grasped" in lang_annotation:
-            model.save_sequence()
+        # if "grasped" in lang_annotation:
+        #     model.save_sequence()
         return False
 
     def get_default_model_and_env(self, train_folder, dataset_path, checkpoint, env=None, lang_embeddings=None, device_id=0, scene=None, camera_conf=None):

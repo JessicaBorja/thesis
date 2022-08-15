@@ -191,7 +191,7 @@ class BaseAgent:
         curr_pos = np.array(info["robot_info"]["tcp_pos"])
         curr_orn = np.array(info["robot_info"]["tcp_orn"])
         
-        kp, kd = 1.2, 0.05
+        kp, kd = 0.08, 0.05
         derivative = 0
         error = (target_pos - curr_pos)
         angle_diff = curr_orn - target_orn
