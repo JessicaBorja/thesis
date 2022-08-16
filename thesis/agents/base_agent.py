@@ -18,7 +18,7 @@ class BaseAgent:
         self.viz_obs = viz_obs
         self.env.reset()
         _info = self.env.robot.get_observation()[-1]
-        self.origin = np.array(_info["tcp_pos"]) # np.array([-0.25, -0.3, 0.6])  # 
+        self.origin = np.array([-0.25, -0.3, 0.6])  #  np.array(_info["tcp_pos"])
         self.target_orn = np.array([np.pi, 0, np.pi/2]) # np.array(_info["tcp_orn"])
         self.logger = logging.getLogger(__name__)
         self.point_detector, _ = get_aff_model(**aff_cfg.checkpoint)
@@ -195,9 +195,11 @@ class BaseAgent:
         derivative = 0
         error = (target_pos - curr_pos)
         angle_diff = curr_orn - target_orn
+        ts = 0
         while(np.linalg.norm(error) > 0.01
-              and np.linalg.norm(curr_pos - last_pos) > 0.0005
-              or (np.arctan2(np.sin(angle_diff), np.cos(angle_diff)) > 0.01).any()
+              or (np.linalg.norm(curr_pos - last_pos) > 0.0005
+                  and (np.arctan2(np.sin(angle_diff), np.cos(angle_diff)) > 0.01).any()
+                  )
               ):
             last_pos = curr_pos
             rel_pos = error * kp + derivative * kd
