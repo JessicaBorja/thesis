@@ -36,6 +36,7 @@ class Evaluation:
         #                                         use_affordances=True)
         # else:
         #     self.policy_manager = LMPManager()
+        self.save_viz = args.save_viz
         self.n_completed = args.n_completed
         scene = args.scene
         if args.scene is not None:
@@ -184,7 +185,8 @@ class Evaluation:
                 or (result >=4 and self.use_affordances): # self.n_completed:
                 saved_sequences.append(i)
                 self.model.save_sequence_txt("sequence_%04d" % i, seq_annotations)
-                self.model.save_sequence()
+                if self.save_viz:
+                    self.model.save_sequence()
 
             self.model.save_dir["rollout_counter"] = 0
             self.model.sequence_data = {}

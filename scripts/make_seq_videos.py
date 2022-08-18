@@ -22,7 +22,7 @@ def make_video(im_lst, fps=60, filename="v"):
     video.release()
 
 def read_captions(input_dir):
-    caption_file = glob(input_dir + "/sequence*.txt")[0]
+    caption_file = glob(input_dir + "/completed_tasks*.txt")[0]
     # caption_file = os.path.join(input_dir, "completed_tasks.txt")
     with open(caption_file) as f:
         captions = f.read().splitlines()
@@ -84,7 +84,7 @@ def merge_images(aff_pred, static_cam_imgs, gripper_cam_imgs, caption, policy_ty
 
 
 def make_rollout_videos(input_dir):
-    fps=20
+    fps=30
     policy_title = {"model_based": "Model-based policy",
                     "model_free": "Learning-based policy"}
 
@@ -121,6 +121,6 @@ def make_rollout_videos(input_dir):
 
 if __name__ == "__main__":
     # input_dir = "~/logs/evaluation_rollouts/2022-07-31_02-37-57baseline/new"
-    input_dir = "~/logs/evaluation_rollouts/2022-07-31_02-37-50ours/new"
+    input_dir = "~/logs/evaluation_rollouts/drop_and_move" # in_place, keep_and_move
     input_dir = os.path.expanduser(input_dir)
     make_rollout_videos(input_dir)

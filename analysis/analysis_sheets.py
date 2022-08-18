@@ -58,7 +58,7 @@ class SheetPlots:
         
         ax.set_xticks(x)
         ax.set_xticklabels(columns)
-        x_label = "Senquential tasks"
+        x_label = "Sequential tasks"
         y_label = "Success rate"
         ax.set_xlabel(x_label.title())
         ax.set_ylabel(y_label.title())
