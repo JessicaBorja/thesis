@@ -33,9 +33,9 @@ def main(cfg):
                            cfg.run_name)
     if cfg.aff_detection.normalize_depth:
         _name += "_normed"
-    if cfg.aff_detection.model_cfg.freeze_encoder.lang:
+    if not cfg.aff_detection.model_cfg.freeze_encoder.lang:
         _name += "ftLang"
-    if cfg.aff_detection.model_cfg.freeze_encoder.aff:
+    if not cfg.aff_detection.model_cfg.freeze_encoder.aff:
         _name += "ftVisual"       
     cfg.wandb.logger.name = _name
     wandb_logger = WandbLogger(**cfg.wandb.logger)
