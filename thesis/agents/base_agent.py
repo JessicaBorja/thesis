@@ -195,11 +195,13 @@ class BaseAgent:
         derivative = 0
         error = (target_pos - curr_pos)
         angle_diff = curr_orn - target_orn
+        max_ts = 200
         ts = 0
-        while(np.linalg.norm(error) > 0.01
-              or (np.linalg.norm(curr_pos - last_pos) > 0.0005
-                  and (np.arctan2(np.sin(angle_diff), np.cos(angle_diff)) > 0.01).any()
+        while(np.linalg.norm(error) > 0.01  # Large error
+              or (np.linalg.norm(curr_pos - last_pos) > 0.0005  # Moving
+                  and (np.arctan2(np.sin(angle_diff), np.cos(angle_diff)) > 0.01).any()  # Large angle diff
                   )
+              and ts < max_ts
               ):
             last_pos = curr_pos
             rel_pos = error * kp + derivative * kd
@@ -216,6 +218,7 @@ class BaseAgent:
 
             angle_diff = curr_orn - target_orn
             error = (target_pos - curr_pos)
+            ts += 1
         # Change motor control to stay in place
         # ns, _, _, info = self.env.step(curr_pos)             
         self.img_save_viz_mb(ns)
