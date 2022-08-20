@@ -165,7 +165,7 @@ class Evaluation:
 
         eval_sequences = get_sequences(args.num_sequences)
         # eval_sequences = [eval_sequences[i] for i in [5,12,24,30,33,34,51,52,53,61,77]]
-        eval_sequences = eval_sequences[:250]
+        # eval_sequences = eval_sequences[:250]
         results = []
         plans = defaultdict(list)
 
@@ -184,8 +184,8 @@ class Evaluation:
             if (result <= 3 and not self.use_affordances) \
                 or (result >=4 and self.use_affordances): # self.n_completed:
                 saved_sequences.append(i)
-                self.model.save_sequence_txt("sequence_%04d" % i, seq_annotations)
                 if self.save_viz:
+                    self.model.save_sequence_txt("sequence_%04d" % i, seq_annotations)
                     self.model.save_sequence()
 
             self.model.save_dir["rollout_counter"] = 0
