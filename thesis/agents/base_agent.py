@@ -119,29 +119,19 @@ class BaseAgent:
         # offset_global_frame = tcp_mat @ np.array([0.0, 0.0, -0.08, 1.0])
         # reach_target = offset_global_frame[:3]
 
-
-        
         tcp_up = tcp_pos[-1] + 0.07
         move_z = max(tcp_up, target_pos[-1])
         move_z = min(move_z, 0.7)
 
-        reach_target = [*tcp_pos[:2], move_z]
+        # Move in +z
+        reach_target = [*tcp_pos[:2], tcp_pos[-1] + 0.03]
         a = [reach_target.copy(), target_orn, gripper_action]
         tcp_pos, _ = self.move_to_pos(tcp_pos, a)
 
-        # tcp_up = tcp_pos[-1] + 0.08
-        # move_z = max(tcp_up, target_pos[-1])
-        # move_z = min(move_z, 0.8)
-
-        # # Move in +z
-        # reach_target = [*tcp_pos[:2], tcp_pos[-1] + 0.03]
-        # a = [reach_target.copy(), target_orn, gripper_action]
-        # tcp_pos, _ = self.move_to_pos(tcp_pos, a)
-
-        # # Move in -y
-        # reach_target = [tcp_pos[0], tcp_pos[1]-0.03, move_z]
-        # a = [reach_target.copy(), target_orn, gripper_action]
-        # tcp_pos, _ = self.move_to_pos(tcp_pos, a)
+        # Move in -y
+        reach_target = [tcp_pos[0], tcp_pos[1]-0.03, move_z]
+        a = [reach_target.copy(), target_orn, gripper_action]
+        tcp_pos, _ = self.move_to_pos(tcp_pos, a)
 
         # Move in xy
         reach_target = [*target_pos[:2], tcp_pos[-1]]
@@ -208,23 +198,19 @@ class BaseAgent:
         angle_diff = curr_orn - target_orn
         max_ts = 200
         ts = 0
-        # while((np.linalg.norm(error) > 0.01  # Large error
-        #        or (np.linalg.norm(curr_pos - last_pos) > 0.0005  # Moving
-        #           and (np.arctan2(np.sin(angle_diff), np.cos(angle_diff)) > 0.01).any()  # Large angle diff
-        #           ))
-        #       and ts < max_ts  # ts 
-        #       ):
-        #     last_pos = curr_pos
-        #     rel_pos = error * kp + derivative * kd
-        #     derivative = error
-
-        #     action = [curr_pos + rel_pos,
-        #               target_orn,
-        #               action[-1]]
-        while(np.linalg.norm(curr_pos - target_pos) > 0.01
-              and np.linalg.norm(curr_pos - last_pos) > 0.001
-              and np.linalg.norm(curr_orn - target_orn) > 0.01):
+        while (np.linalg.norm(error) > 0.01  # Large error
+               and (np.linalg.norm(curr_pos - last_pos) > 0.0005  # Moving
+                    or (np.arctan2(np.sin(angle_diff), np.cos(angle_diff)) > 0.01).any()  # Large angle diff
+                   )
+               and ts < max_ts):
             last_pos = curr_pos
+            rel_pos = error * kp + derivative * kd
+            derivative = error
+
+            action = [curr_pos + rel_pos,
+                      target_orn,
+                      action[-1]]
+
             self.img_save_viz_mb(ns)
             ns, _, _, info = self.env.step(action)             
             curr_pos = np.array(info["robot_info"]["tcp_pos"])
