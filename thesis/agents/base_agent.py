@@ -21,8 +21,13 @@ class BaseAgent:
         self.origin = np.array([-0.25, -0.3, 0.6])  #  np.array(_info["tcp_pos"])
         self.target_orn = np.array([np.pi, 0, np.pi/2]) # np.array(_info["tcp_orn"])
         self.logger = logging.getLogger(__name__)
-        self.point_detector, _ = get_aff_model(**aff_cfg.checkpoint)
         self.device = self.env.device
+        _point_detector, _ = get_aff_model(**aff_cfg.checkpoint)
+
+        # Move to device
+        self.point_detector = _point_detector.to(self.device)
+        self.point_detector.model = self.point_detector.model.to(self.device)
+
         self.model_free = None
         self.offset = np.array([*offset, 1])
 

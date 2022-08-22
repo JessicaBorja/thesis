@@ -21,7 +21,7 @@ class RN50LingUNet(BaseLingunet):
         self.batchnorm = self.cfg['batchnorm']
         self.bilinear = True
         self.up_factor = 2 if self.bilinear else 1
-
+        self.freeze_backbone=True
         self._load_vision_fcn()
         self._load_lang_enc()
         self._build_decoder()
@@ -85,7 +85,7 @@ class RN50LingUNet(BaseLingunet):
         return x, im
 
     def encode_image(self, img):
-        with torch.no_grad():
+        with torch.requires_grad(not self.freeze_backbone):
             img_encoding, img_im = self.resnet50(img)
         return img_encoding, img_im
 

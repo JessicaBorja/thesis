@@ -27,7 +27,6 @@ class AffDepthLangFusionPixel(nn.Module):
         self.padding = self.padding[[1, 0, 2]] # C, H, W
         self.padding = tuple(self.padding.flatten())
         self.in_shape = in_shape
-        self.device = device
         self.output_dim = output_dim
         self._build_nets()
 
@@ -51,7 +50,6 @@ class AffDepthLangFusionPixel(nn.Module):
         self.aff_stream = aff_net_model(input_shape=self.in_shape,
                                         output_dim=self.output_dim,
                                         cfg=self.cfg,
-                                        device=self.device,
                                         **kwargs)
         # Optional 
         if depth_est_fcn:

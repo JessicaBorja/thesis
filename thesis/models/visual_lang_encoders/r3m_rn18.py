@@ -10,7 +10,7 @@ from thesis.models.visual_lang_encoders.base_lingunet import BaseLingunet
 class R3M(BaseLingunet):
     """ R3M RN 18 & SBert with U-Net skip connections """
 
-    def __init__(self, input_shape, output_dim, cfg, device):
+    def __init__(self, input_shape, output_dim, cfg):
         super(R3M, self).__init__(input_shape, output_dim, cfg)
         self.output_dim = output_dim
         self.input_dim = 512
@@ -20,11 +20,11 @@ class R3M(BaseLingunet):
         self.up_factor = 2 if self.bilinear else 1
         _encoder_name = "resnet18"
         self.freeze_backbone = cfg.freeze_encoder.aff
-        self._load_vision(_encoder_name, device)
+        self._load_vision(_encoder_name)
         self._build_decoder(cfg.unet_cfg.decoder_channels)
 
-    def _load_vision(self, resnet_model, device):
-        self.r3m = load_r3m(resnet_model, device).module
+    def _load_vision(self, resnet_model):
+        self.r3m = load_r3m(resnet_model).module
         modules = list(list(self.r3m.children())[3].children())
 
         self.stem = nn.Sequential(*modules[:4])
@@ -71,17 +71,12 @@ class R3M(BaseLingunet):
             im.append(x)
         return x, im
 
-    def encode_image(self, img):
-        with torch.no_grad():
-            img_encoding, img_im = self.r3m_resnet18(img)
-        return img_encoding, img_im
-
     def forward(self, x, text_enc):
         in_type = x.dtype
         in_shape = x.shape
         input = x[:,:3]  # select RGB
         #input 32, 3, 224, 224
-        x, im = self.encode_image(input) # 32, 512, 7, 7
+        x, im = self.r3m_resnet18(input) # 32, 512, 7, 7
         x = x.to(in_type)
 
         # encode language
