@@ -22,7 +22,7 @@ def make_video(im_lst, fps=60, filename="v"):
     video.release()
 
 def read_captions(input_dir):
-    caption_file = glob(input_dir + "/completed_tasks*.txt")[0]
+    caption_file = glob(input_dir + "/sequence*.txt")[0]
     # caption_file = os.path.join(input_dir, "completed_tasks.txt")
     with open(caption_file) as f:
         captions = f.read().splitlines()
@@ -94,7 +94,7 @@ def make_rollout_videos(input_dir):
         tasks = sorted(glob(seq_dir + "/*/", recursive=True))
         captions = read_captions(seq_dir)[:len(tasks)]
         rollout_imgs = []
-        for i, caption, task_dir in enumerate(zip(captions, tasks)):
+        for i, (caption, task_dir) in enumerate(zip(captions, tasks)):
             policies = sorted(glob(task_dir + "/*/", recursive=True))
             aff_pred = glob(task_dir + "aff_pred*.png", recursive=True)
             if len(aff_pred) > 0:
@@ -110,7 +110,7 @@ def make_rollout_videos(input_dir):
                     cam_imgs[cam] = [cv2.imread(x) for x in sorted(glob(cam_dir + "*.png", recursive=True))]
 
                 # create a single images with all images for video
-                instruction = "%d. %s" % (i, caption)
+                instruction = "%d. %s" % (i+1, caption)
                 merged_imgs = merge_images(aff_img,
                                            cam_imgs["static_cam"],
                                            cam_imgs["gripper_cam"],
@@ -123,6 +123,6 @@ def make_rollout_videos(input_dir):
 if __name__ == "__main__":
     # input_dir = "~/logs/evaluation_rollouts/2022-07-31_02-37-57baseline/new"
     # input_dir = "~/logs/evaluation_rollouts/drop_and_move" # in_place, keep_and_move
-    input_dir = "~/logs/evaluation_rollouts/2022-07-31_02-37-50ours/new"
+    input_dir = "~/logs/evaluation_rollouts/2022-07-31_02-37-57baseline"
     input_dir = os.path.expanduser(input_dir)
     make_rollout_videos(input_dir)
