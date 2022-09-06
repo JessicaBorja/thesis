@@ -123,6 +123,7 @@ def make_rollout_videos(input_dir):
 if __name__ == "__main__":
     # input_dir = "~/logs/evaluation_rollouts/2022-07-31_02-37-57baseline/new"
     # input_dir = "~/logs/evaluation_rollouts/drop_and_move" # in_place, keep_and_move
-    input_dir = "~/logs/evaluation_rollouts/2022-07-31_02-37-57baseline"
+    # input_dir = "~/logs/evaluation_rollouts/2022-07-31_02-37-57baseline"
+    input_dir = "/mnt/ssd_shared/Users/Jessica/Documents/Thesis_ssd/thesis/hydra_outputs/evaluation_rollouts/2022-08-24_21-08-15ours"
     input_dir = os.path.expanduser(input_dir)
     make_rollout_videos(input_dir)

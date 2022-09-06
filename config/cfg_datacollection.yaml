@@ -29,7 +29,7 @@ output_cfg:
   multiclass: False
 
 # For collecting dataset with playdata
-dataset_name: real_world/playtable_15hz
+dataset_name: real_world/500k_all_tasks_dataset_15hz
 play_data_dir: ${paths.datasets}/unprocessed/${dataset_name}
 
 #Output directory where dataset will be stored

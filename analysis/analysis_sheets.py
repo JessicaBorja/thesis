@@ -11,7 +11,6 @@ import seaborn as sns
 import re
 import pathlib
 
-from tomlkit import string
 
 plt.rc("text", usetex=True)
 sns.set(style="white", font_scale=2)
@@ -20,7 +19,7 @@ plt.rcParams["font.size"] = 40
 class SheetPlots:
     def __init__(
         self,
-        experiment: string,
+        experiment: str,
         data: pd.DataFrame,
         show: bool = True,
         save_dir: str = "./analysis/figures",
@@ -43,7 +42,7 @@ class SheetPlots:
 
         for i, (_, row) in enumerate(self.df.iterrows()):
             s = row["Method"]
-            doted = "Baseline" in s
+            doted = "baseline" in s.lower()
             percentage = int(s[s.find("(")+1:s.find("%)")])
             c = colors[np.where( percentage == percentages)[0].item()]
             linestyle = '--' if doted else '-'

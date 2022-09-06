@@ -164,7 +164,7 @@ class Evaluation:
         val_annotations = OmegaConf.load(conf_dir / "lfp/annotations/new_playtable_validation.yaml")
 
         eval_sequences = get_sequences(args.num_sequences)
-        # eval_sequences = [eval_sequences[i] for i in [5,12,24,30,33,34,51,52,53,61,77]]
+        # eval_sequences = [eval_sequences[i] for i in [5,12,24,30,33,34,51,52,53,61,77,80]]
         # eval_sequences = eval_sequences[:250]
         results = []
         plans = defaultdict(list)
