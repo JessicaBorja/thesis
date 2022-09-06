@@ -1,9 +1,7 @@
-from thesis.agents.base_agent import BaseAgent
 from thesis.utils.utils import get_abspath, resize_pixel
-from thesis.models.core.language_network import SBert
 from thesis.evaluation.utils import join_vis_lang
+from thesis.utils.utils import add_img_text, resize_pixel, get_aff_model
 
-from calvin_agent.models.play_lmp import PlayLMP
 from thesis.utils.episode_utils import load_dataset_statistics, process_depth, process_rgb, process_state
 from omegaconf import DictConfig, OmegaConf
 import torch.nn as nn
@@ -23,28 +21,62 @@ import importlib
 logger = logging.getLogger(__name__)
 
 
-class PlayLMPAgent(BaseAgent):
-    def __init__(self, env, dataset_path, checkpoint=None, move_outside=True, *args, **kwargs):
-        super().__init__(env, *args, **kwargs)
+class AffHULCAgent():
+    def __init__(self, env, dataset_path, offset, aff_cfg, model_free=None, move_outside=True,
+                 viz_obs=False, save_viz=False, *args, **kwargs):
+        self.env = env
+
+        # Model-based params
         self.move_outside = move_outside
+        self.offset = np.array([*offset, 1])
+
+        # Revisar que esta orientacion este bien
+        self.target_orn = np.array([-2.26, 0.05, -0.12])
+
+        ## Aff modeland language cnc cfg
         self.dataset_path = Path(get_abspath(dataset_path))  # Dataset on which agent was trained
         logger.info("PlayLMPAgent dataset_path: %s" % self.dataset_path)
-        self.lang_enc = SBert('paraphrase-MiniLM-L3-v2')
-        if checkpoint:
-            self.model_free, self.transforms = self.load_model_free(**checkpoint)
+        if model_free:
+            self.model_free, self.transforms = self.load_model_free(**model_free)
             self.relative_actions = "rel_actions" in self.observation_space_keys["actions"]
         else:
-            self.model_free = PlayLMP()
-            self.transforms = nn.Idendity()
-            self.relative_actions = True
+            return
         self.model_free = self.model_free.to(self.device)
+
+        # Cameras
+        self.static_cam = self.env.camera_manager.static_cam
+        
+        # Not save first
+        self.save_viz = False
+        self.reset_position()
+
+        # Load Aff model
+        _point_detector, _ = get_aff_model(**aff_cfg.checkpoint)
+        if _point_detector is not None:
+            self.point_detector = _point_detector.to(self.device)
+            self.point_detector.model = self.point_detector.model.to(self.device)
+
+        ## Save images
+        self.save_viz = save_viz
+        self.viz_obs = viz_obs        
+        model = "ours" if kwargs["use_aff"] else "baseline"
+        save_directory = "./%s_rollouts" % model
+        self.save_dir = {"parent": save_directory,
+                         "sequence_counter": 0,
+                         "rollout_counter": 0,
+                         "step_counter": 0}
+        self.sequence_data = {}
+
+    def move_to(self, abs_pos, gripper_action=1):
+        gripper_state = "open" if gripper_action == 1 else "closed"
+        self.env.reset(abs_pos, self.target_orn, gripper_action)
 
     def instantiate_transforms(self, transforms):
         _transforms = {
             cam: [hydra.utils.instantiate(transform) for transform in transforms[cam]] for cam in transforms
         }
         _transforms = {key: torchvision.transforms.Compose(val) for key, val in _transforms.items()}
-        return _transforms  
+        return _transforms
 
     def load_model_free(self, train_folder, model_name, **kwargs):
         checkpoint_path = get_abspath(train_folder)
@@ -91,8 +123,7 @@ class PlayLMPAgent(BaseAgent):
             _action_high = np.array(env_cfg.action_max)
             self.action_space = spaces.Box(_action_min, _action_high)
         else:
-            model = PlayLMP()
-            transforms = nn.Idendity()
+            return
         return model, transforms
 
     def transform_observation(self, obs: Dict[str, Any]) -> Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]:
@@ -123,10 +154,6 @@ class PlayLMPAgent(BaseAgent):
             action = np.split(action_tensor.squeeze().cpu().detach().numpy(), slice_ids)
         action[-1] = 1 if action[-1] > 0 else -1
         return action
-
-    def encode(self, goal):
-        _goal_embd = self.lang_enc(goal).permute(1,0)
-        return {'lang': _goal_embd}
 
     def add_offset(self, pos):
         # Add offset
@@ -159,12 +186,11 @@ class PlayLMPAgent(BaseAgent):
             self.save_img(heatmap, ".", "aff_pred")
             self.save_img(_info["pred_pixel"] * 255, ".", "pred_pixel")
             self.save_img(inp["img"], ".", "orig_img")
-            self.save_sequence_txt("completed_tasks", caption)
+            self.save_sequence_txt("task", caption)
 
         pixel = resize_pixel(pred["pixel"], pred['softmax'].shape[:2], im_shape)
 
         # World pos
-
         depth = obs["depth_obs"]["depth_static"]
         n = 5
         x_range =[max(pixel[0] - n, 0), min(pixel[0] + n, im_shape[1])]
@@ -172,17 +198,17 @@ class PlayLMPAgent(BaseAgent):
 
         if "depth" in pred:
             depth_sample = pred['depth']
-            target_pos = self.env.cameras[0].deproject_single_depth(pixel, depth_sample)
+            target_pos = self.static_cam.deproject_single_depth(pixel, depth_sample)
         else:
-            target_pos = self.env.cameras[0].deproject(pixel, depth)
+            target_pos = self.static_cam.deproject(pixel, depth)
             for i in range(x_range[0], x_range[1]):
                 for j in range(y_range[0], y_range[1]):
-                    pos = self.env.cameras[0].deproject((i, j), depth)
+                    pos = self.static_cam.deproject((i, j), depth)
                     if pos[1] < target_pos[1]:
                         target_pos = pos
 
         # img = obs["rgb_obs"]["rgb_static"]
-        # pixel = self.env.cameras[0].project(np.array([*target_pos, 1]))
+        # pixel = self.static_cam.project(np.array([*target_pos, 1]))
         # img = self.print_px_img(img, pixel)
         # cv2.imshow("move_to", img[:, :, ::-1])
         # cv2.waitKey(1)
@@ -190,21 +216,22 @@ class PlayLMPAgent(BaseAgent):
         # p.addUserDebugText("t", target_pos, [1,0,0])
         return target_pos, pixel
 
+    def reset_position(self):
+        self.env.reset()
+
     def reset(self, caption):
         self.curr_caption = caption
         self.save_dir["step_counter"] = 0
         if self.move_outside:
             self.reset_position()
+
         # Open gripper
-        robot_obs = self.env.robot.get_observation()[1]
+        robot_obs = self.env.get_obs()["robot_obs"]
         
-        width = robot_obs["gripper_opening_width"]
+        width = robot_obs[6]
+        # Stay in place but open gripper
         if width < 0.03:
-            for i in range(5):
-                self.env.step([robot_obs["tcp_pos"], robot_obs["tcp_orn"], 1])
-        # gripper_action = int(robot_obs["gripper_action"])
-        # gripper_action = 1
-        # self.move_to(self.origin, self.target_orn, gripper_action)
+            self.env.reset(robot_obs[:3], robot_obs[3:6], "open")
 
         # Get Target
         target_pos, pred_px = self.get_aff_pred(caption)
@@ -215,21 +242,15 @@ class PlayLMPAgent(BaseAgent):
         # diff_offset = np.linalg.norm(offset_pos - robot_obs["tcp_pos"])
 
         # 2d dist
-        tcp_px = self.env.cameras[0].project(np.array([*robot_obs["tcp_pos"], 1]))
+        tcp_px = self.static_cam.project(np.array([*robot_obs["tcp_pos"], 1]))
         px_dist = np.linalg.norm(pred_px - tcp_px)
         move = px_dist > 15
     
-        if move: # diff_target > 0.08 and diff_offset > 0.08:
-            # self.reset_position()
-            # self.env.robot.reset()
+        if move:
             obs, _, _, info = self.move_to(offset_pos, gripper_action=1)
-            self.env.robot.target_pos = offset_pos.copy()
-            self.env.robot.target_orn = self.target_orn.copy()
-            # obs["robot_obs"][3:6]
+            # self.env.robot.target_pos = offset_pos.copy()
+            # self.env.robot.target_orn = self.target_orn.copy()
 
-        # obs, _, _, info = self.move_to(target_pos, gripper_action=1)
-        # self.env.robot.target_pos = target_pos
-        # self.env.robot.target_orn = obs["robot_obs"][3:6]
         self.model_free.reset()
 
     def print_px_img(self, img, px):
@@ -256,13 +277,6 @@ class PlayLMPAgent(BaseAgent):
                     shape = (C, H, W)
                 - depth_obs (dict): keys:depth_camName vals: cam_image
                 - robot_obs:
-            goal(dict): 
-            Either a language or image goal. If language contains key "lang" which is used by the policy to make the prediction, otherwise the goal is provided in the form of an image.
-                - lang: caption used to contidion the policy
-                Only used if "lang" not in dictionary...
-                # B, 384
-                - depth_obs: 
-                - rgb_obs: 
         '''   
         if self.viz_obs:
             _caption = "MF: %s" % goal_embd['lang'][0]
@@ -280,3 +294,51 @@ class PlayLMPAgent(BaseAgent):
         action = self.model_free.step(obs, goal_embd)
         action = self.transform_action(action)
         return action
+
+    def save_sequence_txt(self, filename, data):
+        output_dir = os.path.join(self.save_dir["parent"],
+                              "seq_%03d" % self.save_dir["sequence_counter"])
+        filedir = os.path.join(output_dir, "%s.txt" % filename)
+        if filedir in self.sequence_data:
+            self.sequence_data[filedir].append(data)
+        else:
+            if isinstance(data, list):
+                self.sequence_data[filedir] = data
+            else:
+                self.sequence_data[filedir] = [data]
+
+    def save_img(self, img, folder="./", name="img"):
+        outdir = os.path.join(self.save_dir["parent"],
+                              "seq_%03d" % self.save_dir["sequence_counter"])
+        outdir = os.path.join(outdir,
+                              "task_%02d" % self.save_dir["rollout_counter"])
+        outdir = os.path.join(outdir, folder)
+        output_file = os.path.join(outdir, "%s_%04d" % (name, self.save_dir["step_counter"]))
+        self.sequence_data["%s.png" % output_file] = img[:, :, ::-1]
+        return output_file
+
+    def save_rollout(self):
+        for filename, data in self.sequence_data.items():
+            dirname = os.path.dirname(filename)
+            os.makedirs(dirname, exist_ok=True)
+            if filename.split('.')[-1] == "txt":
+                with open(filename, 'w') as f:
+                    for line in data:
+                        f.write(line)
+                        f.write('\n')
+            else:
+                cv2.imwrite(filename, data)
+        self.sequence_data = {}
+
+    # def img_save_viz_mb(self, ns):
+    #     if self.viz_obs:
+    #         _caption = "MB: %s" % self.curr_caption
+    #         join_vis_lang(ns['rgb_obs']['rgb_static'], _caption)
+    #         # img = cv2.resize([:, :, ::-1], (300,300))
+    #         # cv2.imshow("static_cam", img)
+    #         cv2.waitKey(1)
+
+    #     if self.save_viz:
+    #         self.save_img(ns["rgb_obs"]["rgb_static"], "./model_based/static_cam")
+    #         self.save_img(ns["rgb_obs"]["rgb_gripper"], "./model_based/gripper_cam")
+    #         self.save_dir["step_counter"] += 1
