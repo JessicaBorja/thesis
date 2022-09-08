@@ -100,8 +100,12 @@ def split_by_ep(root_dir, min_labels, remove_blank_mask_instances, data_discover
         selected_static_files = select_files(
             static_cam_files, remove_blank_mask_instances, min_labels=min_labels, only_language=only_language
         )
-        data[split].update({ep_str: selected_gripper_files})
-        data[split][ep_str].extend(selected_static_files)
+        ep_data = {"gripper_cam": [f.split(os.sep)[-1] for f in selected_gripper_files],
+                   "static_cam": [f.split(os.sep)[-1] for f in selected_static_files]}
+        data[split].update({ep_str: ep_data})
+
+        # data[split].update({ep_str: selected_gripper_files})
+        # data[split][ep_str].extend(selected_static_files)
     return data
 
 
@@ -136,9 +140,11 @@ def split_by_ts(root_dir, min_labels, remove_blank_mask_instances=True, only_lan
             else:
                 gripper_cam_files = gripper_data[: -len(gripper_data) // 4]
                 static_cam_files = static_data[: -len(static_data) // 4]
-
-            data[split].update({ep_str: gripper_cam_files})
-            data[split][ep_str].extend(static_cam_files)
+            ep_data = {"gripper_cam": [f.split(os.sep)[-1] for f in gripper_cam_files],
+                    "static_cam": [f.split(os.sep)[-1] for f in static_cam_files]}
+            data[split].update({ep_str: ep_data})
+            # data[split].update({ep_str: gripper_cam_files})
+            # data[split][ep_str].extend(static_cam_files)
 
     return data
 

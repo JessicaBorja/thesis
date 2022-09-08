@@ -25,5 +25,5 @@ def main(root_dir):
 
 
 if __name__=="__main__":
-    root_dir = "/mnt/ssd_shared/Users/Jessica/Documents/Thesis_ssd/datasets/real_world/playtable_15hzMoC"
+    root_dir = "/mnt/ssd_shared/Users/Jessica/Documents/Thesis_ssd/datasets/real_world/500k_all_tasks_dataset_15hz"
     main(root_dir)
