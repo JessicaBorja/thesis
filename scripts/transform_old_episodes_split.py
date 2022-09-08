@@ -16,8 +16,8 @@ def main(root_dir):
             data_new_format[split][ep] = {"gripper_cam":[], "static_cam":[]}
             _gripper_data, _static_data = [], []
             for frame in data_old_format[split][ep]:
-                cam_type = frame.split("/")[0]
-                data_new_format[split][ep][cam_type].append(frame)
+                cam_type, _fram_name = frame.split("/")
+                data_new_format[split][ep][cam_type].append(_fram_name)
 
     new_file = os.path.join(root_dir, "episodes_split_new.json")
     with open(new_file, "w") as outfile:

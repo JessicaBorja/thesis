@@ -1,10 +1,10 @@
 import logging
-
+import os
 import cv2
 import hydra
 import numpy as np
 import pybullet as p
-
+from thesis.affordance.dataset_creation.find_norm_values import add_norm_values
 from thesis.affordance.dataset_creation.core.utils import create_data_ep_split, create_json_file
 from thesis.affordance.dataset_creation.data_labeler import DataLabeler
 from thesis.affordance.utils.img_utils import add_img_text, resize_center
@@ -104,6 +104,7 @@ class DataLabelerLang(DataLabeler):
                 task_discovery_ep=self.task_discovery_folders,
                 only_language=True,
             )
+        add_norm_values(os.getcwd(), self.output_dir, "episodes_split.json")
 
     def after_iteration(self, episode, ep_id, curr_folder):
         # log.info("Saving information... current episode %d " % episode)
@@ -304,6 +305,7 @@ class DataLabelerLang(DataLabeler):
             cv2.imshow("%s" % cam_str, out_img[:, :, ::-1])
             cv2.waitKey(1)
         return out_img
+
 
 
 @hydra.main(config_path="../../../config", config_name="cfg_datacollection")
