@@ -55,7 +55,8 @@ class PixeLabelDataLang(Dataset):
         self.depth_norm_inversse = NormalizeVectorInverse(depth_norm_values["mean"], depth_norm_values["std"])
 
         # Excludes background
-        self.n_classes = _data_info["n_classes"] if cam == "static" else 1
+        # self.n_classes = _data_info["n_classes"] if cam == "static" else 1
+        # self.n_classes = 2 if cam == "static" else 1
         self.resize = (self.img_resize[self.cam], self.img_resize[self.cam])
         self.cmd_log = logging.getLogger(__name__)
         self.cmd_log.info("Dataloader using shape: %s" % str(self.resize))
