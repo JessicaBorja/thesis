@@ -187,11 +187,12 @@ class PixelAffLangDetector(LightningModule):
 
         """
         # Get inputs
-        img = np.expand_dims(obs["img"], 0)  # B, H, W, C
-        img = tt(img, self.device)
-        img = img.permute((0, 3, 1, 2))
-
-        img = self.pred_transforms(img)
+        # img = np.expand_dims(obs["img"], 0)  # B, H, W, C
+        # img = tt(img, self.device)
+        # img = img.permute((0, 3, 1, 2))
+        #  obs["img"] [1, 1, 3, 224, 298]
+        img = torch.squeeze(obs["img"], 0)  # -> torch.Size([1, 3, 224, 298])
+        # img = self.pred_transforms(obs["img"])  # -> transforms are applied by PandaWrapper
 
         lang_goal = goal if goal is not None else obs["lang_goal"]
         # Attention model forward pass.
