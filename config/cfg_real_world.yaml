@@ -1,17 +1,18 @@
 defaults:
-  - _self_
-  - robot_io/datamodule@datamodule: default
-  - robot_io/robot@robot: panda_frankx_interface
-  - robot_io/env@env: env
-  - robot_io/cams@cameras: camera_manager
+  - datamodule: default
+  - robot: panda_frankx_interface_policy
+  - env: robot_io_env
+  - cams: camera_manager
   - agent: real_world
   - paths: general_paths
   - override hydra/hydra_logging: colorlog
   - override hydra/job_logging: colorlog
+  - override datamodule/datasets: vision_only
+  - _self_
 
 data_path: ${paths.vr_data}
 model_name: real_world
-
+train_folder: ???
 max_timesteps: 100
 agent:
   _target_: thesis.agents.real_world_agent.AffHULCAgent
@@ -24,8 +25,8 @@ agent:
     checkpoint: 30
   aff_cfg:
     train_folder: ~/logs/thesis/aff_ablation/2022-06-15/18-23-49_aff_ablation
-    # train_folder: ./hydra_outputs/affordance_model/2022-03-09/01-38-55_aff_rl
-    model_name: val_err.ckpt
+      # train_folder: ./hydra_outputs/affordance_model/2022-03-09/01-38-55_aff_rl
+    model_name: last.ckpt
   
 seed: 42
 env:
@@ -40,6 +41,8 @@ hydra:
     dir: ${save_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
   searchpath:
     - pkg://robot_io.conf
+    - pkg://lfp.conf
+
   sweep:
     dir: ${log_dir}/runs/${now:%Y-%m-%d}/${now:%H-%M-%S}
     subdir: ${hydra.job.override_dirname}
