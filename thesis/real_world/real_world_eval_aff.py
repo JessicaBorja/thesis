@@ -1,4 +1,4 @@
-from msilib import sequence
+# from msilib import sequence
 from pathlib import Path
 
 import cv2
@@ -24,84 +24,54 @@ def load_dataset(cfg):
 
     # we don't want to use shm dataset for evaluation
     # since we don't use the trainer during inference, manually set up data_module
-    vision_lang_folder = train_cfg.datamodule.datasets.vision_dataset.lang_folder
-    lang_lang_folder = train_cfg.datamodule.datasets.lang_dataset.lang_folder
-    train_cfg.datamodule.datasets = cfg.datamodule.datasets
-    train_cfg.datamodule.datasets.vision_dataset.lang_folder = vision_lang_folder
-    train_cfg.datamodule.datasets.lang_dataset.lang_folder = lang_lang_folder
-
-    train_cfg.datamodule.root_data_dir = cfg.datamodule.root_data_dir
-    data_module = hydra.utils.instantiate(train_cfg.datamodule, num_workers=0)
-    print(train_cfg.datamodule)
+    # vision_lang_folder = train_cfg.datamodule.datasets.vision_dataset.lang_folder
+    # lang_lang_folder = train_cfg.datamodule.datasets.lang_dataset.lang_folder
+    # train_cfg.datamodule.datasets = cfg.datamodule.datasets
+    # train_cfg.datamodule.datasets.vision_dataset.lang_folder = vision_lang_folder
+    # train_cfg.datamodule.datasets.lang_dataset.lang_folder = lang_lang_folder
+    # print(train_cfg.aff_detection.streams.transforms.validation)
+    # print(cfg.datamodule.transforms.val.keys())
+    #
+    # exit()
+    cfg.datamodule.transforms.train.rgb_static = train_cfg.aff_detection.streams.transforms.training
+    cfg.datamodule.transforms.val.rgb_static = train_cfg.aff_detection.streams.transforms.validation
+    data_module = hydra.utils.instantiate(cfg.datamodule, num_workers=0)
     print("data module prepare_data()")
     data_module.prepare_data()
     data_module.setup()
     print("data module setup complete")
     dataloader = data_module.val_dataloader()
-    dataset = dataloader.dataset.datasets["lang"]
+    dataset = dataloader.dataset.datasets["vis"]
 
     return dataset, cfg.datamodule.root_data_dir
 
 
-def evaluate_policy_dataset(model, env, dataset, max_ts, use_affordances):
-    i = 0
-    print("Press A / D to move through episodes, E / Q to skip 50 episodes.")
-    print("Press P to replay recorded actions of the current episode.")
-    print("Press O to run inference with the model, but use goal from episode.")
-    print("Press L to run inference with the model and use your own language instruction.")
+def evaluate_aff(model, env, max_ts, use_affordances):
     lang_enc = SBertLang()
-
     while 1:
-        episode = dataset[i]
-        imshow_tensor("start", episode["rgb_obs"]["rgb_static"][0], wait=1, resize=True)
-        imshow_tensor("start_gripper", episode["rgb_obs"]["rgb_gripper"][0], wait=1, resize=True)
-        imshow_tensor("goal_gripper", episode["rgb_obs"]["rgb_gripper"][-1], wait=1, resize=True)
-        k = imshow_tensor("goal", episode["rgb_obs"]["rgb_static"][-1], wait=0, resize=True)
+        # lang_input = [input("What should I do? \n")]
+        # lang_embedding = lang_encoder(lang_input)
+        # goal = {"lang": lang_embedding.squeeze(0)}
+        # print("sleeping 5 seconds...)")
+        # time.sleep(6)
+        # rollout(env, model, goal)
 
-        if k == ord("a"):
-            i -= 1
-            i = int(np.clip(i, 0, len(dataset)))
-        if k == ord("d"):
-            i += 1
-            i = int(np.clip(i, 0, len(dataset)))
-        if k == ord("q"):
-            i -= 50
-            i = int(np.clip(i, 0, len(dataset)))
-        if k == ord("e"):
-            i += 50
-            i = int(np.clip(i, 0, len(dataset)))
-
-        # replay episode with recorded actions
-        if k == ord("p"):
-            env.reset(episode=episode)
-            for action in episode["actions"]:
-                env.step(action)
-                env.render("human")
-        # inference with model, but goal from episode
-        if k == ord("o"):
-            # env.reset(episode=episode)
-            goal = {"lang": episode["lang"].unsqueeze(0).cuda()}
-            rollout(env, model, goal)
-        # inference with model language prompt
-        if k == ord("l"):
-            caption = input("Type an instruction \n")
-            if model.model_free.lang_encoder is not None:
-                goal = {"lang": [caption]}
-            else:
-                goal = lang_enc.get_lang_goal(caption)
-            rollout(env, model, goal, use_affordances, ep_len=max_ts)
-            model.save_dir["rollout_counter"] += 1
-            model.rollout()
+        goal = input("Type an instruction \n")
+        # goal = lang_enc.encode_text([caption])
+        rollout(env, model, goal, use_affordances, ep_len=max_ts)
+        model.save_dir["rollout_counter"] += 1
+        model.rollout()
 
 def rollout(env, model, goal, use_affordances=False, ep_len=340):
-    env.reset()
+    # env.reset()
+    # model.reset()
+    obs = env.get_obs()
     if use_affordances:
         # width = env.robot.get_observation()[-1]["gripper_opening_width"]
         # if width > 0.055 or width< 0.01:
-        robot_obs = model.env.get_obs()["robot_obs"]
-        target_pos, _move_flag = model.get_aff_pred(goal, robot_obs)
+        target_pos, _move_flag = model.get_aff_pred(obs, goal)
 
-@hydra.main(config_path="../../conf", config_name="cfg_real_world")
+@hydra.main(config_path="../../config", config_name="cfg_real_world")
 def main(cfg):
     # load robot
     robot = hydra.utils.instantiate(cfg.robot)
@@ -109,16 +79,17 @@ def main(cfg):
 
     dataset, dataset_path = load_dataset(cfg)
     env = PandaLfpWrapper(env, dataset)
-
-    use_affordances = cfg.aff_checkpoint.train_folder is not None
+    use_affordances = cfg.train_folder is not None
+    cfg.agent.aff_cfg.train_folder = cfg.train_folder
     model = hydra.utils.instantiate(cfg.agent,
                                     dataset_path=dataset_path,
                                     env=env,
+                                    model_free=False,
                                     use_aff=use_affordances)
-    print(f"Successfully loaded affordance model: {cfg.affordance.train_folder}/{cfg.affordance.checkpoint}")
-    logger.info(f"Successfully loaded affordance model: {cfg.affordancetrain_folder}/{cfg.affordance.checkpoint}")
+    print(f"Successfully loaded affordance model: {cfg.agent.aff_cfg.train_folder}/{cfg.agent.aff_cfg.model_name}")
+    logger.info(f"Successfully loaded affordance model: {cfg.agent.aff_cfg.train_folder}/{cfg.agent.aff_cfg.model_name}")
 
-    evaluate_policy_dataset(model, env, dataset,
+    evaluate_aff(model, env,
                             use_affordances=use_affordances,
                             max_ts=cfg.max_timesteps)
 
