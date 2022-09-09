@@ -1,5 +1,5 @@
 from thesis.utils.utils import get_abspath, resize_pixel
-from thesis.evaluation.utils import join_vis_lang
+# from thesis.evaluation.utils import join_vis_lang
 from thesis.utils.utils import add_img_text, resize_pixel, get_aff_model
 
 from thesis.utils.episode_utils import load_dataset_statistics, process_depth, process_rgb, process_state
@@ -21,11 +21,37 @@ import importlib
 logger = logging.getLogger(__name__)
 
 
+def add_text(img, lang_text):
+    height, width, _ = img.shape
+    if lang_text != "":
+        coord = (1, int(height - 10))
+        font_scale = (0.7 / 500) * width
+        thickness = 1
+        cv2.putText(
+            img,
+            text=lang_text,
+            org=coord,
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+            fontScale=font_scale,
+            color=(0, 0, 0),
+            thickness=thickness,
+            lineType=cv2.LINE_AA,
+        )
+
+def join_vis_lang(img, lang_text):
+    """Takes as input an image and a language instruction and visualizes them with cv2"""
+    img = img[:, :, ::-1].copy()
+    img = cv2.resize(img, (500, 500))
+    add_text(img, lang_text)
+    cv2.imshow("simulation cam", img)
+    cv2.waitKey(1)
+
+
 class AffHULCAgent():
     def __init__(self, env, dataset_path, offset, aff_cfg, model_free=None, move_outside=True,
                  viz_obs=False, save_viz=False, *args, **kwargs):
         self.env = env
-
+        self.device = "cuda"
         # Model-based params
         self.move_outside = move_outside
         self.offset = np.array([*offset, 1])
@@ -39,19 +65,18 @@ class AffHULCAgent():
         if model_free:
             self.model_free, self.transforms = self.load_model_free(**model_free)
             self.relative_actions = "rel_actions" in self.observation_space_keys["actions"]
-        else:
-            return
-        self.model_free = self.model_free.to(self.device)
+            self.model_free = self.model_free.to(self.device)
+
 
         # Cameras
         self.static_cam = self.env.camera_manager.static_cam
         
         # Not save first
         self.save_viz = False
-        self.reset_position()
+        # self.reset_position()
 
         # Load Aff model
-        _point_detector, _ = get_aff_model(**aff_cfg.checkpoint)
+        _point_detector, _ = get_aff_model(**aff_cfg)
         if _point_detector is not None:
             self.point_detector = _point_detector.to(self.device)
             self.point_detector.model = self.point_detector.model.to(self.device)
@@ -165,12 +190,10 @@ class AffHULCAgent():
         offset_pos = pos + self.offset[:3]
         return offset_pos
 
-    def get_aff_pred(self, caption, robot_obs):
-        obs = self.env.get_obs()
+    def get_aff_pred(self, obs, caption):
         inp = {"img": obs["rgb_obs"]["rgb_static"],
                "lang_goal": caption}
         im_shape = inp["img"].shape[:2]
-
         pred = self.point_detector.predict(inp)
         out_img, _info = self.point_detector.get_preds_viz(inp, pred,
                                                            out_shape=inp["img"].shape[:2])
