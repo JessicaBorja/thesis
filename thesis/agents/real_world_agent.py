@@ -165,7 +165,7 @@ class AffHULCAgent():
         offset_pos = pos + self.offset[:3]
         return offset_pos
 
-    def get_aff_pred(self, caption):
+    def get_aff_pred(self, caption, robot_obs):
         obs = self.env.get_obs()
         inp = {"img": obs["rgb_obs"]["rgb_static"],
                "lang_goal": caption}
@@ -207,14 +207,23 @@ class AffHULCAgent():
                     if pos[1] < target_pos[1]:
                         target_pos = pos
 
+        offset_pos = self.add_offset(target_pos)
+
+        # If far from target 3d
+        # diff_target = np.linalg.norm(target_pos - robot_obs["tcp_pos"])
+        # diff_offset = np.linalg.norm(offset_pos - robot_obs["tcp_pos"])
+
+        # 2d dist
+        tcp_px = self.static_cam.project(np.array([*robot_obs["tcp_pos"], 1]))
+        px_dist = np.linalg.norm(pixel - tcp_px)
+        move = px_dist > 15
+
         # img = obs["rgb_obs"]["rgb_static"]
         # pixel = self.static_cam.project(np.array([*target_pos, 1]))
         # img = self.print_px_img(img, pixel)
         # cv2.imshow("move_to", img[:, :, ::-1])
         # cv2.waitKey(1)
-        # import pybullet as p
-        # p.addUserDebugText("t", target_pos, [1,0,0])
-        return target_pos, pixel
+        return offset_pos, move
 
     def reset_position(self):
         self.env.reset()
@@ -234,17 +243,7 @@ class AffHULCAgent():
             self.env.reset(robot_obs[:3], robot_obs[3:6], "open")
 
         # Get Target
-        target_pos, pred_px = self.get_aff_pred(caption)
-        offset_pos = self.add_offset(target_pos)
-
-        # If far from target 3d
-        # diff_target = np.linalg.norm(target_pos - robot_obs["tcp_pos"])
-        # diff_offset = np.linalg.norm(offset_pos - robot_obs["tcp_pos"])
-
-        # 2d dist
-        tcp_px = self.static_cam.project(np.array([*robot_obs["tcp_pos"], 1]))
-        px_dist = np.linalg.norm(pred_px - tcp_px)
-        move = px_dist > 15
+        offset_pos, move = self.get_aff_pred(caption, robot_obs)
     
         if move:
             obs, _, _, info = self.move_to(offset_pos, gripper_action=1)
