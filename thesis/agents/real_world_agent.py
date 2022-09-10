@@ -165,7 +165,7 @@ class AffHULCAgent():
         return offset_pos
 
     def get_aff_pred(self, caption, obs):
-        inp = {"img": obs["rgb_static"],
+        inp = {"img": obs["rgb_obs"]["rgb_static"],
                "lang_goal": caption}
         im_shape = inp["img"].shape[:2]
         pred = self.point_detector.predict(inp)
