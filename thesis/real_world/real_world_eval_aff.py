@@ -84,7 +84,8 @@ def main(cfg):
     model = hydra.utils.instantiate(cfg.agent,
                                     dataset_path=dataset_path,
                                     env=env,
-                                    use_aff=use_affordances)
+                                    use_aff=use_affordances,
+                                    model_free=False)
     print(f"Successfully loaded affordance model: {cfg.agent.aff_cfg.train_folder}/{cfg.agent.aff_cfg.model_name}")
     logger.info(f"Successfully loaded affordance model: {cfg.agent.aff_cfg.train_folder}/{cfg.agent.aff_cfg.model_name}")
 
