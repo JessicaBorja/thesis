@@ -47,20 +47,10 @@ def load_dataset(cfg):
 
 
 def evaluate_aff(model, env, max_ts, use_affordances):
-    lang_enc = SBertLang()
     while 1:
-        # lang_input = [input("What should I do? \n")]
-        # lang_embedding = lang_encoder(lang_input)
-        # goal = {"lang": lang_embedding.squeeze(0)}
-        # print("sleeping 5 seconds...)")
-        # time.sleep(6)
-        # rollout(env, model, goal)
-
         goal = input("Type an instruction \n")
-        # goal = lang_enc.encode_text([caption])
         rollout(env, model, goal, use_affordances, ep_len=max_ts)
-        model.save_dir["rollout_counter"] += 1
-        model.rollout()
+
 
 def rollout(env, model, goal, use_affordances=False, ep_len=340):
     # env.reset()

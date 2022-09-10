@@ -195,7 +195,7 @@ class AffHULCAgent():
 
         if "depth" in pred:
             depth_sample = pred['depth']
-            target_pos = self.static_cam.deproject_single_depth(pixel, depth_sample)
+            target_pos = self.static_cam.deproject(pixel, depth_sample.item())
         else:
             target_pos = self.static_cam.deproject(pixel, depth)
             for i in range(x_range[0], x_range[1]):
@@ -211,7 +211,7 @@ class AffHULCAgent():
         # diff_offset = np.linalg.norm(offset_pos - robot_obs["tcp_pos"])
 
         # 2d dist
-        tcp_px = self.static_cam.project(np.array([*obs["robot_obs"]["tcp_pos"], 1]))
+        tcp_px = self.static_cam.project(np.array([*obs["robot_obs"][:3], 1]))
         px_dist = np.linalg.norm(pixel - tcp_px)
         move = px_dist > 15
 
