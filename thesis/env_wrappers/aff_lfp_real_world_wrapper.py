@@ -74,7 +74,7 @@ class PandaLfpWrapper(gym.Wrapper):
         action[2] = 1 if action[-1] > 0 else -1
         action_dict = {"motion": action, "ref": "rel" if self.relative_actions else "abs"}
         o, r, d, i = self.env.step(action_dict)
-        return o, r, d, i
+        return self.transform_observation(o), r, d, i
 
     def reset(self, episode=None, robot_obs=None, target_pos=None, target_orn=None, gripper_state="open"):
         if episode is not None:
@@ -91,8 +91,8 @@ class PandaLfpWrapper(gym.Wrapper):
         else:
             obs = self.env.reset()
 
-        return obs
+        return self.transform_observation(obs)
 
     def get_obs(self):
         obs = self.env._get_obs()
-        return obs
+        return self.transform_observation(obs)
