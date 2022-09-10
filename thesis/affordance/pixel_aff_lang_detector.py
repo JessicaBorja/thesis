@@ -34,7 +34,6 @@ class PixelAffLangDetector(LightningModule):
         self.cmd_log = logging.getLogger(__name__)
         self.pred_depth = depth_dist is not None
         self.depth_est_dist = depth_dist
-
         if transforms is not None:
             self.pred_transforms = get_transforms(transforms, self.in_shape[0])['transforms']
         else:
@@ -187,11 +186,12 @@ class PixelAffLangDetector(LightningModule):
 
         """
         # Get inputs
+        # obs["img"] is  150, 200, 3
         img = np.expand_dims(obs["img"], 0)  # B, H, W, C
         img = tt(img, self.device)
-        img = img.permute((0, 3, 1, 2))
+        img = img.permute((0, 3, 1, 2)) #1, 3, 150, 200
 
-        img = self.pred_transforms(img)
+        img = self.pred_transforms(img) #1, 3, 224, 224
 
         lang_goal = goal if goal is not None else obs["lang_goal"]
         # Attention model forward pass.

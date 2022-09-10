@@ -48,7 +48,7 @@ class PolicyManager:
 
         obs = env.get_obs()
         # Reset environment
-        t_obs = model.transform_observation(obs)
+        t_obs = model.rename_observation(obs)
         plan, latent_goal = model.model_free.get_pp_plan_lang(t_obs, goal)
         plans[subtask].append((plan.cpu(), latent_goal.cpu()))
 

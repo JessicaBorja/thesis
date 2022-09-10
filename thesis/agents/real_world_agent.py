@@ -180,7 +180,7 @@ class AffHULCAgent():
             cv2.imshow("img", out_img[:, :, ::-1])
             # cv2.imshow("heatmap", (_info["heatmap"])[:, :, ::-1])
             # cv2.imshow("pred_pixel", (_info["pred_pixel"])[:, :, ::-1])
-            cv2.waitKey(1)
+            cv2.waitKey(2)
         
         if self.save_viz:
             heatmap = _info["heatmap"] * 255

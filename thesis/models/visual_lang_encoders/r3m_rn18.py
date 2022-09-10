@@ -72,12 +72,9 @@ class R3M(BaseLingunet):
         return x, im
 
     def forward(self, x, text_enc):
-        in_type = x.dtype
-        in_shape = x.shape
         input = x[:,:3]  # select RGB
         #input 32, 3, 224, 224
-        x, im = self.r3m_resnet18(input) # 32, 512, 7, 7
-        x = x.to(in_type)
+        x, im = self.r3m_resnet18(input)  # 32, 512, 7, 7
 
         # encode language
         l_enc, l_emb, l_mask = text_enc
