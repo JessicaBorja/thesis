@@ -164,13 +164,17 @@ class AffHULCAgent():
         offset_pos = pos + self.offset[:3]
         return offset_pos
 
-    def get_aff_pred(self, caption, obs):
+    def get_aff_pred(self, caption, obs, out_shape=None):
         inp = {"img": obs["rgb_obs"]["rgb_static"],
                "lang_goal": caption}
         im_shape = inp["img"].shape[:2]
         pred = self.point_detector.predict(inp)
+
+        if out_shape is None:
+            inp["img"].shape[:2]
+
         out_img, _info = self.point_detector.get_preds_viz(inp, pred,
-                                                           out_shape=inp["img"].shape[:2])
+                                                           out_shape=out_shape)
 
         if self.viz_obs:
             cv2.imshow("img", out_img[:, :, ::-1])
@@ -195,7 +199,7 @@ class AffHULCAgent():
 
         if "depth" in pred:
             depth_sample = pred['depth']
-            target_pos = self.static_cam.deproject_single_depth(pixel, depth_sample)
+            target_pos = self.static_cam.deproject(pixel, depth_sample)
         else:
             target_pos = self.static_cam.deproject(pixel, depth)
             for i in range(x_range[0], x_range[1]):
@@ -207,8 +211,8 @@ class AffHULCAgent():
         offset_pos = self.add_offset(target_pos)
 
         # If far from target 3d
-        # diff_target = np.linalg.norm(target_pos - robot_obs["tcp_pos"])
-        # diff_offset = np.linalg.norm(offset_pos - robot_obs["tcp_pos"])
+        # diff_target = np.linalg.norm(target_pos - robot_obs[:3])
+        # diff_offset = np.linalg.norm(offset_pos - robot_obs[:3])
 
         # 2d dist
         tcp_px = self.static_cam.project(np.array([*obs["robot_obs"]["tcp_pos"], 1]))

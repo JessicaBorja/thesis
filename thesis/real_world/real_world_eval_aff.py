@@ -69,7 +69,7 @@ def rollout(env, model, goal, use_affordances=False, ep_len=340):
     if use_affordances:
         # width = env.robot.get_observation()[-1]["gripper_opening_width"]
         # if width > 0.055 or width< 0.01:
-        target_pos, _move_flag = model.get_aff_pred(goal, obs)
+        target_pos, _move_flag = model.get_aff_pred(goal, obs, (500, 500))
 
 @hydra.main(config_path="../../config", config_name="cfg_real_world")
 def main(cfg):

@@ -243,8 +243,10 @@ class PixelAffLangDetector(LightningModule):
         heatmap = blend_imgs(frame.copy(), heatmap, alpha=0.8)
 
         pixel = pred["pixel"]
-        pixel = resize_pixel(pixel, self.in_shape[:2], pred_img.shape[:2])
         # print(pred["error"], pred["pixel"], (x, y))
+
+        pred_img = cv2.resize(pred_img, out_shape, interpolation=cv2.INTER_CUBIC)
+        pixel = resize_pixel(pixel, self.in_shape[:2], pred_img.shape[:2])
         pred_img = cv2.drawMarker(
                 pred_img,
                 (pixel[0], pixel[1]),
@@ -255,7 +257,6 @@ class PixelAffLangDetector(LightningModule):
                 line_type=cv2.LINE_AA,
             )
 
-        pred_img = cv2.resize(pred_img, out_shape, interpolation=cv2.INTER_CUBIC)
         heatmap = cv2.resize(heatmap, out_shape, interpolation=cv2.INTER_CUBIC)
         pred_img = pred_img.astype(float) / 255
         

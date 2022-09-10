@@ -91,7 +91,6 @@ def evaluate_policy_dataset(model, env, dataset, max_ts, use_affordances):
                 goal = lang_enc.get_lang_goal(caption)
             rollout(env, model, goal, use_affordances, ep_len=max_ts)
             model.save_dir["rollout_counter"] += 1
-            model.rollout()
 
 def rollout(env, model, goal, use_affordances=False, ep_len=340):
     env.reset()
