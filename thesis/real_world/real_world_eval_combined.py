@@ -10,7 +10,7 @@ from robot_io.utils.utils import FpsController
 from lfp.evaluation.utils import imshow_tensor
 from lfp.models.play_lmp import PlayLMP
 from lfp.utils.utils import format_sftp_path, get_checkpoints_for_epochs
-from lfp.wrappers.panda_lfp_wrapper import PandaLfpWrapper
+from thesis.env_wrappers.aff_lfp_real_world_wrapper import PandaLfpWrapper
 
 from thesis.models.language_encoders.sbert_lang_encoder import SBertLang
 import logging
