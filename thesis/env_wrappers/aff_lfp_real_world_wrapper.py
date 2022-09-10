@@ -91,7 +91,7 @@ class PandaLfpWrapper(gym.Wrapper):
         else:
             obs = self.env.reset()
 
-        return obs
+        return self.transform_observation(obs)
 
     def get_obs(self):
         obs = self.env._get_obs()
