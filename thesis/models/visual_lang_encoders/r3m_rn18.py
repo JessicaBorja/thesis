@@ -24,7 +24,7 @@ class R3M(BaseLingunet):
         self._build_decoder(cfg.unet_cfg.decoder_channels)
 
     def _load_vision(self, resnet_model):
-        self.r3m = load_r3m(resnet_model).module
+        self.r3m = load_r3m(resnet_model, device="cuda").module
         modules = list(list(self.r3m.children())[3].children())
 
         self.stem = nn.Sequential(*modules[:4])
