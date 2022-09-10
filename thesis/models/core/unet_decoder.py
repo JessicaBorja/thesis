@@ -71,8 +71,6 @@ class DecoderBlock(nn.Module):
 
         # Double conv
         if skip is not None:
-            print("my shape:, ", x.shape)
-            print("my shape2:, ", skip.shape)
             x = torch.cat([x, skip], dim=1)
         x = self.conv1(x)
         x = self.conv2(x)
