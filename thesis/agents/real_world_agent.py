@@ -1,5 +1,5 @@
 from thesis.utils.utils import get_abspath, resize_pixel
-# from thesis.evaluation.utils import join_vis_lang
+from thesis.evaluation.utils import join_vis_lang
 from thesis.utils.utils import add_img_text, resize_pixel, get_aff_model
 
 from thesis.utils.episode_utils import load_dataset_statistics, process_depth, process_rgb, process_state
@@ -19,32 +19,6 @@ import torch
 import logging
 import importlib
 logger = logging.getLogger(__name__)
-
-
-def add_text(img, lang_text):
-    height, width, _ = img.shape
-    if lang_text != "":
-        coord = (1, int(height - 10))
-        font_scale = (0.7 / 500) * width
-        thickness = 1
-        cv2.putText(
-            img,
-            text=lang_text,
-            org=coord,
-            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-            fontScale=font_scale,
-            color=(0, 0, 0),
-            thickness=thickness,
-            lineType=cv2.LINE_AA,
-        )
-
-def join_vis_lang(img, lang_text):
-    """Takes as input an image and a language instruction and visualizes them with cv2"""
-    img = img[:, :, ::-1].copy()
-    img = cv2.resize(img, (500, 500))
-    add_text(img, lang_text)
-    cv2.imshow("simulation cam", img)
-    cv2.waitKey(1)
 
 
 class AffHULCAgent():
@@ -190,7 +164,7 @@ class AffHULCAgent():
         offset_pos = pos + self.offset[:3]
         return offset_pos
 
-    def get_aff_pred(self, obs, caption):
+    def get_aff_pred(self, caption, obs):
         inp = {"img": obs["rgb_obs"]["rgb_static"],
                "lang_goal": caption}
         im_shape = inp["img"].shape[:2]
@@ -237,7 +211,7 @@ class AffHULCAgent():
         # diff_offset = np.linalg.norm(offset_pos - robot_obs["tcp_pos"])
 
         # 2d dist
-        tcp_px = self.static_cam.project(np.array([*robot_obs["tcp_pos"], 1]))
+        tcp_px = self.static_cam.project(np.array([*obs["robot_obs"]["tcp_pos"], 1]))
         px_dist = np.linalg.norm(pixel - tcp_px)
         move = px_dist > 15
 
@@ -258,15 +232,15 @@ class AffHULCAgent():
             self.reset_position()
 
         # Open gripper
-        robot_obs = self.env.get_obs()["robot_obs"]
-        
+        obs = self.env.get_obs()
+        robot_obs = obs["robot_obs"]
         width = robot_obs[6]
         # Stay in place but open gripper
         if width < 0.03:
             self.env.reset(robot_obs[:3], robot_obs[3:6], "open")
 
         # Get Target
-        offset_pos, move = self.get_aff_pred(caption, robot_obs)
+        offset_pos, move = self.get_aff_pred(caption, obs)
     
         if move:
             obs, _, _, info = self.move_to(offset_pos, gripper_action=1)

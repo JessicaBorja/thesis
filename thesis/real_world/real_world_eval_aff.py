@@ -10,7 +10,7 @@ from robot_io.utils.utils import FpsController
 from lfp.evaluation.utils import imshow_tensor
 from lfp.models.play_lmp import PlayLMP
 from lfp.utils.utils import format_sftp_path, get_checkpoints_for_epochs
-from lfp.wrappers.panda_lfp_wrapper import PandaLfpWrapper
+from thesis.env_wrappers.aff_lfp_real_world_wrapper import PandaLfpWrapper
 
 from thesis.models.language_encoders.sbert_lang_encoder import SBertLang
 import logging
@@ -69,7 +69,7 @@ def rollout(env, model, goal, use_affordances=False, ep_len=340):
     if use_affordances:
         # width = env.robot.get_observation()[-1]["gripper_opening_width"]
         # if width > 0.055 or width< 0.01:
-        target_pos, _move_flag = model.get_aff_pred(obs, goal)
+        target_pos, _move_flag = model.get_aff_pred(goal, obs)
 
 @hydra.main(config_path="../../config", config_name="cfg_real_world")
 def main(cfg):
@@ -84,14 +84,13 @@ def main(cfg):
     model = hydra.utils.instantiate(cfg.agent,
                                     dataset_path=dataset_path,
                                     env=env,
-                                    model_free=False,
                                     use_aff=use_affordances)
     print(f"Successfully loaded affordance model: {cfg.agent.aff_cfg.train_folder}/{cfg.agent.aff_cfg.model_name}")
     logger.info(f"Successfully loaded affordance model: {cfg.agent.aff_cfg.train_folder}/{cfg.agent.aff_cfg.model_name}")
 
     evaluate_aff(model, env,
-                            use_affordances=use_affordances,
-                            max_ts=cfg.max_timesteps)
+                 use_affordances=use_affordances,
+                 max_ts=cfg.max_timesteps)
 
 
 if __name__ == "__main__":

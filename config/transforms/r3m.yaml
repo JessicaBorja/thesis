@@ -14,6 +14,7 @@ training:
     std: [0.229, 0.224, 0.225] 
     
 validation:
+  # - _target_: torch.nn.Identity
   - _target_: torchvision.transforms.Resize
     size: ${aff_detection.img_size}
   - _target_: thesis.datasets.transforms.ScaleImageTensor  # Scale 0-255 to 0-1
