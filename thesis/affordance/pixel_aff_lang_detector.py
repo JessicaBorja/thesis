@@ -239,7 +239,7 @@ class PixelAffLangDetector(LightningModule):
         heatmap = heatmap.astype('uint8')
 
         #frame = cv2.resize(frame, heatmap.shape[:2])
-        heatmap = cv2.resize(heatmap, frame.shape[:2])
+        heatmap = cv2.resize(heatmap, frame.shape[:2][::-1])
         heatmap = blend_imgs(frame.copy(), heatmap, alpha=0.8)
 
         pixel = pred["pixel"]
