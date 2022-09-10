@@ -12,7 +12,6 @@ import re
 import hydra
 from omegaconf import ListConfig, OmegaConf
 
-import vr_env
 
 hasher = pyhash.fnv1_32()
 logger = logging.getLogger(__name__)
@@ -231,6 +230,7 @@ def get_env(dataset_path, obs_space=None, show_gui=True, scene=None, camera_conf
         for k in exclude_keys:
             del render_conf.cameras[k]
     if "scene" in kwargs:
+        import vr_env
         scene_cfg = OmegaConf.load(Path(vr_env.__file__).parents[1] / "conf/scene" / f"{kwargs['scene']}.yaml")
         OmegaConf.merge(render_conf, scene_cfg)
     # Hack for maintaining two repositories
