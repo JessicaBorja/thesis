@@ -199,7 +199,7 @@ class AffHULCAgent():
         resize_res = np.array(self.static_cam.get_resize_res())
         resize_res = resize_pixel(pred["pixel"], pred['softmax'].shape[:2], resize_res)
         if "depth" in pred:
-            depth_sample = pred['depth']
+            depth_sample = -1*pred['depth']
             target_pos = self.static_cam.deproject(resize_res, depth_sample.item())
         else:
             target_pos = self.static_cam.deproject(resize_res, depth)
