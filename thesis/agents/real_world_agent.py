@@ -31,7 +31,7 @@ class AffHULCAgent():
         self.offset = np.array([*offset, 1])
         self.T_world_cam = self.env.env.camera_manager.static_cam.get_extrinsic_calibration("panda")
         # Revisar que esta orientacion este bien
-        self.target_orn = np.array(-3.11,  0.047,  0.027)
+        self.target_orn = np.array([-3.11,  0.047,  0.027])
 
         ## Aff modeland language cnc cfg
         self.dataset_path = Path(get_abspath(dataset_path))  # Dataset on which agent was trained
