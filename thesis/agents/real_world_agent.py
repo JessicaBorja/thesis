@@ -196,7 +196,7 @@ class AffHULCAgent():
         x_range =[max(pixel[0] - n, 0), min(pixel[0] + n, im_shape[1])]
         y_range =[max(pixel[1] - n, 0), min(pixel[1] + n, im_shape[1])]
 
-        resize_res = np.array(self.static_cam.resize_resolution)
+        resize_res = np.array(self.static_cam.get_resize_res())
         resize_res = resize_pixel(pred["pixel"], pred['softmax'].shape[:2], resize_res)
         if "depth" in pred:
             depth_sample = pred['depth']
