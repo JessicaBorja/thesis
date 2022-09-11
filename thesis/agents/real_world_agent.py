@@ -31,7 +31,7 @@ class AffHULCAgent():
         self.offset = np.array([*offset, 1])
         self.T_world_cam = self.env.env.camera_manager.static_cam.get_extrinsic_calibration("panda")
         # Revisar que esta orientacion este bien
-        self.target_orn = np.array(-3.11,  0.047,  0.027)
+        self.target_orn = np.array([-3.11,  0.047,  0.027])
 
         ## Aff modeland language cnc cfg
         self.dataset_path = Path(get_abspath(dataset_path))  # Dataset on which agent was trained
@@ -196,10 +196,10 @@ class AffHULCAgent():
         x_range =[max(pixel[0] - n, 0), min(pixel[0] + n, im_shape[0])]
         y_range =[max(pixel[1] - n, 0), min(pixel[1] + n, im_shape[1])]
 
-        resize_res = np.array(self.static_cam.get_resize_res())[::-1]
+        resize_res = np.array(self.static_cam.get_resize_res())
         resize_res = resize_pixel(pred["pixel"], pred['softmax'].shape[:2], resize_res)
         if "depth" in pred:
-            depth_sample = pred['depth']
+            depth_sample = -1*pred['depth']
             target_pos = self.static_cam.deproject(resize_res, depth_sample.item())
         else:
             target_pos = self.static_cam.deproject(resize_res, depth)
