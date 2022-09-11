@@ -29,9 +29,9 @@ class AffHULCAgent():
         # Model-based params
         self.move_outside = move_outside
         self.offset = np.array([*offset, 1])
-
+        self.T_world_cam = self.env.env.camera_manager.static_cam.get_extrinsic_calibration("panda")
         # Revisar que esta orientacion este bien
-        self.target_orn = np.array([-2.26, 0.05, -0.12])
+        self.target_orn = np.array(-3.11,  0.047,  0.027)
 
         ## Aff modeland language cnc cfg
         self.dataset_path = Path(get_abspath(dataset_path))  # Dataset on which agent was trained
@@ -47,7 +47,7 @@ class AffHULCAgent():
         
         # Not save first
         self.save_viz = False
-        # self.reset_position()
+        self.reset_position()
 
         # Load Aff model
         _point_detector, _ = get_aff_model(**aff_cfg)
@@ -188,7 +188,6 @@ class AffHULCAgent():
             self.save_img(_info["pred_pixel"] * 255, ".", "pred_pixel")
             self.save_img(inp["img"], ".", "orig_img")
             self.save_sequence_txt("task", caption)
-
         pixel = resize_pixel(pred["pixel"], pred['softmax'].shape[:2], im_shape)
 
         # World pos
@@ -208,7 +207,11 @@ class AffHULCAgent():
                     if pos[1] < target_pos[1]:
                         target_pos = pos
 
-        offset_pos = self.add_offset(target_pos)
+        world_pt = self.T_world_cam @ np.array([*target_pos, 1])
+        world_pt = world_pt[:3]
+        print("real word point: ", world_pt)
+        # offset_pos = world_pt
+        offset_pos = self.add_offset(world_pt)
 
         # If far from target 3d
         # diff_target = np.linalg.norm(target_pos - robot_obs[:3])
@@ -217,7 +220,11 @@ class AffHULCAgent():
         # 2d dist
         tcp_px = self.static_cam.project(np.array([*obs["robot_obs"][:3], 1]))
         px_dist = np.linalg.norm(pixel - tcp_px)
+        print("px_dist: ", px_dist)
+        print(pixel)
+        print(tcp_px)
         move = px_dist > 15
+        print("move: ", move)
 
         # img = obs["rgb_obs"]["rgb_static"]
         # pixel = self.static_cam.project(np.array([*target_pos, 1]))

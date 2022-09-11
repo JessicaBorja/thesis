@@ -56,15 +56,15 @@ def rollout(env, model, goal, use_affordances=False, ep_len=340):
     # env.reset()
     # model.reset()
     move_robot = True
-    target_orn = np.array([-3.11019442,  0.04784107,  0.0272988])
+    target_orn = np.array([-3.11,  0.047,  0.027])
+    # target_orn = np.array([-2.26, 0.05, -0.12])
     obs = env.get_obs()
     if use_affordances:
         # width = env.robot.get_observation()[-1]["gripper_opening_width"]
         # if width > 0.055 or width< 0.01:
         target_pos, _move_flag = model.get_aff_pred(goal, obs, (500, 500))
-        print("inference target pos: ", target_pos)
         if move_robot and _move_flag:
-            # target_pos = np.array([0.4030218,  0.01018669, 0.43426962])
+            # target_pos = np.array([0.3030218,  0.01018669, 0.43426962])
             print("moving to: ", target_pos)
             print("moving to rot: ", target_orn)
             env.reset(target_pos=target_pos, target_orn=target_orn)
