@@ -166,6 +166,7 @@ class AffHULCAgent():
 
     def crop_and_resize_pixel(self, px, full_res_img):
         crop_coords = self.static_cam.get_crop_coords()
+        px = np.asarray(px)
         if crop_coords is not None:
             c = crop_coords
             img = np.zeros((c[1]-c[0], c[3]-c[2]))  #full_res_img[c[0]: c[1], c[2]:c[3]]
