@@ -165,11 +165,10 @@ class AffHULCAgent():
         return offset_pos
 
     def crop_and_resize_pixel(self, px, full_res_img):
-        crop_coords = self.static_cam.get_crop_coords 
+        crop_coords = self.static_cam.get_crop_coords()
         if crop_coords is not None:
             c = crop_coords
-            img = full_res_img[c[0]: c[1], c[2]:c[3]]
-            # 
+            img = np.zeros((c[1]-c[0], c[3]-c[2]))  #full_res_img[c[0]: c[1], c[2]:c[3]]
             px[0] = px[0] - c[0]
             px[1] = px[1] - c[2]
         resize_px = resize_pixel(px,
