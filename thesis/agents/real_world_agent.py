@@ -47,7 +47,7 @@ class AffHULCAgent():
         
         # Not save first
         self.save_viz = False
-        self.reset_position()
+        # self.reset_position()
 
         # Load Aff model
         _point_detector, _ = get_aff_model(**aff_cfg)
@@ -231,19 +231,17 @@ class AffHULCAgent():
 
         # If far from target 3d
         # diff_target = np.linalg.norm(target_pos - robot_obs[:3])
-        # diff_offset = np.linalg.norm(offset_pos - robot_obs[:3])
+        diff_offset = np.linalg.norm(offset_pos - obs["robot_obs"][:3])
+        print("3D distance: ", diff_offset)
+        move = diff_offset > 0.2
 
-        # 2d dist
-        tcp_px = self.static_cam.project(np.array([*obs["robot_obs"][:3], 1]))
-        tcp_px = self.crop_and_resize_pixel(tcp_px, self.static_cam.get_resolution())
-        tcp_px = resize_pixel(tcp_px, self.static_cam.get_resize_res(), im_shape)
-
-        px_dist = np.linalg.norm(pixel - tcp_px)
-        print("px_dist: ", px_dist)
-        print(pixel)
-        print(tcp_px)
-        move = px_dist > 15
-        print("move: ", move)
+        # # 2d dist
+        # tcp_px = self.static_cam.project(np.array([*obs["robot_obs"][:3], 1]))
+        # tcp_px = self.crop_and_resize_pixel(tcp_px, self.static_cam.get_resolution())
+        # tcp_px = resize_pixel(tcp_px, self.static_cam.get_resize_res(), im_shape)
+        #
+        # px_dist = np.linalg.norm(pixel - tcp_px)
+        # move = px_dist > 15
 
         # img = obs["rgb_obs"]["rgb_static"]
         # pixel = self.static_cam.project(np.array([*target_pos, 1]))
