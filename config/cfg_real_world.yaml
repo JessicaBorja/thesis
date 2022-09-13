@@ -19,7 +19,7 @@ agent:
   _recursive_: False
   save_viz: False
   viz_obs: True
-  offset: [0.0, -0.025, 0.05]  # Relative to end effector
+  offset: [-0.05, -0.05, 0.10]  # Relative to end effector
   model_free: 
     train_folder: ./trained_agents/lfp
     checkpoint: 30
