@@ -53,21 +53,24 @@ def evaluate_aff(model, env, max_ts, use_affordances):
 
 
 def rollout(env, model, goal, use_affordances=False, ep_len=340):
-    # env.reset()
-    # model.reset()
     move_robot = True
     target_orn = np.array([-3.11,  0.047,  0.027])
-    # target_orn = np.array([-2.26, 0.05, -0.12])
+
+    rotate_orn = np.array([3.12, -0.022, 1.38])
     obs = env.get_obs()
     if use_affordances:
-        # width = env.robot.get_observation()[-1]["gripper_opening_width"]
-        # if width > 0.055 or width< 0.01:
         target_pos, _move_flag = model.get_aff_pred(goal, obs, (500, 500))
         if move_robot and _move_flag:
-            # target_pos = np.array([0.3030218,  0.01018669, 0.43426962])
             print("moving to: ", target_pos)
             print("moving to rot: ", target_orn)
-            env.reset(target_pos=target_pos, target_orn=target_orn)
+            target_pos = np.clip(target_pos, [0.1,-0.45,0.1],[0.45,0.45,0.7])
+            print("after clipping: ", target_pos)
+            env.reset()
+            print("going to final pos")
+            if target_pos[1] > 0.4:
+                env.reset(target_pos=target_pos, target_orn=rotate_orn)
+            else:
+                env.reset(target_pos=target_pos, target_orn=target_orn)
 
 @hydra.main(config_path="../../config", config_name="cfg_real_world")
 def main(cfg):
