@@ -193,8 +193,8 @@ class AffHULCAgent():
         # World pos
         depth = obs["depth_obs"]["depth_static"]
         n = 5
-        x_range =[max(pixel[0] - n, 0), min(pixel[0] + n, im_shape[0])]
-        y_range =[max(pixel[1] - n, 0), min(pixel[1] + n, im_shape[1])]
+        x_range =[max(pixel[0] - n, 0), min(pixel[0] + n, im_shape[1])]
+        y_range =[max(pixel[1] - n, 0), min(pixel[1] + n, im_shape[0])]
 
         resize_res = np.array(self.static_cam.get_resize_res())
         resize_res = resize_pixel(pred["pixel"], pred['softmax'].shape[:2], resize_res)
