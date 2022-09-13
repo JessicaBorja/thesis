@@ -207,7 +207,7 @@ class AffHULCAgent():
                 for j in range(y_range[0], y_range[1]):
                     pos = self.static_cam.deproject((i, j), depth)
                     if pos is not None:
-                        if target_pos is None or pos[0] < target_pos[0]:
+                        if target_pos is None or pos[1] < target_pos[1]:
                             target_pos = pos
 
         world_pt = self.T_world_cam @ np.array([*target_pos, 1])
