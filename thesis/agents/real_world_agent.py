@@ -235,7 +235,7 @@ class AffHULCAgent():
 
         # 2d dist
         tcp_px = self.static_cam.project(np.array([*obs["robot_obs"][:3], 1]))
-        tcp_px = self.crop_and_resize_pixel(tcp_px)
+        tcp_px = self.crop_and_resize_pixel(tcp_px, self.static_cam.get_resolution())
         tcp_px = resize_pixel(tcp_px, self.static_cam.get_resize_res(), im_shape)
 
         px_dist = np.linalg.norm(pixel - tcp_px)
