@@ -164,6 +164,19 @@ class AffHULCAgent():
         offset_pos = pos + self.offset[:3]
         return offset_pos
 
+    def crop_and_resize_pixel(self, px, full_res_img):
+        crop_coords = self.static_cam.get_crop_coords 
+        if crop_coords is not None:
+            c = crop_coords
+            img = full_res_img[c[0]: c[1], c[2]:c[3]]
+            # 
+            px[0] = px[0] - c[0]
+            px[1] = px[1] - c[2]
+        resize_px = resize_pixel(px,
+                                 img.shape[:2],
+                                 self.static_cam.get_resize_res())
+        return resize_px
+
     def get_aff_pred(self, caption, obs, out_shape=None):
         inp = {"img": obs["rgb_obs"]["rgb_static"],
                "lang_goal": caption}
@@ -222,6 +235,9 @@ class AffHULCAgent():
 
         # 2d dist
         tcp_px = self.static_cam.project(np.array([*obs["robot_obs"][:3], 1]))
+        tcp_px = self.crop_and_resize_pixel(tcp_px)
+        tcp_px = resize_pixel(tcp_px, self.static_cam.get_resize_res(), im_shape)
+
         px_dist = np.linalg.norm(pixel - tcp_px)
         print("px_dist: ", px_dist)
         print(pixel)
