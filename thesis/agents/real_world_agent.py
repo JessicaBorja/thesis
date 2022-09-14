@@ -77,54 +77,6 @@ class AffHULCAgent():
         _transforms = {key: torchvision.transforms.Compose(val) for key, val in _transforms.items()}
         return _transforms
 
-    def load_model_free(self, train_folder, model_name, **kwargs):
-        checkpoint_path = get_abspath(train_folder)
-        policy_cfg = os.path.join(checkpoint_path, "./.hydra/config.yaml")
-        if os.path.isfile(policy_cfg):
-            run_cfg = OmegaConf.load(policy_cfg)
-            run_cfg = OmegaConf.create(OmegaConf.to_yaml(run_cfg).replace("calvin_models.", ""))
-            checkpoint = os.path.join(checkpoint_path, "saved_models")
-
-            if isinstance(model_name, int):
-                model_name = "epoch=%d.ckpt" % model_name
-            checkpoint = os.path.join(checkpoint, model_name)
-            model_class = run_cfg.model._target_.split('.')
-            model_file = '.'.join(run_cfg.model._target_.split('.')[:-1])
-            model_file = importlib.import_module(model_file)
-            model_class = getattr(model_file, model_class[-1])
-            # Parameter added after model was trained
-            if ('rgb_static' in run_cfg.model.perceptual_encoder and
-                'spatial_softmax_temp' not in run_cfg.model.perceptual_encoder.rgb_static):
-                perceptual_encoder = OmegaConf.to_container(run_cfg.model.perceptual_encoder)
-                for k in perceptual_encoder.keys():
-                    v = perceptual_encoder[k]
-                    if isinstance(v, dict) and 'spatial_softmax_temp' not in v and '_target_' in v \
-                    and v['_target_'] == 'lfp.models.perceptual_encoders.vision_network.VisionNetwork':
-                        perceptual_encoder[k]['spatial_softmax_temp'] = 1.0
-                perceptual_encoder = DictConfig(perceptual_encoder)
-                model = model_class.load_from_checkpoint(checkpoint, perceptual_encoder=perceptual_encoder)
-            else:
-                model = model_class.load_from_checkpoint(checkpoint)
-            model.freeze()
-            print("Successfully loaded model.")
-            _transforms = run_cfg.datamodule.transforms
-            transforms = load_dataset_statistics(self.dataset_path / "training",
-                                                 self.dataset_path / "validation",
-                                                 _transforms)
-
-            transforms = self.instantiate_transforms(transforms["val"])
-            if run_cfg.model.action_decoder.get("load_action_bounds", False):
-                model.action_decoder._setup_action_bounds(self.dataset_path, None, None, True)
-            env_cfg = run_cfg.datamodule
-            self.observation_space_keys = env_cfg.observation_space
-            self.proprio_state = env_cfg.proprioception_dims
-            _action_min = np.array(env_cfg.action_min)
-            _action_high = np.array(env_cfg.action_max)
-            self.action_space = spaces.Box(_action_min, _action_high)
-        else:
-            return
-        return model, transforms
-
     def transform_observation(self, obs: Dict[str, Any]) -> Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]:
         state_obs = process_state(obs, self.observation_space_keys, self.transforms, self.proprio_state)
         rgb_obs = process_rgb(obs["rgb_obs"], self.observation_space_keys, self.transforms)
