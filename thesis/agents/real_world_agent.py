@@ -162,6 +162,10 @@ class AffHULCAgent():
         # offset_global_frame = tcp_mat @ self.offset
         # offset_pos = offset_global_frame[:3]
         offset_pos = pos + self.offset[:3]
+        if pos[2] > 0.45:
+            print("not increasing height!")
+            offset_pos[2] -= self.offset[2]
+
         return offset_pos
 
     def crop_and_resize_pixel(self, px, full_res_img):
@@ -191,8 +195,6 @@ class AffHULCAgent():
 
         if self.viz_obs:
             cv2.imshow("img", out_img[:, :, ::-1])
-            # cv2.imshow("heatmap", (_info["heatmap"])[:, :, ::-1])
-            # cv2.imshow("pred_pixel", (_info["pred_pixel"])[:, :, ::-1])
             cv2.waitKey(2)
         
         if self.save_viz:
@@ -233,7 +235,7 @@ class AffHULCAgent():
         # diff_target = np.linalg.norm(target_pos - robot_obs[:3])
         diff_offset = np.linalg.norm(offset_pos - obs["robot_obs"][:3])
         print("3D distance: ", diff_offset)
-        move = diff_offset > 0.2
+        move = diff_offset > 0.15
 
         # # 2d dist
         # tcp_px = self.static_cam.project(np.array([*obs["robot_obs"][:3], 1]))
