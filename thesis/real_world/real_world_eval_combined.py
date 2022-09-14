@@ -78,8 +78,8 @@ def evaluate_combined(model_aff, model_free, lang_encoder, mf_transforms, env, u
 def rollout(env, model_aff, model_free, lang_encoder, mf_transforms, goal, use_affordances, use_model_free, ep_len):
     move_robot = True
 
-    # if use_affordances:
-    #     rollout_aff(env, model_aff, goal, move_robot)
+    if use_affordances:
+        rollout_aff(env, model_aff, goal, move_robot)
     if use_model_free:
         rollout_model_free(env, model_free, lang_encoder, mf_transforms, goal, move_robot, ep_len)
 
