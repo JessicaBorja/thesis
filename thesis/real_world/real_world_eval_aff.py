@@ -67,10 +67,15 @@ def rollout(env, model, goal, use_affordances=False, ep_len=340):
             print("after clipping: ", target_pos)
             env.reset()
             print("going to final pos")
+            if target_pos[1] < -0.35 and target_pos[2] < 0.35:
+                print("increasing height for avoiding collision with box")
+                target_pos[2] = 0.35
             if target_pos[1] > 0.4:
                 env.reset(target_pos=target_pos, target_orn=rotate_orn)
             else:
                 env.reset(target_pos=target_pos, target_orn=target_orn)
+        else:
+            print("move false!")
 
 @hydra.main(config_path="../../config", config_name="cfg_real_world")
 def main(cfg):

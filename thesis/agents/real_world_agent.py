@@ -47,7 +47,7 @@ class AffHULCAgent():
         
         # Not save first
         self.save_viz = False
-        self.reset_position()
+        # self.reset_position()
 
         # Load Aff model
         _point_detector, _ = get_aff_model(**aff_cfg)
@@ -76,54 +76,6 @@ class AffHULCAgent():
         }
         _transforms = {key: torchvision.transforms.Compose(val) for key, val in _transforms.items()}
         return _transforms
-
-    def load_model_free(self, train_folder, model_name, **kwargs):
-        checkpoint_path = get_abspath(train_folder)
-        policy_cfg = os.path.join(checkpoint_path, "./.hydra/config.yaml")
-        if os.path.isfile(policy_cfg):
-            run_cfg = OmegaConf.load(policy_cfg)
-            run_cfg = OmegaConf.create(OmegaConf.to_yaml(run_cfg).replace("calvin_models.", ""))
-            checkpoint = os.path.join(checkpoint_path, "saved_models")
-
-            if isinstance(model_name, int):
-                model_name = "epoch=%d.ckpt" % model_name
-            checkpoint = os.path.join(checkpoint, model_name)
-            model_class = run_cfg.model._target_.split('.')
-            model_file = '.'.join(run_cfg.model._target_.split('.')[:-1])
-            model_file = importlib.import_module(model_file)
-            model_class = getattr(model_file, model_class[-1])
-            # Parameter added after model was trained
-            if ('rgb_static' in run_cfg.model.perceptual_encoder and
-                'spatial_softmax_temp' not in run_cfg.model.perceptual_encoder.rgb_static):
-                perceptual_encoder = OmegaConf.to_container(run_cfg.model.perceptual_encoder)
-                for k in perceptual_encoder.keys():
-                    v = perceptual_encoder[k]
-                    if isinstance(v, dict) and 'spatial_softmax_temp' not in v and '_target_' in v \
-                    and v['_target_'] == 'lfp.models.perceptual_encoders.vision_network.VisionNetwork':
-                        perceptual_encoder[k]['spatial_softmax_temp'] = 1.0
-                perceptual_encoder = DictConfig(perceptual_encoder)
-                model = model_class.load_from_checkpoint(checkpoint, perceptual_encoder=perceptual_encoder)
-            else:
-                model = model_class.load_from_checkpoint(checkpoint)
-            model.freeze()
-            print("Successfully loaded model.")
-            _transforms = run_cfg.datamodule.transforms
-            transforms = load_dataset_statistics(self.dataset_path / "training",
-                                                 self.dataset_path / "validation",
-                                                 _transforms)
-
-            transforms = self.instantiate_transforms(transforms["val"])
-            if run_cfg.model.action_decoder.get("load_action_bounds", False):
-                model.action_decoder._setup_action_bounds(self.dataset_path, None, None, True)
-            env_cfg = run_cfg.datamodule
-            self.observation_space_keys = env_cfg.observation_space
-            self.proprio_state = env_cfg.proprioception_dims
-            _action_min = np.array(env_cfg.action_min)
-            _action_high = np.array(env_cfg.action_max)
-            self.action_space = spaces.Box(_action_min, _action_high)
-        else:
-            return
-        return model, transforms
 
     def transform_observation(self, obs: Dict[str, Any]) -> Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]:
         state_obs = process_state(obs, self.observation_space_keys, self.transforms, self.proprio_state)
@@ -162,14 +114,18 @@ class AffHULCAgent():
         # offset_global_frame = tcp_mat @ self.offset
         # offset_pos = offset_global_frame[:3]
         offset_pos = pos + self.offset[:3]
+        if pos[2] > 0.45:
+            print("not increasing height!")
+            offset_pos[2] -= self.offset[2]
+
         return offset_pos
 
     def crop_and_resize_pixel(self, px, full_res_img):
-        crop_coords = self.static_cam.get_crop_coords 
+        crop_coords = self.static_cam.get_crop_coords()
+        px = np.asarray(px)
         if crop_coords is not None:
             c = crop_coords
-            img = full_res_img[c[0]: c[1], c[2]:c[3]]
-            # 
+            img = np.zeros((c[1]-c[0], c[3]-c[2]))  #full_res_img[c[0]: c[1], c[2]:c[3]]
             px[0] = px[0] - c[0]
             px[1] = px[1] - c[2]
         resize_px = resize_pixel(px,
@@ -191,8 +147,6 @@ class AffHULCAgent():
 
         if self.viz_obs:
             cv2.imshow("img", out_img[:, :, ::-1])
-            # cv2.imshow("heatmap", (_info["heatmap"])[:, :, ::-1])
-            # cv2.imshow("pred_pixel", (_info["pred_pixel"])[:, :, ::-1])
             cv2.waitKey(2)
         
         if self.save_viz:
@@ -231,19 +185,17 @@ class AffHULCAgent():
 
         # If far from target 3d
         # diff_target = np.linalg.norm(target_pos - robot_obs[:3])
-        # diff_offset = np.linalg.norm(offset_pos - robot_obs[:3])
+        diff_offset = np.linalg.norm(offset_pos - obs["robot_obs"][:3])
+        print("3D distance: ", diff_offset)
+        move = diff_offset > 0.15
 
-        # 2d dist
-        tcp_px = self.static_cam.project(np.array([*obs["robot_obs"][:3], 1]))
-        tcp_px = self.crop_and_resize_pixel(tcp_px)
-        tcp_px = resize_pixel(tcp_px, self.static_cam.get_resize_res(), im_shape)
-
-        px_dist = np.linalg.norm(pixel - tcp_px)
-        print("px_dist: ", px_dist)
-        print(pixel)
-        print(tcp_px)
-        move = px_dist > 15
-        print("move: ", move)
+        # # 2d dist
+        # tcp_px = self.static_cam.project(np.array([*obs["robot_obs"][:3], 1]))
+        # tcp_px = self.crop_and_resize_pixel(tcp_px, self.static_cam.get_resolution())
+        # tcp_px = resize_pixel(tcp_px, self.static_cam.get_resize_res(), im_shape)
+        #
+        # px_dist = np.linalg.norm(pixel - tcp_px)
+        # move = px_dist > 15
 
         # img = obs["rgb_obs"]["rgb_static"]
         # pixel = self.static_cam.project(np.array([*target_pos, 1]))

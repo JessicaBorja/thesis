@@ -269,7 +269,7 @@ class PixelAffLangDetector(LightningModule):
             gt_depth = float(gt_depth.detach().cpu().numpy())
             text = "DepthErr: %.3f, Goal: %s" % (np.abs(depth_est - gt_depth), inp["lang_goal"])
         else:
-            text = "DepthPred: %.3f, Goal: %s" % (depth_est, inp["lang_goal"])
+            text = "DepthPred: %.3f, Goal: %s" % (-1*depth_est, inp["lang_goal"])
         out_img = add_img_text(out_img, text)
         
-        return out_img, {"pred_pixel": pred_img, "heatmap": heatmap} 
+        return out_img, {"pred_pixel": pred_img, "heatmap": heatmap}
