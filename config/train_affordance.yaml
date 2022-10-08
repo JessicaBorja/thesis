@@ -29,8 +29,8 @@ aff_detection:
   optimizer:
     lr: 1e-4
   loss_weights:
-    aff: 0.0001
-    depth: 10.0
+    aff: 0.1
+    depth: 0.9
   dataset:
     _recursive_: False
     data_dir: ${paths.datasets}/${dataset_name}
